@@ -1,0 +1,22 @@
+export const seedLeverBoards = [
+  { token: 'kushki', companyName: 'Kushki', source: 'seed' },
+  { token: 'kavak', companyName: 'Kavak', source: 'seed' },
+  { token: 'cornershop', companyName: 'Cornershop', source: 'seed' },
+  { token: 'platanus', companyName: 'Platanus', source: 'seed' },
+  { token: 'uala', companyName: 'Uala', source: 'seed' },
+  { token: 'vtex', companyName: 'VTEX', source: 'seed' },
+  { token: 'xepelin', companyName: 'Xepelin', source: 'seed' },
+  { token: 'clip', companyName: 'Clip', source: 'seed' },
+  { token: 'creditas', companyName: 'Creditas', source: 'seed' },
+  { token: 'truora', companyName: 'Truora', source: 'seed' },
+  { token: 'fintual', companyName: 'Fintual', source: 'seed' },
+  { token: 'houm', companyName: 'Houm', source: 'seed' },
+  { token: 'valoreo', companyName: 'Valoreo', source: 'seed' },
+  { token: 'belvo', companyName: 'Belvo', source: 'seed' },
+  { token: 'frubana', companyName: 'Frubana', source: 'seed' },
+  // Verified additions (high posting volume)
+  { token: 'palantir', companyName: 'Palantir', source: 'seed' },
+  { token: 'spotify', companyName: 'Spotify', source: 'seed' },
+  { token: 'mistral', companyName: 'Mistral AI', source: 'seed' },
+  { token: 'gopuff', companyName: 'Gopuff', source: 'seed' },
+];

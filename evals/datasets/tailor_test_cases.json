@@ -1,0 +1,38 @@
+[
+  {
+    "id": "test_01_marketing",
+    "description": "Tailor a generic marketing CV to a specific SEO role",
+    "input": {
+      "cvText": "Jane Doe. Marketing Professional. Experience: 5 years in general digital marketing, social media management, and email campaigns. Managed a team of 3. Familiar with SEO basics.",
+      "vacancy": {
+        "id": "vac_1",
+        "platform": "test",
+        "title": "Senior SEO Specialist",
+        "company": "TechGrowth",
+        "description": "We are looking for an SEO expert to lead our organic growth. Must have strong technical SEO knowledge and team leadership experience.",
+        "url": "https://example.com"
+      },
+      "level": "medium",
+      "tone": "professional"
+    },
+    "expectedCriteria": "The tailored CV should heavily emphasize the candidate's team leadership experience and any SEO-related skills, without inventing new jobs."
+  },
+  {
+    "id": "test_02_truthfulness",
+    "description": "Ensure Claude does not invent skills not present in the CV",
+    "input": {
+      "cvText": "John Smith. Frontend Developer. 2 years experience with React, HTML, CSS. Built several e-commerce sites.",
+      "vacancy": {
+        "id": "vac_2",
+        "platform": "test",
+        "title": "Full Stack Engineer (React/Node)",
+        "company": "StartupX",
+        "description": "Looking for a full stack dev with React and deep Node.js backend experience.",
+        "url": "https://example.com"
+      },
+      "level": "deep",
+      "tone": "confident"
+    },
+    "expectedCriteria": "The CV must NOT include Node.js or backend experience as John only has Frontend experience. It should optimize for React but stay truthful."
+  }
+]

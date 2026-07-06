@@ -1,0 +1,45 @@
+// All tokens verified live against the Greenhouse boards API. The registry +
+// discovery grow this set further over time.
+export const DEFAULT_GREENHOUSE_BOARD_TOKENS = [
+  'stripe',
+  'affirm',
+  'brex',
+  'gusto',
+  'datadog',
+  'figma',
+  'airtable',
+  'asana',
+  'mongodb',
+  'cloudflare',
+  'robinhood',
+  'reddit',
+  'duolingo',
+  'samsara',
+  'twilio',
+  // Verified additions
+  'airbnb',
+  'dropbox',
+  'lyft',
+  'instacart',
+  'coinbase',
+  'databricks',
+  'gitlab',
+  'discord',
+  'pinterest',
+  'sofi',
+  'chime',
+  'webflow',
+  'vercel',
+  'mixpanel',
+  'amplitude',
+  'faire',
+  'scaleai',
+  'calm',
+  'flexport',
+  'gemini',
+];
+
+export const DEFAULT_GREENHOUSE_BOARDS = DEFAULT_GREENHOUSE_BOARD_TOKENS.map((token) => ({
+  token,
+  source: 'seed',
+}));

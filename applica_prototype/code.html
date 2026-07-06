@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+
+<html lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport"/>
+<title>Applica - Premium Job Platform</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "primary": "#2A4A4F",
+                        "on-primary": "#FFFFFF",
+                        "primary-container": "#3A6A70",
+                        "on-primary-container": "#FFFFFF",
+                        "secondary": "#D4AF37",
+                        "on-secondary": "#FFFFFF",
+                        "secondary-container": "#E5C973",
+                        "on-secondary-container": "#1A1A1A",
+                        "tertiary": "#3D2C06",
+                        "on-tertiary": "#FFFFFF",
+                        "surface": "#FAF9F9",
+                        "on-surface": "#1A1C1C",
+                        "surface-variant": "#E3E2E2",
+                        "on-surface-variant": "#414849",
+                        "outline": "#717879",
+                        "outline-variant": "#C1C8C9",
+                        "error": "#BA1A1A",
+                        "on-error": "#FFFFFF",
+                        "error-container": "#FFDAD6",
+                        "on-error-container": "#93000A",
+                        "linkedin-blue": "#0A66C2",
+                        "success-green": "#10B981"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "8px",
+                        "lg": "12px",
+                        "xl": "16px",
+                        "full": "9999px"
+                    },
+                    "fontFamily": {
+                        "sans": ["Inter", "sans-serif"]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; background-color: #FAF9F9; overflow-x: hidden; touch-action: pan-y; }
+        .view-section { display: none; min-height: 100vh; padding-bottom: 0px; width: 100%; position: absolute; top: 0; left: 0; background: #FAF9F9; z-index: 10; }
+        .view-section.active { display: flex; animation: fadeIn 0.3s ease-in-out; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .swipe-card { transition: transform 0.3s ease, opacity 0.3s ease; transform-origin: 50% 100%; will-change: transform, opacity; }
+        .swipe-right { transform: translateX(100%) rotate(15deg) !important; opacity: 0 !important; }
+        .swipe-left { transform: translateX(-100%) rotate(-15deg) !important; opacity: 0 !important; }
+        
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+    </style>
+</head>
+<body class="text-on-surface antialiased bg-surface h-screen w-screen overflow-hidden relative">
+<!-- Welcome/Onboarding Flow -->
+<section class="view-section active flex-col items-center justify-center px-6" id="welcome-view">
+<!-- Step 1 -->
+<div class="welcome-step flex flex-col items-center w-full max-w-md" id="welcome-step-1">
+<h1 class="text-4xl text-primary font-light tracking-tight text-center mb-6">
+            Welcome to <span class="font-black text-primary">Applica</span>
+</h1>
+<p class="text-lg text-on-surface-variant text-center mb-8">
+            Elevate your executive career. Connect directly with top-tier opportunities in Tech and Finance.
+        </p>
+<div class="w-full h-64 rounded-xl overflow-hidden mb-8 shadow-sm border border-outline-variant">
+<img alt="Modern office" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCk73raioLG8_FyXkZikRKTMWOwwYao6SJdE5GK5jeJiQrjUFErSoEErslTa_6K1lpo2msK4DLpXpR4h8GravfnsF52MUEN7T3NnyYjBLwA2BONZEyx2lkRtjvMUmSL6cddmDbUJKEyIxnKdLwoIhuE0QsksDgjJYCMlYg05hA0L5FTRLP85gMnYmVYxhemtFB0tVZcXTFyiUlHGeGPe-0Ka-YCmgKjG8P8V6jWO6hGEVIX_bLulDVPu027Ec3AeeeaFNDVngT3RdU"/>
+</div>
+<div class="flex gap-2 mb-8">
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+</div>
+<div class="flex flex-col w-full gap-4">
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-4 rounded-full shadow-md active:scale-95 transition-transform" onclick="nextWelcomeStep(2)">Siguiente</button>
+<button class="w-full bg-surface-variant text-on-surface-variant text-lg font-semibold py-4 rounded-full active:scale-95 transition-transform" onclick="switchView('login-view')">Log In</button>
+</div>
+</div>
+<!-- Step 2 -->
+<div class="welcome-step hidden flex-col items-center w-full max-w-md" id="welcome-step-2">
+<h1 class="text-4xl text-primary font-light tracking-tight text-center mb-6">
+<span class="font-black">Curated</span> for you
+        </h1>
+<p class="text-lg text-on-surface-variant text-center mb-8">
+            We deliver highly targeted, premium roles that match your executive profile directly to your feed.
+        </p>
+<div class="w-full h-64 rounded-xl overflow-hidden mb-8 shadow-sm border border-outline-variant">
+<img alt="Team meeting" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuAvCRMdfHFPKO-zpT4UT1JfPQpXbuPQ9-aGo0QTjo4mTjJjXgVpuzOVPDILXH4zrhtCMo7ynzB8cSd9CztqPPWclFP0pBb9sEquHkn3E-qrJb_sjDMAPo8cemjL7Kk9CQNZ-QEE8npbdI5lvNm_OqN0fN2GmNuc4xopJrqm-Bj4dcEtG5Ob1FJANNwT0wtKQkRwLuZOLK_b_2ytmvsbSxBelx_lfh8hLID-TzvwMumAjGObWbqgDbvg463FEThAXPeEKZVF2I55MsY"/>
+</div>
+<div class="flex gap-2 mb-8">
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+</div>
+<div class="flex flex-col w-full gap-4">
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-4 rounded-full shadow-md active:scale-95 transition-transform" onclick="nextWelcomeStep(3)">Siguiente</button>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="welcome-step hidden flex-col items-center w-full max-w-md" id="welcome-step-3">
+<h1 class="text-4xl text-primary font-light tracking-tight text-center mb-6">
+<span class="font-black">One Swipe</span> Away
+        </h1>
+<p class="text-lg text-on-surface-variant text-center mb-8">
+            Apply anonymously with a single swipe. We protect your privacy while connecting you to the best.
+        </p>
+<div class="w-full h-64 rounded-xl overflow-hidden mb-8 shadow-sm bg-primary-container flex items-center justify-center text-on-primary-container">
+<span class="material-symbols-outlined text-7xl">swipe_right</span>
+</div>
+<div class="flex gap-2 mb-8">
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-outline-variant"></div>
+<div class="w-2 h-2 rounded-full bg-primary"></div>
+</div>
+<div class="flex flex-col w-full gap-4">
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-4 rounded-full shadow-md active:scale-95 transition-transform" onclick="switchView('register-view')">Comenzar</button>
+</div>
+</div>
+</section>
+<!-- Registration View -->
+<section class="view-section flex-col items-center justify-center px-6" id="register-view">
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-outline-variant">
+<div class="flex items-center mb-8 cursor-pointer" onclick="switchView('welcome-view'); nextWelcomeStep(1);">
+<span class="material-symbols-outlined text-outline">arrow_back</span>
+<span class="ml-2 text-sm font-semibold text-outline">Back</span>
+</div>
+<h2 class="text-3xl font-semibold text-primary mb-2">Create Account</h2>
+<p class="text-base text-on-surface-variant mb-8">Join the exclusive network of professionals.</p>
+<button class="w-full bg-linkedin-blue text-white text-lg font-semibold py-3 rounded-full mb-6 flex items-center justify-center gap-2" onclick="switchView('ai-profile-view')">
+<span class="material-symbols-outlined">work</span> Continue with LinkedIn
+        </button>
+<div class="flex items-center justify-center space-x-4 mb-6">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="text-xs font-semibold text-outline uppercase">Or</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<form class="space-y-4" onsubmit="event.preventDefault(); switchView('ai-profile-view');">
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-1">Work Email</label>
+<input class="w-full px-4 py-3 rounded-lg border border-outline focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="name@company.com" required="" type="email"/>
+</div>
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-1">Password</label>
+<input class="w-full px-4 py-3 rounded-lg border border-outline focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="••••••••" required="" type="password"/>
+</div>
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-3 rounded-full mt-4 shadow-md" type="submit">Register</button>
+</form>
+</div>
+</section>
+<!-- Login View -->
+<section class="view-section flex-col items-center justify-center px-6" id="login-view">
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-outline-variant">
+<div class="flex items-center mb-8 cursor-pointer" onclick="switchView('welcome-view'); nextWelcomeStep(1);">
+<span class="material-symbols-outlined text-outline">arrow_back</span>
+<span class="ml-2 text-sm font-semibold text-outline">Back</span>
+</div>
+<h2 class="text-3xl font-semibold text-primary mb-2">Welcome Back</h2>
+<p class="text-base text-on-surface-variant mb-8">Log in to continue your career journey.</p>
+<button class="w-full bg-linkedin-blue text-white text-lg font-semibold py-3 rounded-full mb-6 flex items-center justify-center gap-2" onclick="switchView('feed-view')">
+<span class="material-symbols-outlined">work</span> Log In with LinkedIn
+        </button>
+<div class="flex items-center justify-center space-x-4 mb-6">
+<div class="h-px bg-outline-variant flex-1"></div>
+<span class="text-xs font-semibold text-outline uppercase">Or</span>
+<div class="h-px bg-outline-variant flex-1"></div>
+</div>
+<form class="space-y-4" onsubmit="event.preventDefault(); switchView('feed-view');">
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-1">Work Email</label>
+<input class="w-full px-4 py-3 rounded-lg border border-outline focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="name@company.com" required="" type="email"/>
+</div>
+<div>
+<label class="block text-sm font-semibold text-on-surface mb-1">Password</label>
+<input class="w-full px-4 py-3 rounded-lg border border-outline focus:border-primary focus:ring-1 focus:ring-primary outline-none" placeholder="••••••••" required="" type="password"/>
+</div>
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-3 rounded-full mt-4 shadow-md" type="submit">Log In</button>
+</form>
+</div>
+</section>
+<!-- AI Profile Build View -->
+<section class="view-section flex-col items-center justify-center px-6" id="ai-profile-view">
+<div class="w-full max-w-md bg-white p-8 rounded-xl shadow-lg border border-outline-variant text-center space-y-6">
+<div class="w-24 h-24 mx-auto bg-primary-container rounded-full flex items-center justify-center mb-6">
+<span class="material-symbols-outlined text-4xl text-on-primary-container animate-pulse">smart_toy</span>
+</div>
+<h2 class="text-3xl font-semibold text-primary">IA construyendo tu perfil...</h2>
+<p class="text-base text-on-surface-variant">Estamos analizando tu experiencia y habilidades para crear perfiles optimizados para roles tecnológicos y financieros.</p>
+<div class="w-full bg-surface-variant rounded-full h-2 overflow-hidden relative">
+<div class="bg-secondary h-2 rounded-full absolute top-0 left-0 transition-all duration-300" id="ai-progress-bar" style="width: 0%;"></div>
+</div>
+<button class="w-full bg-primary text-on-primary text-lg font-semibold py-3 rounded-full opacity-50 cursor-not-allowed transition-all" disabled="" id="btn-complete-profile" onclick="switchView('feed-view');">
+            Procesando...
+        </button>
+</div>
+</section>
+<!-- App Shell Components (Visible in App Views) -->
+<header class="fixed top-0 w-full flex items-center justify-between px-4 h-16 z-40 bg-white border-b border-outline-variant transform -translate-y-full transition-transform duration-300" id="mobile-top-nav">
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded bg-primary flex items-center justify-center text-on-primary font-bold">A</div>
+<div class="text-xl font-black tracking-tighter text-primary">Applica</div>
+</div>
+<button class="text-outline" onclick="switchView('profile-view')">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">tune</span>
+</button>
+</header>
+<main class="w-full h-full pt-16 pb-20 relative overflow-hidden hidden" id="app-content-container">
+<!-- Feed View (Job Swiping) -->
+<section class="view-section flex-col px-4 pt-4 active" id="feed-view" style="position: relative;">
+<div class="flex-1 w-full max-w-md mx-auto flex flex-col items-center justify-center relative">
+<div class="relative w-full aspect-[3/4.5] max-h-[550px]" id="card-container">
+<!-- Stacked Cards (Back) -->
+<div class="absolute inset-0 bg-white rounded-2xl shadow-md border border-outline-variant scale-90 translate-y-8 opacity-40 z-10"></div>
+<div class="absolute inset-0 bg-white rounded-2xl shadow-md border border-outline-variant scale-95 translate-y-4 opacity-70 z-20"></div>
+<!-- Active Card -->
+<div class="absolute inset-0 bg-white rounded-2xl shadow-xl border border-outline-variant flex flex-col overflow-hidden z-30 cursor-grab active:cursor-grabbing touch-none" id="active-card" onclick="openJobDetails()">
+<div class="absolute inset-0 pointer-events-none flex items-center justify-between px-8 z-40 opacity-0" id="card-badges">
+<div class="border-4 border-error text-error font-black text-4xl px-4 py-1 rounded-lg transform -rotate-12 bg-white/80" id="badge-nope">NOPE</div>
+<div class="border-4 border-success-green text-success-green font-black text-4xl px-4 py-1 rounded-lg transform rotate-12 bg-white/80" id="badge-apply">APPLY</div>
+</div>
+<div class="h-1/3 w-full relative">
+<img alt="Company" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC8-Q3Ce7Un1OlhMAqY2HCdM5Ul4oTJ2MHw7hjiB3WoPTaLOdioiCYpyIEKQ2QYBeMCGfWaZwn8dyiE5ZRTQjpT8R89cu8IZIiT8YMSj2cjZsdGA_Tqq68KJV6XDQdeDV4WQ1Ag8S5KnWeD__U-aTCabUqq8PC9fXjzDCZzpp7EWB_oPYwxjm_KyzH5upol3wnlbV1kLHz-oddD1cKPuja9og05Ia2TphsliH3SWWT4FK4TxGowxqkU3FwxaZe671wyaguGLMNmSZE"/>
+<div class="absolute top-4 right-4 bg-primary text-on-primary rounded-full px-3 py-1 flex items-center gap-1 text-[10px] font-bold">
+<span class="material-symbols-outlined text-[12px] text-secondary">bolt</span> PREMIUM ROLE
+                        </div>
+</div>
+<div class="p-6 flex-1 flex flex-col">
+<div class="mb-1">
+<h3 class="text-2xl font-bold text-primary leading-tight">Chief Financial Officer</h3>
+<p class="text-lg text-secondary font-medium">Fintech Unicorn • Mexico City</p>
+</div>
+<div class="flex flex-wrap gap-2 my-4">
+<span class="px-3 py-1 bg-surface text-on-surface-variant text-[11px] font-bold rounded-full border border-outline-variant">HYBRID</span>
+<span class="px-3 py-1 bg-secondary-container text-on-secondary-container text-[11px] font-bold rounded-full">$250k - $320k USD</span>
+</div>
+<p class="text-on-surface-variant text-sm line-clamp-4">
+                            Seeking a strategic CFO to lead our global expansion. You will be responsible for financial planning, investor relations, and scaling our finance operations across 5 countries...
+                        </p>
+<div class="mt-auto pt-4 border-t border-outline-variant flex items-center gap-2 text-primary font-bold text-xs uppercase tracking-wider">
+<span class="material-symbols-outlined text-sm">visibility</span> Tap to view details
+                        </div>
+</div>
+</div>
+</div>
+<!-- Swipe Buttons -->
+<div class="flex justify-center gap-8 w-full mt-8">
+<button class="w-16 h-16 rounded-full bg-white border-2 border-outline-variant flex items-center justify-center text-outline hover:text-error hover:border-error transition-colors shadow-sm active:scale-90" onclick="triggerSwipe('left')">
+<span class="material-symbols-outlined text-3xl">close</span>
+</button>
+<button class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-secondary shadow-lg active:scale-90" onclick="triggerSwipe('right')">
+<span class="material-symbols-outlined text-3xl font-bold">check</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Job Details Modal (Simplified as a View) -->
+<section class="view-section flex-col bg-white" id="job-details-view">
+<div class="fixed top-0 w-full h-16 px-4 bg-white/80 backdrop-blur flex items-center justify-between border-b border-outline-variant z-50">
+<button class="text-primary" onclick="switchView('feed-view')">
+<span class="material-symbols-outlined">close</span>
+</button>
+<span class="font-bold text-primary">Detalle de Posición</span>
+<div class="w-6"></div>
+</div>
+<div class="pt-16 pb-24 px-6 overflow-y-auto no-scrollbar">
+<div class="py-6 border-b border-outline-variant">
+<h1 class="text-3xl font-bold text-primary mb-2">Chief Financial Officer</h1>
+<p class="text-xl text-secondary font-medium">Fintech Unicorn</p>
+<p class="text-on-surface-variant mt-2 flex items-center gap-1">
+<span class="material-symbols-outlined text-sm">location_on</span> Mexico City, MX (Hybrid)
+                </p>
+</div>
+<div class="py-6 space-y-6">
+<div>
+<h3 class="text-sm font-black text-primary uppercase tracking-widest mb-3">Compensación &amp; Beneficios</h3>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface p-4 rounded-xl border border-outline-variant">
+<p class="text-[10px] text-outline uppercase font-bold mb-1">Salario Base</p>
+<p class="text-lg font-bold text-primary">$250k - $320k</p>
+</div>
+<div class="bg-surface p-4 rounded-xl border border-outline-variant">
+<p class="text-[10px] text-outline uppercase font-bold mb-1">Equity</p>
+<p class="text-lg font-bold text-primary">0.5% - 1.2%</p>
+</div>
+</div>
+</div>
+<div>
+<h3 class="text-sm font-black text-primary uppercase tracking-widest mb-3">Sobre el Rol</h3>
+<p class="text-on-surface-variant leading-relaxed">
+                        Como CFO, serás un socio estratégico clave para el CEO y la Junta Directiva. Liderarás todos los aspectos de la estrategia financiera, incluyendo la planificación y el análisis, la tesorería, los impuestos, el control y las relaciones con los inversores.
+                    </p>
+</div>
+<div>
+<h3 class="text-sm font-black text-primary uppercase tracking-widest mb-3">Requerimientos Clave</h3>
+<ul class="list-disc pl-5 text-on-surface-variant space-y-2">
+<li>15+ años de experiencia progresiva en finanzas.</li>
+<li>Experiencia previa como CFO en una empresa escalable.</li>
+<li>Fuerte historial en levantamiento de capital (Serie C+).</li>
+<li>Inglés y Español bilingüe.</li>
+</ul>
+</div>
+</div>
+<button class="w-full bg-primary text-on-primary py-4 rounded-full font-bold shadow-md" onclick="switchView('feed-view')">
+                Postularme con un Swipe
+            </button>
+</div>
+</section>
+<!-- Pendientes View -->
+<section class="view-section flex-col px-4 pt-4 overflow-y-auto no-scrollbar" id="dashboard-view">
+<div class="max-w-md mx-auto w-full pt-6 pb-24">
+<h2 class="text-2xl font-bold text-primary mb-6">Pendientes</h2>
+<div class="space-y-4 mb-8">
+<h3 class="text-xs font-black text-outline uppercase tracking-widest">Requiere Atención</h3>
+<div class="bg-white p-4 rounded-xl border border-error-container shadow-sm">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-full bg-error-container text-error flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">assignment_late</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold text-primary text-sm">VP of Engineering</h4>
+<p class="text-xs text-on-surface-variant mb-2">Tech Innovators Inc.</p>
+<span class="inline-block px-2 py-1 bg-error-container text-error text-[10px] font-bold rounded">Información Faltante</span>
+<p class="text-xs text-on-surface-variant mt-2">Por favor, completa tu portafolio para continuar con el proceso.</p>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">chevron_right</span>
+</div>
+</div>
+<div class="bg-white p-4 rounded-xl border border-secondary-container shadow-sm">
+<div class="flex items-start gap-3">
+<div class="w-10 h-10 rounded-full bg-secondary-container text-secondary flex items-center justify-center shrink-0">
+<span class="material-symbols-outlined">pending_actions</span>
+</div>
+<div class="flex-1">
+<h4 class="font-bold text-primary text-sm">Director of Product</h4>
+<p class="text-xs text-on-surface-variant mb-2">Global Solutions LLC</p>
+<span class="inline-block px-2 py-1 bg-secondary-container text-secondary text-[10px] font-bold rounded">Revisión Manual Necesaria</span>
+<p class="text-xs text-on-surface-variant mt-2">Estamos revisando tus referencias adicionales.</p>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">chevron_right</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Apps View -->
+<section class="view-section flex-col px-4 pt-4 overflow-y-auto no-scrollbar" id="apps-view">
+<div class="max-w-md mx-auto w-full pt-6 pb-24">
+<h2 class="text-2xl font-bold text-primary mb-6">Mis Aplicaciones</h2>
+<div class="space-y-4">
+<h3 class="text-xs font-black text-outline uppercase tracking-widest">Historial</h3>
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex items-center justify-between opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined">check</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface text-sm">Senior Designer</h4>
+<p class="text-xs text-on-surface-variant">Google</p>
+</div>
+</div>
+<span class="text-[10px] font-bold text-success-green uppercase">Enviada</span>
+</div>
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex items-center justify-between opacity-80">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-full bg-surface-variant text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined">check</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface text-sm">Product Manager</h4>
+<p class="text-xs text-on-surface-variant">Meta</p>
+</div>
+</div>
+<span class="text-[10px] font-bold text-success-green uppercase">Enviada</span>
+</div>
+</div>
+</div>
+</section>
+<!-- Profile View -->
+<section class="view-section flex-col px-4 pt-4 overflow-y-auto no-scrollbar" id="profile-view">
+<div class="max-w-md mx-auto w-full pb-24 space-y-6">
+<h2 class="text-2xl font-bold text-primary">Tu Perfil</h2>
+<div class="bg-white rounded-xl p-6 shadow-sm border border-outline-variant flex flex-col items-center text-center gap-4">
+<div class="relative">
+<div class="w-24 h-24 rounded-full bg-surface-variant border-4 border-surface overflow-hidden shadow-md">
+<img alt="Profile" class="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida-public/AB6AXuCqWJMOKA2mR7tNftydnmjR_FCflpOzsaR-oimkhjRHYhCySSPKa13Baf2q8aDFCXSvB0iMXOljdS-XfuVcoEqgXoOG1yW90cnUvzR4_WIYSGIry6Q5PITR18Q8F9eGUv5YUoW-mX7IZZR-Ovrhjl03i41Uu-arn_-JbWc0_2f2D_81kxVFcpN9Wtu5QcFtKEpVvM1FsPyy4JB_YdHA-VSyRzcB_FpmmKNhZNbjD9xCBA4VhX2YqweocI0KEeAN2mQ1g7Xogx5NrxA"/>
+</div>
+<button class="absolute bottom-0 right-0 bg-primary text-on-primary rounded-full p-1.5 border-2 border-white shadow-sm">
+<span class="material-symbols-outlined text-[16px]">edit</span>
+</button>
+</div>
+<div>
+<h2 class="text-xl font-bold text-primary">Alex Mercer</h2>
+<p class="text-sm text-secondary font-medium mb-2">VP of Product Design</p>
+<span class="inline-flex items-center gap-1 bg-surface-variant text-on-surface-variant px-3 py-1 rounded-full text-[10px] font-bold">
+<span class="material-symbols-outlined text-[14px] text-linkedin-blue">verified</span> VERIFIED EXECUTIVE
+                    </span>
+</div>
+</div>
+<div class="space-y-3">
+<h3 class="text-xs font-black text-outline uppercase tracking-widest">Active Resumes (CVs)</h3>
+<div class="bg-white p-4 rounded-xl border-2 border-primary shadow-sm flex items-center justify-between cursor-pointer">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-primary-container text-on-primary-container flex items-center justify-center">
+<span class="material-symbols-outlined">design_services</span>
+</div>
+<div>
+<h4 class="font-bold text-primary text-sm">Product Leadership</h4>
+<p class="text-[10px] text-on-surface-variant uppercase font-bold">Optimized for Tech</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-primary">check_circle</span>
+</div>
+<div class="bg-white p-4 rounded-xl border border-outline-variant shadow-sm flex items-center justify-between cursor-pointer opacity-70">
+<div class="flex items-center gap-3">
+<div class="w-10 h-10 rounded-lg bg-surface-variant text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined">strategy</span>
+</div>
+<div>
+<h4 class="font-bold text-on-surface text-sm">Fintech Strategy</h4>
+<p class="text-[10px] text-outline uppercase font-bold">Optimized for Finance</p>
+</div>
+</div>
+</div>
+</div>
+<div class="space-y-3">
+<h3 class="text-xs font-black text-outline uppercase tracking-widest">Ajustes &amp; Privacidad</h3>
+<div class="bg-white rounded-xl border border-outline-variant shadow-sm overflow-hidden divide-y divide-outline-variant">
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">notifications</span>
+<span class="text-sm font-semibold text-on-surface">Notificaciones</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">chevron_right</span>
+</div>
+<div class="p-4 flex items-center justify-between">
+<div class="flex items-center gap-3">
+<span class="material-symbols-outlined text-outline">lock</span>
+<span class="text-sm font-semibold text-on-surface">Privacidad (Modo Anónimo)</span>
+</div>
+<span class="material-symbols-outlined text-outline text-sm">chevron_right</span>
+</div>
+</div>
+</div>
+<button class="w-full py-4 text-error font-bold text-sm bg-error-container/30 rounded-xl" onclick="location.reload()">
+                Cerrar Sesión
+            </button>
+</div>
+</section>
+</main>
+<!-- Bottom Nav Bar -->
+<nav class="fixed bottom-0 w-full bg-white border-t border-outline-variant shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] z-50 transform translate-y-full transition-transform duration-300 flex justify-around items-center px-2 py-2 pb-[env(safe-area-inset-bottom,16px)]" id="mobile-bottom-nav">
+<button class="nav-btn flex flex-col items-center justify-center w-16 py-1 text-primary" data-target="feed-view" onclick="switchView('feed-view')">
+<span class="material-symbols-outlined mb-1 text-[28px]" style="font-variation-settings: 'FILL' 1;">style</span>
+<span class="text-[10px] font-bold">Feed</span>
+</button>
+<button class="nav-btn flex flex-col items-center justify-center w-16 py-1 text-outline" data-target="dashboard-view" onclick="switchView('dashboard-view')">
+<span class="material-symbols-outlined mb-1 text-[28px]">assignment_late</span>
+<span class="text-[10px] font-semibold">Pendientes</span>
+</button>
+<button class="nav-btn flex flex-col items-center justify-center w-16 py-1 text-outline" data-target="apps-view" onclick="switchView('apps-view')">
+<span class="material-symbols-outlined mb-1 text-[28px]">assignment</span>
+<span class="text-[10px] font-semibold">Apps</span>
+</button>
+<button class="nav-btn flex flex-col items-center justify-center w-16 py-1 text-outline" data-target="profile-view" onclick="switchView('profile-view')">
+<span class="material-symbols-outlined mb-1 text-[28px]">person</span>
+<span class="text-[10px] font-semibold">Perfil</span>
+</button>
+</nav>
+<script>
+    // --- View Navigation ---
+    function switchView(viewId) {
+        const isAppView = ['feed-view', 'profile-view', 'apps-view', 'dashboard-view', 'job-details-view'].includes(viewId);
+        
+        // Handle Global Containers
+        const appContent = document.getElementById('app-content-container');
+        const welcomeView = document.getElementById('welcome-view');
+        const registerView = document.getElementById('register-view');
+        const loginView = document.getElementById('login-view');
+        const aiView = document.getElementById('ai-profile-view');
+        
+        [welcomeView, registerView, loginView, aiView].forEach(el => el.classList.remove('active'));
+        
+        if (isAppView) {
+            appContent.classList.remove('hidden');
+            document.querySelectorAll('#app-content-container .view-section').forEach(v => v.classList.remove('active'));
+            document.getElementById(viewId).classList.add('active');
+            
+            // Show Shell
+            document.getElementById('mobile-top-nav').classList.remove('-translate-y-full');
+            document.getElementById('mobile-bottom-nav').classList.remove('translate-y-full');
+            
+            // Update Bottom Nav Highlighting
+            updateNavState(viewId);
+        } else {
+            appContent.classList.add('hidden');
+            document.getElementById(viewId).classList.add('active');
+            
+            // Hide Shell
+            document.getElementById('mobile-top-nav').classList.add('-translate-y-full');
+            document.getElementById('mobile-bottom-nav').classList.add('translate-y-full');
+        }
+
+        if (viewId === 'ai-profile-view') {
+            simulateAIProcess();
+        }
+    }
+
+    function updateNavState(activeId) {
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            const target = btn.getAttribute('data-target');
+            const icon = btn.querySelector('.material-symbols-outlined');
+            const text = btn.querySelector('span:last-child');
+            
+            if (target === activeId) {
+                btn.classList.add('text-primary');
+                btn.classList.remove('text-outline');
+                icon.style.fontVariationSettings = "'FILL' 1";
+                text.classList.replace('font-semibold', 'font-bold');
+            } else {
+                btn.classList.remove('text-primary');
+                btn.classList.add('text-outline');
+                icon.style.fontVariationSettings = "'FILL' 0";
+                text.classList.replace('font-bold', 'font-semibold');
+            }
+        });
+    }
+
+    // --- Onboarding Logic ---
+    function nextWelcomeStep(step) {
+        document.querySelectorAll('.welcome-step').forEach(el => el.classList.add('hidden'));
+        document.getElementById(`welcome-step-${step}`).classList.remove('hidden');
+    }
+
+    // --- AI Simulation Logic ---
+    function simulateAIProcess() {
+        const bar = document.getElementById('ai-progress-bar');
+        const btn = document.getElementById('btn-complete-profile');
+        bar.style.width = '0%';
+        btn.disabled = true;
+        btn.innerText = "Procesando...";
+        
+        setTimeout(() => bar.style.width = '30%', 400);
+        setTimeout(() => bar.style.width = '75%', 1200);
+        setTimeout(() => {
+            bar.style.width = '100%';
+            btn.disabled = false;
+            btn.classList.remove('opacity-50', 'cursor-not-allowed');
+            btn.innerText = "Ir al Feed";
+            // Auto-transition
+            setTimeout(() => switchView('feed-view'), 800);
+        }, 2200);
+    }
+
+    // --- Swipe Interaction Logic ---
+    const card = document.getElementById('active-card');
+    const badges = document.getElementById('card-badges');
+    const badgeNope = document.getElementById('badge-nope');
+    const badgeApply = document.getElementById('badge-apply');
+    
+    let isDragging = false;
+    let startX = 0;
+    let currentX = 0;
+
+    if(card) {
+        card.addEventListener('touchstart', dragStart);
+        card.addEventListener('touchmove', dragMove);
+        card.addEventListener('touchend', dragEnd);
+        card.addEventListener('mousedown', dragStart);
+        document.addEventListener('mousemove', dragMove);
+        document.addEventListener('mouseup', dragEnd);
+    }
+
+    function dragStart(e) {
+        isDragging = true;
+        startX = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        card.style.transition = 'none';
+        badges.style.opacity = '1';
+    }
+
+    function dragMove(e) {
+        if (!isDragging) return;
+        const x = e.type.includes('mouse') ? e.clientX : e.touches[0].clientX;
+        currentX = x - startX;
+        const rotate = currentX * 0.05;
+        card.style.transform = `translateX(${currentX}px) rotate(${rotate}deg)`;
+        
+        const opacity = Math.min(Math.abs(currentX) / 100, 1);
+        if (currentX > 0) {
+            badgeApply.style.opacity = opacity;
+            badgeNope.style.opacity = '0';
+        } else {
+            badgeNope.style.opacity = opacity;
+            badgeApply.style.opacity = '0';
+        }
+    }
+
+    function dragEnd() {
+        if (!isDragging) return;
+        isDragging = false;
+        const threshold = window.innerWidth * 0.25;
+        
+        if (currentX > threshold) {
+            triggerSwipe('right');
+        } else if (currentX < -threshold) {
+            triggerSwipe('left');
+        } else {
+            card.style.transition = 'transform 0.3s ease';
+            card.style.transform = 'translateX(0) rotate(0)';
+            badges.style.opacity = '0';
+        }
+        currentX = 0;
+    }
+
+    function triggerSwipe(direction) {
+        if (direction === 'right') {
+            card.classList.add('swipe-right');
+            badgeApply.style.opacity = '1';
+        } else {
+            card.classList.add('swipe-left');
+            badgeNope.style.opacity = '1';
+        }
+
+        setTimeout(() => {
+            card.style.opacity = '0';
+            card.style.transition = 'none';
+            card.classList.remove('swipe-right', 'swipe-left');
+            card.style.transform = 'translateX(0) rotate(0)';
+            badgeApply.style.opacity = '0';
+            badgeNope.style.opacity = '0';
+            badges.style.opacity = '0';
+            
+            // Mock next card content
+            setTimeout(() => {
+                card.style.opacity = '1';
+                card.style.transition = 'opacity 0.3s ease';
+            }, 100);
+        }, 300);
+    }
+
+    function openJobDetails() {
+        if (Math.abs(currentX) < 5) { // Only open if not dragging
+            switchView('job-details-view');
+        }
+    }
+
+</script>
+</body></html>

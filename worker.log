@@ -1,0 +1,45 @@
+(node:28028) Warning: SECURITY WARNING: The SSL modes 'prefer', 'require', and 'verify-ca' are treated as aliases for 'verify-full'.
+In the next major version (pg-connection-string v3.0.0 and pg v9.0.0), these modes will adopt standard libpq semantics, which have weaker security guarantees.
+
+To prepare for this change:
+- If you want the current behavior, explicitly use 'sslmode=verify-full'
+- If you want libpq compatibility now, use 'uselibpqcompat=true&sslmode=require'
+
+See https://www.postgresql.org/docs/current/libpq-ssl.html for libpq SSL mode definitions.
+(Use `node --trace-warnings ...` to show where the warning was created)
+[pg-boss] started successfully
+[Worker] Scheduling initial supply jobs...
+[Worker] Listening for jobs (search_vacancies, prepare_application_materials, process_application, assisted_apply, regenerate_materials, refresh_ats_registry, discover_ats_boards)...
+[startWorker] Worker is running. Press Ctrl+C to stop.
+[Worker] Assisted apply for application b1512c35-9d04-480c-8594-04d251d7d69e
+[BrowserManager] Launching REAL browser (brave) with dedicated profile for trusted apply...
+[Greenhouse] Locating form fields...
+[Greenhouse] Attaching resume from C:\Users\lidic\OneDrive\1DANIEL\0 Alma Partners\Antigravity\Applica\uploads\cv_b1512c35-9d04-480c-8594-04d251d7d69e.pdf
+[Greenhouse] Resume attached (visible en el formulario)
+[Greenhouse] Filled first name
+[Greenhouse] Filled last name
+[Greenhouse] Filled email
+[Greenhouse] Filled phone
+[Greenhouse] Filled LinkedIn
+[Greenhouse] Filled reusable answer for "LinkedIn profile"
+[Greenhouse] Selected Gender = Male
+[Greenhouse] Filled reusable answer for "Gender"
+[Greenhouse] Selected Veteran Status = I am not a protected veteran
+[Greenhouse] Filled reusable answer for "Veteran Status"
+[Greenhouse] Filled reusable answer for "LinkedIn"
+[Greenhouse] Filled reusable answer for "Website"
+[Greenhouse] Filled reusable answer for "LinkedIn Profile"
+[Greenhouse] Selected Country* = Panama +507
+[Greenhouse] Filled reusable answer for "Country*"
+[Greenhouse] Selected Location (City)* = Ciudad de Panamá, PM, Panamá
+[Greenhouse] Filled reusable answer for "Location (City)*"
+[Greenhouse] Selected hispanic_ethnicity = Yes
+[Greenhouse] disability_status: pregunta voluntaria - elegí "prefiero no responder".
+[Greenhouse] Checking Submit button...
+[Greenhouse] Submit button clicked
+[Greenhouse] reCAPTCHA on submit - form prepared; handing off for human verification + submit.
+[RealApply] Banner en la ventana: presente pos=fixed top=0 h=42 display=block visibility=visible
+[RealApply] Ventana lista. Espero a que completes y envíes.
+[RealApply] [auto] Captcha detectado: Applica en pausa; el usuario tiene el control.
+[RealApply] Envío detectado. Capturadas 9 respuestas.
+[Worker] Silent learning: guardé 4 respuesta(s) nueva(s) al banco.

@@ -1,0 +1,64 @@
+/* Append to globals.css */
+
+/* ── Modern Table (Job Applications) ─ */
+.modern-table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  padding: 0.5rem 0;
+}
+.modern-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0 0.5rem;
+  font-size: .8125rem;
+}
+.modern-table th {
+  padding: 0.5rem 1.25rem;
+  text-align: left;
+  font-size: .65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--text-3);
+  border: none;
+  white-space: nowrap;
+}
+.modern-table tr.modern-row {
+  background: var(--surface);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.03), 0 0 0 1px rgba(0,0,0,0.02);
+  transition: all var(--transition);
+  cursor: pointer;
+}
+.modern-table tr.modern-row:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md), 0 0 0 1px var(--border);
+}
+.modern-table td {
+  padding: 1rem 1.25rem;
+  color: var(--text-2);
+  vertical-align: middle;
+}
+.modern-table td:first-child {
+  border-top-left-radius: var(--radius-md);
+  border-bottom-left-radius: var(--radius-md);
+}
+.modern-table td:last-child {
+  border-top-right-radius: var(--radius-md);
+  border-bottom-right-radius: var(--radius-md);
+}
+
+.company-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--petrol-light), var(--petrol));
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  box-shadow: inset 0 2px 4px rgba(255,255,255,0.1), var(--shadow-sm);
+  flex-shrink: 0;
+}

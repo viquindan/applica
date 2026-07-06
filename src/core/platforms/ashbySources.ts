@@ -1,0 +1,21 @@
+export const seedAshbyBoards = [
+  { token: 'deel', companyName: 'Deel', source: 'seed' },
+  { token: 'ontop', companyName: 'Ontop', source: 'seed' },
+  { token: 'mural', companyName: 'MURAL', source: 'seed' },
+  { token: 'ycombinator', companyName: 'Y Combinator', source: 'seed' },
+  { token: 'carta', companyName: 'Carta', source: 'seed' },
+  { token: 'notion', companyName: 'Notion', source: 'seed' },
+  { token: 'airtable', companyName: 'Airtable', source: 'seed' },
+  { token: 'canva', companyName: 'Canva', source: 'seed' },
+  { token: 'brex', companyName: 'Brex', source: 'seed' },
+  { token: 'ramp', companyName: 'Ramp', source: 'seed' },
+  { token: 'rippling', companyName: 'Rippling', source: 'seed' },
+  // Verified additions
+  { token: 'linear', companyName: 'Linear', source: 'seed' },
+  { token: 'replit', companyName: 'Replit', source: 'seed' },
+  { token: 'runway', companyName: 'Runway', source: 'seed' },
+  { token: 'watershed', companyName: 'Watershed', source: 'seed' },
+  { token: 'posthog', companyName: 'PostHog', source: 'seed' },
+  { token: 'cohere', companyName: 'Cohere', source: 'seed' },
+  { token: 'middesk', companyName: 'Middesk', source: 'seed' },
+];

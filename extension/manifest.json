@@ -1,0 +1,45 @@
+{
+  "manifest_version": 3,
+  "name": "Applica - Autollenado de postulaciones",
+  "version": "0.1.0",
+  "description": "Llena tus postulaciones a empleos (Greenhouse, Lever, Ashby, SmartRecruiters) con un clic, usando tu perfil de Applica.",
+  "permissions": ["storage", "activeTab", "scripting", "downloads"],
+  "host_permissions": [
+    "https://boards.greenhouse.io/*",
+    "https://job-boards.greenhouse.io/*",
+    "https://*.greenhouse.io/*",
+    "https://jobs.lever.co/*",
+    "https://jobs.ashbyhq.com/*",
+    "https://*.ashbyhq.com/*",
+    "https://jobs.smartrecruiters.com/*",
+    "https://careers.smartrecruiters.com/*",
+    "http://localhost:3000/*",
+    "https://localhost:3000/*"
+  ],
+  "background": { "service_worker": "background.js" },
+  "action": { "default_popup": "popup.html", "default_title": "Applica" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://boards.greenhouse.io/*",
+        "https://job-boards.greenhouse.io/*",
+        "https://*.greenhouse.io/*",
+        "https://jobs.lever.co/*",
+        "https://jobs.ashbyhq.com/*",
+        "https://*.ashbyhq.com/*",
+        "https://jobs.smartrecruiters.com/*",
+        "https://careers.smartrecruiters.com/*"
+      ],
+      "js": ["config.js", "content.js"],
+      "css": ["content.css"],
+      "run_at": "document_idle",
+      "all_frames": false
+    },
+    {
+      "matches": ["http://localhost:3000/*", "https://localhost:3000/*"],
+      "js": ["config.js", "connector.js"],
+      "run_at": "document_idle",
+      "all_frames": false
+    }
+  ]
+}
