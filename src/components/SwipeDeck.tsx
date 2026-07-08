@@ -1,7 +1,7 @@
 'use client';
 import { useState, useMemo } from 'react';
 import { vacancies, applications } from '@/db/schema';
-import { CompanyLogo, ScoreRing } from '@/components/JobCardUI';
+import { CompanyLogo, ScoreRing, ExtensionOffer } from '@/components/JobCardUI';
 
 type AppRow = typeof applications.$inferSelect & {
   vacancy: Pick<typeof vacancies.$inferSelect, 'title' | 'company' | 'platform' | 'url' | 'score' | 'location' | 'warnings' | 'description'> | null;
@@ -21,7 +21,6 @@ export default function SwipeDeck({
   cancelAssisted,
   openApp,
   isAtsApp,
-  ExtensionOffer,
 }: {
   apps: AppRow[];
   actioningId: string | null;
@@ -34,7 +33,6 @@ export default function SwipeDeck({
   cancelAssisted: (app: AppRow) => void;
   openApp: (app: AppRow) => void;
   isAtsApp: (app: AppRow) => boolean;
-  ExtensionOffer: React.ComponentType;
 }) {
   const [savedForLaterIds, setSavedForLaterIds] = useState<string[]>([]);
 

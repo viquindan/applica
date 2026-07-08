@@ -3,14 +3,16 @@ export const translations = {
     // Nav
     nav: {
       dashboard: 'Command Center',
-      applications: 'Pipeline',
+      applications: 'Applications',
+      feed: 'Feed',
+      pending: 'Pending',
       review: 'Review Queue',
       settings: 'Settings',
       logout: 'Log out',
       login: 'Sign In',
       register: 'Get Started',
       journey: 'Agent Status',
-      profile: 'Setup / Brain',
+      profile: 'Profile',
     },
     landing: {
       heroTitle: 'Search broadly. Apply selectively.',
@@ -297,6 +299,8 @@ export const translations = {
     nav: {
       dashboard: 'Panel',
       applications: 'Aplicaciones',
+      feed: 'Feed',
+      pending: 'Pendientes',
       review: 'Cola de revisión',
       settings: 'Configuración',
       logout: 'Cerrar sesión',
