@@ -21,11 +21,12 @@
 
 ## En curso / verificar
 - **Branch `v3-web-app`**: rediseño "Applica Executive" (base Stitch en `applica movil/` y `applica web/`). `master` queda intacto como V1.
-  - Tema global: paleta forest #123338 + dorado #fed65b, sidebar oscura, botones pill, tipografía 900/300.
-  - `/applications` reestructurado: Feed swipe (`SwipeDeck.tsx`, una vacante a la vez) para decisiones `pending_review`; tarjetas "Intervenciones Pendientes" para apps en `approved`; tabla "Historial" con todo lo demás. La máquina de estados y endpoints del apply engine (docs/APPLY-ENGINE.md §9) no se tocaron, solo se reorganizó la UI; se quitó el botón "Ya apliqué" (redundante con el swipe) a pedido del usuario.
+  - Tema global: paleta forest #123338 + dorado #fed65b, sombras ambientales tipo "quiet luxury", botones pill, tipografía 900/300.
+  - **Navegación reestructurada en 4 pantallas reales** (antes todo vivía en `/applications`): `/applications` = Feed (solo `SwipeDeck.tsx`, una vacante a la vez, botón discreto de "buscar ahora"); `/applications/pending` = Pendientes (captcha/confirmación de apps `approved` + `pending_review` con datos faltantes); `/applications/apps` = historial + "Motor de búsqueda" (cifras del funnel, frecuencia, automatización) colapsado por defecto; `/profile` sin cambios de ruta. Sidebar y `BottomNavigation.tsx` muestran las mismas 4 secciones. `/review` redirige a `/applications/pending`.
+  - Lógica compartida en `applications/data.ts` (query server-side única) + `useApplicationActions.ts`/`useSearchEngine.ts` (hooks cliente) para que la máquina de estados del apply engine (docs/APPLY-ENGINE.md §9) viva una sola vez y no diverja entre las 3 pantallas. `ApplicationsClient.tsx` (monolito V1) fue eliminado.
   - `/profile` rediseñado a "Executive Profile" (avatar, portafolio de CV, preferencias con slider de salario) conservando el auto-save y toda la lógica de subida/activación de CV.
-  - Responsive mobile-first casi idéntico al diseño móvil de Stitch: `BottomNavigation.tsx` + sidebar oculta bajo 768px, para ensayar cómo se vería la futura app (probablemente React Native).
-  - Verificado con `tsc --noEmit` limpio y capturas Playwright de landing (desktop/mobile). Las páginas autenticadas (`/applications`, `/profile`) no se verificaron visualmente en esta sesión por falta de sesión de prueba a mano; pendiente que el usuario las revise en su navegador.
+  - Responsive mobile-first casi idéntico al diseño móvil de Stitch: bottom nav pill flotante, mazo de tarjetas apiladas en el Feed, botones circulares SVG, para ensayar cómo se vería la futura app (probablemente React Native).
+  - Verificado con `tsc --noEmit` limpio y capturas Playwright (desktop/mobile) de landing, Feed, Pendientes, Apps y Perfil vía rutas `dev-preview` temporales con datos mock, borradas tras cada verificación (no se tocó la DB real).
 - Aprendizaje de respuestas de combobox (deal size, hunting vs expansion...): fix verificado en sintético; confirmar que la próxima postulación real las pre-llene.
 
 ## Pendiente
