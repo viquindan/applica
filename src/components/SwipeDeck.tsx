@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { vacancies, applications } from '@/db/schema';
 import { CompanyLogo, ScoreRing, ExtensionOffer } from '@/components/JobCardUI';
 
@@ -8,6 +8,10 @@ type AppRow = typeof applications.$inferSelect & {
 };
 
 type AttentionReason = { title: string; detail: string; cta: 'go' | 'fill' };
+
+const EXIT_MS = 260;
+const SWIPE_ROTATION_FACTOR = 0.06;
+const SWIPE_BADGE_FULL_OPACITY_PX = 100;
 
 export default function SwipeDeck({
   apps,
@@ -35,12 +39,23 @@ export default function SwipeDeck({
   isAtsApp: (app: AppRow) => boolean;
 }) {
   const [savedForLaterIds, setSavedForLaterIds] = useState<string[]>([]);
+  // Cards the user has decisively swiped/tapped away. Hidden immediately so the
+  // fly-off animation doesn't "snap back" while we wait on the server round-trip
+  // (assisted apply can take a beat before the status actually flips).
+  const [dismissedIds, setDismissedIds] = useState<Set<string>>(new Set());
+
+  const [dragX, setDragX] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const [exiting, setExiting] = useState<null | 'left' | 'right'>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
 
   const queue = useMemo(() => {
-    const saved = apps.filter((a) => savedForLaterIds.includes(a.id));
-    const rest = apps.filter((a) => !savedForLaterIds.includes(a.id));
+    const visible = apps.filter((a) => !dismissedIds.has(a.id));
+    const saved = visible.filter((a) => savedForLaterIds.includes(a.id));
+    const rest = visible.filter((a) => !savedForLaterIds.includes(a.id));
     return [...rest, ...saved];
-  }, [apps, savedForLaterIds]);
+  }, [apps, savedForLaterIds, dismissedIds]);
 
   const current = queue[0];
   const behind = queue.slice(1, 3);
@@ -66,6 +81,53 @@ export default function SwipeDeck({
   const descriptionText = (current.vacancy?.description ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
   const warnings = (current.vacancy?.warnings as string[] | null) ?? [];
 
+  const canDrag = !isProcessing && !inAttention && actioningId !== current.id && exiting === null;
+
+  function doExit(direction: 'left' | 'right') {
+    const app = current;
+    setExiting(direction);
+    setTimeout(() => {
+      if (direction === 'right') applyApp(app); else discardApp(app);
+      setDismissedIds((prev) => new Set(prev).add(app.id));
+      setExiting(null);
+      setDragX(0);
+    }, EXIT_MS);
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    if (!canDrag) return;
+    setDragging(true);
+    startXRef.current = e.clientX;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    setDragX(e.clientX - startXRef.current);
+  }
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    if (!dragging) return;
+    setDragging(false);
+    const width = cardRef.current?.clientWidth ?? 320;
+    const threshold = width * 0.25;
+    if (dragX > threshold) doExit('right');
+    else if (dragX < -threshold) doExit('left');
+    else setDragX(0);
+  }
+
+  const cardTransform = exiting
+    ? {
+        transform: `translateX(${exiting === 'right' ? 140 : -140}%) rotate(${exiting === 'right' ? 20 : -20}deg)`,
+        opacity: 0,
+        transition: `transform ${EXIT_MS}ms ease, opacity ${EXIT_MS}ms ease`,
+      }
+    : dragging
+      ? { transform: `translateX(${dragX}px) rotate(${dragX * SWIPE_ROTATION_FACTOR}deg)`, transition: 'none' }
+      : { transform: 'translateX(0) rotate(0)', transition: 'transform .3s ease' };
+
+  const dragProgress = Math.min(Math.abs(dragX) / SWIPE_BADGE_FULL_OPACITY_PX, 1);
+  const nopeOpacity = exiting === 'left' ? 1 : (!exiting && dragX < 0 ? dragProgress : 0);
+  const applyOpacity = exiting === 'right' ? 1 : (!exiting && dragX > 0 ? dragProgress : 0);
+
   return (
     <div className="swipe-deck-grid" style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) 300px', gap: '1.5rem', alignItems: 'start' }}>
       {/* ── Stacked deck ── */}
@@ -79,10 +141,38 @@ export default function SwipeDeck({
           }} />
         ))}
 
-        <div className="swipe-card" style={{
-          position: 'relative', zIndex: 10, background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
-          overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid rgba(18,51,56,.05)',
-        }}>
+        <div
+          ref={cardRef}
+          className="swipe-card"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          style={{
+            position: 'relative', zIndex: 10, background: 'var(--surface)', borderRadius: 'var(--radius-xl)',
+            overflow: 'hidden', boxShadow: 'var(--shadow-lg)', border: '1px solid rgba(18,51,56,.05)',
+            touchAction: canDrag ? 'none' : 'auto', cursor: canDrag ? (dragging ? 'grabbing' : 'grab') : 'default',
+            userSelect: 'none', ...cardTransform,
+          }}
+        >
+          {/* NOPE / APLICAR stamps, driven by drag distance - mirrors the Stitch prototype */}
+          <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '1.75rem' }}>
+            <div style={{
+              opacity: nopeOpacity, transform: 'rotate(-14deg)', border: '4px solid var(--danger)', color: 'var(--danger)',
+              fontWeight: 900, fontSize: '1.5rem', padding: '.25rem 1rem', borderRadius: 'var(--radius-md)',
+              background: 'rgba(255,255,255,.85)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
+            }}>
+              NOPE
+            </div>
+            <div style={{
+              opacity: applyOpacity, transform: 'rotate(14deg)', border: '4px solid var(--success)', color: 'var(--success)',
+              fontWeight: 900, fontSize: '1.5rem', padding: '.25rem 1rem', borderRadius: 'var(--radius-md)',
+              background: 'rgba(255,255,255,.85)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
+            }}>
+              APLICAR
+            </div>
+          </div>
+
           <div style={{
             position: 'relative', height: 220,
             background: `linear-gradient(160deg, var(--petrol) 0%, var(--petrol-light) 55%, #3d6a70 100%)`,
@@ -158,14 +248,14 @@ export default function SwipeDeck({
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
                   <button
                     title="No me interesa"
-                    disabled={actioningId === current.id}
-                    onClick={() => discardApp(current)}
+                    disabled={actioningId === current.id || exiting !== null}
+                    onClick={() => doExit('left')}
                     className="swipe-btn swipe-btn-ghost"
                   >
                     <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><path d="M6 6l12 12M18 6L6 18" /></svg>
                   </button>
                   <button
-                    disabled={actioningId === current.id}
+                    disabled={actioningId === current.id || exiting !== null}
                     onClick={() => setSavedForLaterIds((prev) => prev.includes(current.id) ? prev : [...prev, current.id])}
                     className="swipe-btn swipe-btn-save"
                   >
@@ -173,8 +263,8 @@ export default function SwipeDeck({
                   </button>
                   <button
                     title={isAtsApp(current) ? 'Abrimos la oferta con el formulario listo; solo resuelves el captcha y envías.' : 'Ver cómo aplicar a esta oferta.'}
-                    disabled={actioningId === current.id}
-                    onClick={() => applyApp(current)}
+                    disabled={actioningId === current.id || exiting !== null}
+                    onClick={() => doExit('right')}
                     className="swipe-btn swipe-btn-apply"
                   >
                     {actioningId === current.id ? <span className="spinner" style={{ width: 18, height: 18, borderTopColor: '#fff' }} /> : (
