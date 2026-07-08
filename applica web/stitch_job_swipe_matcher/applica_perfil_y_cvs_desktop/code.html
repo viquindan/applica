@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Applica - Profile Management</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#56421b",
+                        "surface-bright": "#faf9f9",
+                        "primary-fixed-dim": "#abccd2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed": "#c6e9ef",
+                        "error": "#BA1A1A",
+                        "on-primary-fixed": "#001f24",
+                        "on-surface-variant": "#414849",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f4f3f3",
+                        "on-tertiary-container": "#cbaf7e",
+                        "surface-variant": "#e3e2e2",
+                        "on-primary-container": "#97b9be",
+                        "surface": "#FAF9F9",
+                        "on-background": "#1a1c1c",
+                        "linkedin-blue": "#0A66C2",
+                        "secondary-fixed": "#ffe088",
+                        "primary": "#123338",
+                        "primary-container": "#2a4a4f",
+                        "inverse-on-surface": "#f1f0f0",
+                        "on-secondary-fixed": "#241a00",
+                        "tertiary": "#3d2c06",
+                        "on-secondary-fixed-variant": "#574500",
+                        "secondary-fixed-dim": "#e9c349",
+                        "tertiary-fixed-dim": "#dfc390",
+                        "surface-tint": "#446469",
+                        "success-green": "#10B981",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "outline-variant": "#C1C8C9",
+                        "tertiary-fixed": "#fddfa9",
+                        "on-tertiary-fixed": "#261900",
+                        "on-tertiary-fixed-variant": "#57441c",
+                        "inverse-primary": "#abccd2",
+                        "surface-container-highest": "#e3e2e2",
+                        "surface-container-high": "#e8e8e8",
+                        "secondary-container": "#fed65b",
+                        "surface-container": "#eeeeed",
+                        "outline": "#717879",
+                        "background": "#faf9f9",
+                        "on-primary-fixed-variant": "#2c4c51",
+                        "secondary": "#735c00",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#745c00"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    spacing: {
+                        "xl": "32px",
+                        "container-margin": "24px",
+                        "xs": "8px",
+                        "sm": "12px",
+                        "gutter": "16px",
+                        "md": "16px",
+                        "base": "4px",
+                        "lg": "24px"
+                    },
+                    fontFamily: {
+                        "display-lg-light": ["Inter"],
+                        "label-bold": ["Inter"],
+                        "title-lg": ["Inter"],
+                        "body-md": ["Inter"],
+                        "label-caps": ["Inter"],
+                        "headline-md": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-lg": ["Inter"]
+                    },
+                    fontSize: {
+                        "display-lg-light": ["36px", { lineHeight: "1.2", letterSpacing: "-0.01em", fontWeight: "300" }],
+                        "label-bold": ["11px", { lineHeight: "1.0", fontWeight: "700" }],
+                        "title-lg": ["20px", { lineHeight: "1.4", fontWeight: "600" }],
+                        "body-md": ["14px", { lineHeight: "1.5", fontWeight: "400" }],
+                        "label-caps": ["10px", { lineHeight: "1.0", letterSpacing: "0.1em", fontWeight: "900" }],
+                        "headline-md": ["24px", { lineHeight: "1.3", fontWeight: "700" }],
+                        "body-lg": ["18px", { lineHeight: "1.6", fontWeight: "400" }],
+                        "display-lg": ["36px", { lineHeight: "1.2", letterSpacing: "-0.02em", fontWeight: "900" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-surface text-on-surface font-body-md antialiased min-h-screen flex">
+<!-- SideNavBar (Shared Component) -->
+<nav class="bg-primary fixed left-0 top-0 h-full w-64 shadow-xl z-50 flex flex-col py-lg space-y-xs justify-between">
+<div>
+<div class="px-lg pb-xl">
+<h1 class="font-display-lg text-display-lg text-secondary-fixed">Applica</h1>
+<p class="font-label-bold text-label-bold text-secondary-fixed/70 mt-1 uppercase tracking-widest">Executive Career Suite</p>
+</div>
+<div class="space-y-xs font-label-bold text-label-bold">
+<a class="flex items-center gap-md text-on-primary p-md mx-sm hover:bg-primary-container/50 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">explore</span>
+<span>Feed</span>
+</a>
+<a class="flex items-center gap-md text-on-primary p-md mx-sm hover:bg-primary-container/50 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">work_history</span>
+<span>Applications</span>
+</a>
+<a class="flex items-center gap-md text-on-primary p-md mx-sm hover:bg-primary-container/50 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">hourglass_empty</span>
+<span>Pending</span>
+</a>
+<!-- Active State for Profile -->
+<a class="flex items-center gap-md bg-primary-container text-on-primary-container rounded-lg p-md mx-sm hover:bg-primary-container/50 transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined text-[24px]" style="font-variation-settings: 'FILL' 1;">account_circle</span>
+<span>Profile</span>
+</a>
+</div>
+</div>
+<div class="mt-auto space-y-xs font-label-bold text-label-bold pb-xl">
+<div class="px-lg pb-md">
+<button class="w-full bg-secondary-fixed text-on-secondary-fixed py-sm rounded-full active:scale-95 transition-transform duration-200 shadow-md">
+                    Premium Membership
+                </button>
+</div>
+<a class="flex items-center gap-md text-on-primary p-md mx-sm hover:bg-primary-container/50 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">help_outline</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-md text-on-primary p-md mx-sm hover:bg-primary-container/50 transition-all rounded-lg" href="#">
+<span class="material-symbols-outlined text-[24px]">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Canvas -->
+<main class="ml-64 flex-1 p-xl overflow-y-auto">
+<header class="mb-xl flex justify-between items-end border-b border-outline-variant pb-md">
+<div>
+<h2 class="font-headline-md text-headline-md text-primary">Executive Profile</h2>
+<p class="font-body-md text-body-md text-on-surface-variant mt-xs">Manage your professional identity and application materials.</p>
+</div>
+<button class="bg-primary-container text-on-primary w-32 py-sm rounded-full font-label-bold text-label-bold shadow-md hover:bg-primary transition-colors active:scale-95">
+                Save Changes
+            </button>
+</header>
+<div class="grid grid-cols-12 gap-xl max-w-[1200px] mx-auto">
+<!-- Left Column: Personal Info (Span 5) -->
+<div class="col-span-5 space-y-lg">
+<section class="bg-surface-container-lowest rounded-xl shadow-xl p-lg border border-outline-variant">
+<div class="flex flex-col items-center mb-lg">
+<div class="relative group cursor-pointer">
+<div class="w-32 h-32 rounded-full overflow-hidden border-2 border-secondary-fixed p-1">
+<img class="w-full h-full object-cover rounded-full bg-surface-variant" data-alt="A highly professional studio headshot of a corporate executive in a modern, well-lit office environment. The lighting is soft and flattering, highlighting confidence and sophistication. The color palette features cool pristine whites and subtle deep forest green accents in the background, matching the high-end, quiet luxury aesthetic of the application." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBryjoRE6Ea-ytgJiXTSVp3qcLatZWAGOAt-gHYZ7BK7tSuZlhx0TYXa6CSSDPqlknvpCL1SuQ_MdJ6KR_E6YW_BpdPVrt5HIQmPC0PLzUlueCvOyOKzi2UiSTP8m8IctZ4AOZqSb_u0y14UNmSgY90vmE5MU4V-bwSajpS15iKY8kYWBOZgTIIqfdw2nCedTCjb5HPsfMkf5hzwiF-ZnRXvUrXF09GacXVbr9w__R8DBFV-FdZVOpu"/>
+</div>
+<div class="absolute inset-0 bg-primary/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="material-symbols-outlined text-white">photo_camera</span>
+</div>
+</div>
+<h3 class="font-title-lg text-title-lg text-primary mt-md">Jonathan Hayes</h3>
+<p class="font-body-md text-body-md text-on-surface-variant">VP of Engineering</p>
+</div>
+<div class="space-y-md">
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase">Full Name</label>
+<input class="w-full px-sm py-sm rounded-lg border border-outline bg-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-on-surface font-body-md text-body-md" type="text" value="Jonathan Hayes"/>
+</div>
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase">Professional Title</label>
+<input class="w-full px-sm py-sm rounded-lg border border-outline bg-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-on-surface font-body-md text-body-md" type="text" value="VP of Engineering"/>
+</div>
+<div class="grid grid-cols-2 gap-md">
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase">Email</label>
+<input class="w-full px-sm py-sm rounded-lg border border-outline bg-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-on-surface font-body-md text-body-md" type="email" value="j.hayes@example.com"/>
+</div>
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase">Phone</label>
+<input class="w-full px-sm py-sm rounded-lg border border-outline bg-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-on-surface font-body-md text-body-md" type="tel" value="+1 (555) 019-2834"/>
+</div>
+</div>
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-xs uppercase">Executive Summary</label>
+<textarea class="w-full px-sm py-sm rounded-lg border border-outline bg-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-colors text-on-surface font-body-md text-body-md resize-none" rows="4">Strategic technology leader with 15+ years scaling engineering organizations in fintech and enterprise SaaS...</textarea>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: CV Management & Preferences (Span 7) -->
+<div class="col-span-7 space-y-lg">
+<!-- CV Management -->
+<section class="bg-surface-container-lowest rounded-xl shadow-xl p-lg border border-outline-variant relative overflow-hidden">
+<div class="absolute top-0 right-0 w-32 h-32 bg-primary-fixed/20 rounded-bl-full blur-3xl -z-10"></div>
+<h3 class="font-title-lg text-title-lg text-primary mb-md flex items-center gap-xs">
+<span class="material-symbols-outlined">description</span>
+                        Curriculum Vitae Portfolio
+                    </h3>
+<div class="space-y-sm mb-lg">
+<!-- Active CV -->
+<div class="flex items-center justify-between p-sm border border-secondary-fixed bg-secondary-fixed/5 rounded-lg">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-primary-container text-on-primary flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">picture_as_pdf</span>
+</div>
+<div>
+<p class="font-title-lg text-[16px] text-on-surface">Hayes_Exec_Resume_2024.pdf</p>
+<p class="font-label-bold text-label-bold text-on-surface-variant mt-1">Uploaded Oct 12 • 2.4 MB</p>
+</div>
+</div>
+<div class="flex items-center gap-sm">
+<span class="bg-primary text-on-primary font-label-bold text-label-bold px-sm py-1 rounded-full uppercase tracking-wider">Active</span>
+<button class="text-on-surface-variant hover:text-primary transition-colors"><span class="material-symbols-outlined">more_vert</span></button>
+</div>
+</div>
+<!-- Inactive CV -->
+<div class="flex items-center justify-between p-sm border border-outline-variant bg-surface rounded-lg opacity-70 hover:opacity-100 transition-opacity">
+<div class="flex items-center gap-md">
+<div class="w-10 h-10 rounded bg-surface-variant text-on-surface-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-[20px]">description</span>
+</div>
+<div>
+<p class="font-title-lg text-[16px] text-on-surface">Hayes_TechLead_Old.pdf</p>
+<p class="font-label-bold text-label-bold text-on-surface-variant mt-1">Uploaded Mar 04 • 1.8 MB</p>
+</div>
+</div>
+<button class="text-on-surface-variant hover:text-primary transition-colors px-sm py-1 border border-outline rounded-full font-label-bold text-label-bold">Set Active</button>
+</div>
+</div>
+<!-- Upload Area -->
+<button class="w-full border-2 border-dashed border-outline-variant rounded-lg p-lg flex flex-col items-center justify-center text-on-surface-variant hover:border-primary hover:text-primary hover:bg-primary-fixed/10 transition-all">
+<span class="material-symbols-outlined text-[32px] mb-2">cloud_upload</span>
+<span class="font-title-lg text-[16px]">Upload New Document</span>
+<span class="font-label-bold text-label-bold mt-1">PDF, DOCX up to 10MB</span>
+</button>
+</section>
+<!-- Job Preferences -->
+<section class="bg-surface-container-lowest rounded-xl shadow-xl p-lg border border-outline-variant">
+<h3 class="font-title-lg text-title-lg text-primary mb-md flex items-center gap-xs">
+<span class="material-symbols-outlined">tune</span>
+                        Opportunity Preferences
+                    </h3>
+<div class="space-y-lg">
+<!-- Salary -->
+<div>
+<div class="flex justify-between items-end mb-sm">
+<label class="block font-label-bold text-label-bold text-on-surface-variant uppercase">Base Salary Expectation (USD)</label>
+<span class="font-title-lg text-title-lg text-primary">$250k - $300k+</span>
+</div>
+<div class="h-2 bg-surface-variant rounded-full relative overflow-hidden">
+<div class="absolute left-1/4 right-1/4 h-full bg-secondary-fixed rounded-full"></div>
+</div>
+<div class="flex justify-between font-label-bold text-label-bold text-on-surface-variant mt-2">
+<span>$150k</span>
+<span>$400k+</span>
+</div>
+</div>
+<!-- Work Model -->
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-sm uppercase">Preferred Work Model</label>
+<div class="flex gap-sm">
+<button class="px-md py-sm rounded-full border border-primary bg-primary text-on-primary font-label-bold text-label-bold transition-all shadow-md">
+                                    Hybrid
+                                </button>
+<button class="px-md py-sm rounded-full border border-primary bg-primary text-on-primary font-label-bold text-label-bold transition-all shadow-md">
+                                    Remote
+                                </button>
+<button class="px-md py-sm rounded-full border border-outline-variant bg-surface text-on-surface-variant font-label-bold text-label-bold hover:border-primary transition-all">
+                                    On-Site
+                                </button>
+</div>
+</div>
+<!-- Location -->
+<div>
+<label class="block font-label-bold text-label-bold text-on-surface-variant mb-sm uppercase">Target Markets</label>
+<div class="flex flex-wrap gap-sm">
+<span class="flex items-center gap-1 px-sm py-1 bg-surface-variant text-on-surface-variant rounded-md font-label-bold text-label-bold">
+                                    New York, NY <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error">close</span>
+</span>
+<span class="flex items-center gap-1 px-sm py-1 bg-surface-variant text-on-surface-variant rounded-md font-label-bold text-label-bold">
+                                    San Francisco, CA <span class="material-symbols-outlined text-[14px] cursor-pointer hover:text-error">close</span>
+</span>
+<span class="flex items-center gap-1 px-sm py-1 border border-dashed border-outline-variant text-primary rounded-md font-label-bold text-label-bold cursor-pointer hover:bg-surface-variant">
+<span class="material-symbols-outlined text-[14px]">add</span> Add City
+                                </span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</div>
+</main>
+</body></html>

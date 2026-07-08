@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+
+<html class="scroll-smooth" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Applica | Executive Career Suite</title>
+<!-- Material Symbols -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS Setup -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration (Provided) -->
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-dim": "#dadada",
+                        "surface-container-lowest": "#ffffff",
+                        "tertiary-container": "#56421b",
+                        "surface-bright": "#faf9f9",
+                        "primary-fixed-dim": "#abccd2",
+                        "on-surface": "#1a1c1c",
+                        "primary-fixed": "#c6e9ef",
+                        "error": "#BA1A1A",
+                        "on-primary-fixed": "#001f24",
+                        "on-surface-variant": "#414849",
+                        "on-tertiary": "#ffffff",
+                        "surface-container-low": "#f4f3f3",
+                        "on-tertiary-container": "#cbaf7e",
+                        "surface-variant": "#e3e2e2",
+                        "on-primary-container": "#97b9be",
+                        "surface": "#FAF9F9",
+                        "on-background": "#1a1c1c",
+                        "linkedin-blue": "#0A66C2",
+                        "secondary-fixed": "#ffe088",
+                        "primary": "#123338",
+                        "primary-container": "#2a4a4f",
+                        "inverse-on-surface": "#f1f0f0",
+                        "on-secondary-fixed": "#241a00",
+                        "tertiary": "#3d2c06",
+                        "on-secondary-fixed-variant": "#574500",
+                        "secondary-fixed-dim": "#e9c349",
+                        "tertiary-fixed-dim": "#dfc390",
+                        "surface-tint": "#446469",
+                        "success-green": "#10B981",
+                        "error-container": "#ffdad6",
+                        "on-secondary": "#ffffff",
+                        "inverse-surface": "#2f3131",
+                        "outline-variant": "#C1C8C9",
+                        "tertiary-fixed": "#fddfa9",
+                        "on-tertiary-fixed": "#261900",
+                        "on-tertiary-fixed-variant": "#57441c",
+                        "inverse-primary": "#abccd2",
+                        "surface-container-highest": "#e3e2e2",
+                        "surface-container-high": "#e8e8e8",
+                        "secondary-container": "#fed65b",
+                        "surface-container": "#eeeeed",
+                        "outline": "#717879",
+                        "background": "#faf9f9",
+                        "on-primary-fixed-variant": "#2c4c51",
+                        "secondary": "#735c00",
+                        "on-error": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "on-primary": "#ffffff",
+                        "on-secondary-container": "#745c00"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.25rem",
+                        "lg": "0.5rem",
+                        "xl": "0.75rem",
+                        "full": "9999px"
+                    },
+                    "spacing": {
+                        "xl": "32px",
+                        "container-margin": "24px",
+                        "xs": "8px",
+                        "sm": "12px",
+                        "gutter": "16px",
+                        "md": "16px",
+                        "base": "4px",
+                        "lg": "24px"
+                    },
+                    "fontFamily": {
+                        "display-lg-light": ["Inter", "sans-serif"],
+                        "label-bold": ["Inter", "sans-serif"],
+                        "title-lg": ["Inter", "sans-serif"],
+                        "body-md": ["Inter", "sans-serif"],
+                        "label-caps": ["Inter", "sans-serif"],
+                        "headline-md": ["Inter", "sans-serif"],
+                        "body-lg": ["Inter", "sans-serif"],
+                        "display-lg": ["Inter", "sans-serif"]
+                    },
+                    "fontSize": {
+                        "display-lg-light": ["36px", { "lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "300" }],
+                        "label-bold": ["11px", { "lineHeight": "1.0", "fontWeight": "700" }],
+                        "title-lg": ["20px", { "lineHeight": "1.4", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "1.5", "fontWeight": "400" }],
+                        "label-caps": ["10px", { "lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "900" }],
+                        "headline-md": ["24px", { "lineHeight": "1.3", "fontWeight": "700" }],
+                        "body-lg": ["18px", { "lineHeight": "1.6", "fontWeight": "400" }],
+                        "display-lg": ["36px", { "lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "900" }]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&display=swap');
+        
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid theme('colors.outline-variant');
+        }
+        
+        .dark-glass-panel {
+            background: rgba(18, 51, 56, 0.85); /* primary color base */
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 224, 136, 0.1); /* secondary-fixed base */
+        }
+        
+        /* Smooth reveal animations */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.8s cubic-bezier(0.5, 0, 0, 1);
+        }
+        
+        .reveal.active {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body class="font-body-md text-body-md antialiased overflow-x-hidden selection:bg-secondary-fixed selection:text-on-secondary-fixed">
+<!-- TopNavBar (Adapted for Landing Page - Linear Intent overrides full nav rendering, keeping it minimal) -->
+<header class="fixed top-0 w-full z-50 glass-panel border-b-0 shadow-[0_4px_30px_rgba(0,0,0,0.05)] transition-all duration-300" id="main-header">
+<div class="flex justify-between items-center h-16 px-container-margin max-w-screen-xl mx-auto">
+<!-- Brand -->
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-2xl" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<span class="font-display-lg text-[24px] text-primary tracking-tight">Applica</span>
+</div>
+<!-- Actions -->
+<div class="flex items-center gap-md">
+<a class="hidden md:block font-label-bold text-label-bold text-on-surface-variant hover:text-primary transition-colors" href="#">Log In</a>
+<a class="bg-primary-container text-on-primary font-label-bold text-label-bold px-md py-xs rounded-full shadow-md active:scale-95 duration-200 transition-transform" href="#">Get Started</a>
+</div>
+</div>
+</header>
+<main>
+<!-- Hero Section -->
+<section class="relative min-h-screen flex items-center justify-center pt-24 pb-16 overflow-hidden bg-primary-container">
+<!-- Background Image -->
+<div class="absolute inset-0 z-0">
+<div class="bg-cover bg-center w-full h-full opacity-40 mix-blend-overlay" data-alt="A sophisticated, modern executive corner office with floor-to-ceiling windows overlooking a sweeping metropolis at dawn. The light is soft and diffused, creating a serene, high-end atmosphere. Luxurious dark wood furniture, minimalist decor, and subtle gold accents reflect a quiet luxury aesthetic. The overall mood is ambitious, calm, and exclusive, utilizing a palette of deep greens, rich browns, and pristine whites." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuDD8Px4QBPcdxasWpzIYUa_VcrBLFxv5RbfUiLN_iiX_kWpLqobJ8joTD-FH3yMS0JDtatHHXblEaQ44UsyKbZZqo50vHXPpJTSwO20k6emHOtJ3khx9FmxHY2KdoORAoaYLQO8JN_btakIzjHcSxo_aIi61Kx1NIfGDi_rWhwR49yzgwP4OtVfxyHJMD0Hk9g39TL-ZfdcqkcyQM1ViQmUPSATQoYHlob618HLfekMQP44E2PKppqC')"></div>
+<!-- Gradient Overlay -->
+<div class="absolute inset-0 bg-gradient-to-t from-primary-container via-primary-container/80 to-transparent"></div>
+<div class="absolute inset-0 bg-gradient-to-r from-primary-container via-primary-container/60 to-transparent"></div>
+</div>
+<div class="relative z-10 w-full max-w-screen-xl mx-auto px-container-margin grid grid-cols-1 lg:grid-cols-12 gap-xl items-center">
+<!-- Hero Content -->
+<div class="lg:col-span-7 flex flex-col space-y-lg reveal active">
+<div class="inline-flex items-center gap-2 bg-secondary-fixed/20 border border-secondary-fixed/30 rounded-full px-sm py-1 w-max">
+<span class="material-symbols-outlined text-secondary-fixed text-sm" style="font-variation-settings: 'FILL' 1;">star</span>
+<span class="font-label-caps text-label-caps text-secondary-fixed uppercase tracking-widest">Exclusive Executive Suite</span>
+</div>
+<h1 class="font-display-lg text-display-lg text-surface-container-lowest md:text-[56px] leading-[1.1]">
+                        Elevate your career trajectory with <span class="text-secondary-fixed">AI-precision.</span>
+</h1>
+<p class="font-body-lg text-body-lg text-primary-fixed-dim max-w-xl">
+                        Applica bypasses the noise of traditional job boards. We curate elite opportunities in Tech and Finance, automating your applications with bespoke, AI-tailored precision.
+                    </p>
+<div class="flex flex-col sm:flex-row gap-md pt-sm">
+<button class="bg-secondary-fixed text-on-secondary-fixed font-title-lg text-title-lg px-xl py-sm rounded-full shadow-lg active:scale-95 duration-200 transition-transform flex items-center justify-center gap-2 hover:bg-secondary-container">
+                            Request Access
+                            <span class="material-symbols-outlined">arrow_forward</span>
+</button>
+<button class="dark-glass-panel text-surface-container-lowest font-title-lg text-title-lg px-xl py-sm rounded-full active:scale-95 duration-200 transition-transform hover:bg-primary-container/50">
+                            View Methodology
+                        </button>
+</div>
+<div class="flex items-center gap-sm pt-xl">
+<div class="flex -space-x-3">
+<img class="w-10 h-10 rounded-full border-2 border-primary-container object-cover" data-alt="A professional headshot of a confident female executive in a modern blazer, soft natural lighting, high-end corporate style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAAXd3F_zZEnmcRpjFOfpKVz0Fsxu1itGBLkOn0jwUBGkgrk_NLQ_24klpAIwgFQOqvY7oeDTkWCS_xjF7fDSq7vIdrI6WSyuVBkJpAFIH-wiphGAYgCgWZZLilKKfqznL0x1rZPln5GsnafqecZcE7FUfg1vVoopH2cgaNgUZ8Z02V-1ccX7BAZ20gfTdWHIA1MOSp-lJ8JupurCOrFpvZ_QwhsHzoJ6cSF39Ba85R24-knq4Ay7NN"/>
+<img class="w-10 h-10 rounded-full border-2 border-primary-container object-cover" data-alt="A professional headshot of a distinguished male finance director, wearing a tailored suit, warm studio lighting, sophisticated corporate aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAJ2pVSs2YvLkm_eksOrIs6tySZ1AL5UlOjZ1Nhy9ap28Se1H7FfBKmDauvuIw8xWGt1i2bDaiH0DdD85JK8k8XUiuv2bI7ygKV9sZOBQERvnhAqgDjzr_Z2VRcGtsoWy7rkaTlCZ3yZAwKL3lH4x6y_RHCnp6LqmAas0_jTkxrTVqWY_YPdC7e-GMSOPLhvtzsHB53iv8qLgm8ylsjRZF7noXXFhv544IlbtlN2ryHe55JoaCAfIC0"/>
+<img class="w-10 h-10 rounded-full border-2 border-primary-container object-cover" data-alt="A professional headshot of a young, dynamic tech founder, minimalist background, bright and optimistic lighting, premium quality." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBxLENKauZjjvxMF6LsK9XZOfhtMTmzw-xi6Pzwi0DdLfoZ6dzK-pIma57BWtHL09ZhcyTlZ0NPlS35KnhV7OZ3Z4XnPexIekfMxTKoNP7B-SM0Px7uP5nC-xqvfUnpJQqVR3tiAVO-A7qLKBF_61S9cbnZiARNIqBTdvnpZ-EF48Z4oud-KQAf1Y9UvIwM0kgsMysLLHonSi_99lOAQ-ljeijKgugx61AuSfmoJi2RAL-HIROjbCAn"/>
+</div>
+<div class="font-body-md text-body-md text-primary-fixed-dim text-sm">
+<span class="text-secondary-fixed font-label-bold">Join 5,000+</span> executives securing placements.
+                        </div>
+</div>
+</div>
+<!-- Hero Visual (Bento/Card Preview) -->
+<div class="lg:col-span-5 relative hidden md:block reveal active" style="transition-delay: 200ms;">
+<!-- Decorative Background Blur -->
+<div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-secondary-fixed/10 blur-[100px] rounded-full z-0 pointer-events-none"></div>
+<div class="relative z-10 w-full max-w-sm mx-auto">
+<!-- Mock App Card -->
+<div class="bg-surface-container-lowest rounded-xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] border border-outline-variant/30 overflow-hidden transform rotate-2 hover:rotate-0 transition-transform duration-500">
+<!-- Card Header Image -->
+<div class="h-40 relative w-full">
+<div class="bg-cover bg-center w-full h-full" data-alt="A sleek, architectural exterior of a modern tech campus building in Silicon Valley. Glass facades reflecting a clear blue sky. Professional, high-end corporate environment imagery with a clean, light-mode aesthetic." style="background-image: url('https://lh3.googleusercontent.com/aida-public/AB6AXuB_x3iknlJ0HfyucqqGt0pEbZBTYcFB20tCjqKKP4n0Nms4HMPE0lLa51-Ev1w5RRnt4_oSEpqlx3mrS26RmmnXpfBAqgh2XFVsYdQncKxaT4k2Lu-Vxs3nwG4CxkhR-jMktNHMf-L0Y4PRsHKCNh0Sr_yA9p725nH0vaQQps9MQ0bUyD8KmcKb73tA-ZzTn5C_l2prBkX9t4eTBLTdk7P8tukHHUr-wdlhcfvXM4zryazFBhJFR0-N')"></div>
+<div class="absolute top-sm right-sm bg-primary-container text-secondary-fixed font-label-caps text-label-caps px-2 py-1 rounded-full flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+                                    MATCH 98%
+                                </div>
+</div>
+<!-- Card Content -->
+<div class="p-container-margin bg-surface-container-lowest">
+<div class="font-label-bold text-label-bold text-outline uppercase tracking-wider mb-xs">VP of Engineering</div>
+<h3 class="font-headline-md text-headline-md text-on-surface mb-2">Nexus Dynamics</h3>
+<div class="flex flex-wrap gap-xs mb-lg">
+<span class="bg-surface-container text-on-surface-variant font-label-bold text-label-bold px-3 py-1 rounded-full">Remote</span>
+<span class="bg-surface-container text-on-surface-variant font-label-bold text-label-bold px-3 py-1 rounded-full">$250k - $320k</span>
+</div>
+<div class="flex gap-md border-t border-surface-variant pt-md">
+<button class="w-16 h-16 rounded-full border border-outline-variant flex items-center justify-center text-on-surface-variant hover:bg-surface-variant transition-colors">
+<span class="material-symbols-outlined text-2xl">close</span>
+</button>
+<button class="flex-1 bg-primary text-on-primary rounded-full flex items-center justify-center font-title-lg text-title-lg gap-2 shadow-md hover:bg-primary-container transition-colors">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">check</span>
+                                        Auto-Apply
+                                    </button>
+</div>
+</div>
+</div>
+<!-- Floating Notification -->
+<div class="absolute -bottom-8 -left-8 bg-surface-container-lowest p-sm rounded-lg shadow-xl border border-outline-variant/30 flex items-center gap-sm animate-bounce" style="animation-duration: 3s;">
+<div class="w-10 h-10 rounded-full bg-success-green/20 flex items-center justify-center">
+<span class="material-symbols-outlined text-success-green" style="font-variation-settings: 'FILL' 1;">check_circle</span>
+</div>
+<div>
+<div class="font-label-bold text-label-bold text-on-surface">Application Sent</div>
+<div class="font-body-md text-[12px] text-on-surface-variant">Nexus Dynamics received your profile.</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- How It Works Section (Bento Grid) -->
+<section class="py-24 bg-surface relative z-20">
+<div class="max-w-screen-xl mx-auto px-container-margin">
+<div class="text-center max-w-2xl mx-auto mb-16 reveal">
+<h2 class="font-display-lg text-display-lg text-primary mb-sm">The Concierge Experience</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant">
+                        Our intelligent pipeline transforms hours of applications into a seamless, curated swipe. 
+                        Your expertise deserves a sophisticated platform.
+                    </p>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-lg">
+<!-- Step 1 -->
+<div class="glass-panel p-lg rounded-xl reveal flex flex-col h-full hover:-translate-y-2 transition-transform duration-300">
+<div class="w-14 h-14 rounded-full bg-linkedin-blue/10 flex items-center justify-center mb-md border border-linkedin-blue/20">
+<span class="material-symbols-outlined text-linkedin-blue text-3xl">link</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-2">1. Connect LinkedIn</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">
+                            Securely sync your professional history. We extract your achievements, narrative, and skills without manual data entry.
+                        </p>
+</div>
+<!-- Step 2 -->
+<div class="bg-primary text-on-primary p-lg rounded-xl shadow-xl reveal flex flex-col h-full relative overflow-hidden transform md:-translate-y-4 hover:-translate-y-6 transition-transform duration-300" style="transition-delay: 100ms;">
+<div class="absolute -right-10 -top-10 w-32 h-32 bg-secondary-fixed/20 rounded-full blur-2xl"></div>
+<div class="w-14 h-14 rounded-full bg-secondary-fixed/20 flex items-center justify-center mb-md border border-secondary-fixed/30 relative z-10">
+<span class="material-symbols-outlined text-secondary-fixed text-3xl">auto_awesome</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-surface-container-lowest mb-2 relative z-10">2. AI Profile Build</h3>
+<p class="font-body-md text-body-md text-primary-fixed-dim flex-1 relative z-10">
+                            Our LLMs craft bespoke resumes and cover letters tailored specifically to each executive role's unique requirements.
+                        </p>
+<!-- Mini visual -->
+<div class="mt-md bg-primary-container rounded-lg p-sm border border-outline-variant/20 relative z-10">
+<div class="h-2 bg-secondary-fixed/40 rounded w-3/4 mb-2"></div>
+<div class="h-2 bg-surface-container/20 rounded w-1/2 mb-2"></div>
+<div class="h-2 bg-surface-container/20 rounded w-5/6"></div>
+</div>
+</div>
+<!-- Step 3 -->
+<div class="glass-panel p-lg rounded-xl reveal flex flex-col h-full hover:-translate-y-2 transition-transform duration-300" style="transition-delay: 200ms;">
+<div class="w-14 h-14 rounded-full bg-surface-variant flex items-center justify-center mb-md border border-outline-variant">
+<span class="material-symbols-outlined text-primary text-3xl">swipe_right</span>
+</div>
+<h3 class="font-title-lg text-title-lg text-on-surface mb-2">3. Swipe &amp; Apply</h3>
+<p class="font-body-md text-body-md text-on-surface-variant flex-1">
+                            Review curated, high-relevance roles. Approve with a swipe, and Applica handles the entire submission process instantly.
+                        </p>
+</div>
+</div>
+</div>
+</section>
+</main>
+<!-- Footer -->
+<footer class="bg-surface-container-lowest border-t border-outline-variant/50 py-lg">
+<div class="max-w-screen-xl mx-auto px-container-margin flex flex-col md:flex-row justify-between items-center gap-md">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-primary text-xl" style="font-variation-settings: 'FILL' 1;">diamond</span>
+<span class="font-label-bold text-label-bold text-primary">Applica Inc. © 2024</span>
+</div>
+<div class="flex gap-lg">
+<a class="font-body-md text-sm text-on-surface-variant hover:text-primary" href="#">Privacy</a>
+<a class="font-body-md text-sm text-on-surface-variant hover:text-primary" href="#">Terms</a>
+<a class="font-body-md text-sm text-on-surface-variant hover:text-primary" href="#">Contact</a>
+</div>
+</div>
+</footer>
+<script>
+        // Simple reveal animation on scroll
+        document.addEventListener("DOMContentLoaded", () => {
+            const reveals = document.querySelectorAll(".reveal:not(.active)");
+            
+            const revealOnScroll = () => {
+                const windowHeight = window.innerHeight;
+                const elementVisible = 100;
+                
+                reveals.forEach((reveal) => {
+                    const elementTop = reveal.getBoundingClientRect().top;
+                    if (elementTop < windowHeight - elementVisible) {
+                        reveal.classList.add("active");
+                    }
+                });
+            };
+
+            window.addEventListener("scroll", revealOnScroll);
+            revealOnScroll(); // Trigger on load
+            
+            // Header scroll effect
+            const header = document.getElementById('main-header');
+            window.addEventListener('scroll', () => {
+                if (window.scrollY > 50) {
+                    header.classList.add('shadow-md');
+                } else {
+                    header.classList.remove('shadow-md');
+                }
+            });
+        });
+    </script>
+</body></html>

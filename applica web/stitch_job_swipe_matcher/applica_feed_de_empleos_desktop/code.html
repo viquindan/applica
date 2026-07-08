@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+
+<html lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Applica - Executive Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+          darkMode: "class",
+          theme: {
+            extend: {
+              "colors": {
+                      "surface-dim": "#dadada",
+                      "surface-container-lowest": "#ffffff",
+                      "tertiary-container": "#56421b",
+                      "surface-bright": "#faf9f9",
+                      "primary-fixed-dim": "#abccd2",
+                      "on-surface": "#1a1c1c",
+                      "primary-fixed": "#c6e9ef",
+                      "error": "#BA1A1A",
+                      "on-primary-fixed": "#001f24",
+                      "on-surface-variant": "#414849",
+                      "on-tertiary": "#ffffff",
+                      "surface-container-low": "#f4f3f3",
+                      "on-tertiary-container": "#cbaf7e",
+                      "surface-variant": "#e3e2e2",
+                      "on-primary-container": "#97b9be",
+                      "surface": "#FAF9F9",
+                      "on-background": "#1a1c1c",
+                      "linkedin-blue": "#0A66C2",
+                      "secondary-fixed": "#ffe088",
+                      "primary": "#123338",
+                      "primary-container": "#2a4a4f",
+                      "inverse-on-surface": "#f1f0f0",
+                      "on-secondary-fixed": "#241a00",
+                      "tertiary": "#3d2c06",
+                      "on-secondary-fixed-variant": "#574500",
+                      "secondary-fixed-dim": "#e9c349",
+                      "tertiary-fixed-dim": "#dfc390",
+                      "surface-tint": "#446469",
+                      "success-green": "#10B981",
+                      "error-container": "#ffdad6",
+                      "on-secondary": "#ffffff",
+                      "inverse-surface": "#2f3131",
+                      "outline-variant": "#C1C8C9",
+                      "tertiary-fixed": "#fddfa9",
+                      "on-tertiary-fixed": "#261900",
+                      "on-tertiary-fixed-variant": "#57441c",
+                      "inverse-primary": "#abccd2",
+                      "surface-container-highest": "#e3e2e2",
+                      "surface-container-high": "#e8e8e8",
+                      "secondary-container": "#fed65b",
+                      "surface-container": "#eeeeed",
+                      "outline": "#717879",
+                      "background": "#faf9f9",
+                      "on-primary-fixed-variant": "#2c4c51",
+                      "secondary": "#735c00",
+                      "on-error": "#ffffff",
+                      "on-error-container": "#93000a",
+                      "on-primary": "#ffffff",
+                      "on-secondary-container": "#745c00"
+              },
+              "borderRadius": {
+                      "DEFAULT": "0.25rem",
+                      "lg": "0.5rem",
+                      "xl": "0.75rem",
+                      "full": "9999px"
+              },
+              "spacing": {
+                      "xl": "32px",
+                      "container-margin": "24px",
+                      "xs": "8px",
+                      "sm": "12px",
+                      "gutter": "16px",
+                      "md": "16px",
+                      "base": "4px",
+                      "lg": "24px"
+              },
+              "fontFamily": {
+                      "display-lg-light": [
+                              "Inter"
+                      ],
+                      "label-bold": [
+                              "Inter"
+                      ],
+                      "title-lg": [
+                              "Inter"
+                      ],
+                      "body-md": [
+                              "Inter"
+                      ],
+                      "label-caps": [
+                              "Inter"
+                      ],
+                      "headline-md": [
+                              "Inter"
+                      ],
+                      "body-lg": [
+                              "Inter"
+                      ],
+                      "display-lg": [
+                              "Inter"
+                      ]
+              },
+              "fontSize": {
+                      "display-lg-light": [
+                              "36px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.01em",
+                                      "fontWeight": "300"
+                              }
+                      ],
+                      "label-bold": [
+                              "11px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "title-lg": [
+                              "20px",
+                              {
+                                      "lineHeight": "1.4",
+                                      "fontWeight": "600"
+                              }
+                      ],
+                      "body-md": [
+                              "14px",
+                              {
+                                      "lineHeight": "1.5",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "label-caps": [
+                              "10px",
+                              {
+                                      "lineHeight": "1.0",
+                                      "letterSpacing": "0.1em",
+                                      "fontWeight": "900"
+                              }
+                      ],
+                      "headline-md": [
+                              "24px",
+                              {
+                                      "lineHeight": "1.3",
+                                      "fontWeight": "700"
+                              }
+                      ],
+                      "body-lg": [
+                              "18px",
+                              {
+                                      "lineHeight": "1.6",
+                                      "fontWeight": "400"
+                              }
+                      ],
+                      "display-lg": [
+                              "36px",
+                              {
+                                      "lineHeight": "1.2",
+                                      "letterSpacing": "-0.02em",
+                                      "fontWeight": "900"
+                              }
+                      ]
+              }
+      },
+          },
+        }
+      </script>
+<style>
+        body { background-color: #faf9f9; color: #1a1c1c; font-family: 'Inter', sans-serif; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+        }
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        
+        .job-card-deck {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            perspective: 1000px;
+        }
+        .job-card {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            transform-origin: bottom center;
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.5s ease, filter 0.5s ease;
+        }
+        
+        .card-front { transform: translateY(0) scale(1) translateZ(0); z-index: 10; opacity: 1; filter: brightness(1); }
+        .card-middle { transform: translateY(12px) scale(0.95) translateZ(-50px); z-index: 9; opacity: 0.8; filter: brightness(0.9); }
+        .card-back { transform: translateY(24px) scale(0.9) translateZ(-100px); z-index: 8; opacity: 0.5; filter: brightness(0.8); }
+        .card-hidden { transform: translateY(36px) scale(0.85) translateZ(-150px); z-index: 7; opacity: 0; pointer-events: none; }
+        
+        .swipe-left { transform: translateX(-150%) rotate(-15deg) !important; opacity: 0 !important; pointer-events: none; }
+        .swipe-right { transform: translateX(150%) rotate(15deg) !important; opacity: 0 !important; pointer-events: none; }
+
+    </style>
+</head>
+<body class="bg-background text-on-background h-screen overflow-hidden flex">
+<!-- SideNavBar (Desktop Only) -->
+<nav class="hidden md:flex flex-col py-lg space-y-xs fixed left-0 top-0 h-full w-64 bg-primary dark:bg-surface-container-highest shadow-xl z-50">
+<div class="px-md mb-xl flex items-center gap-sm">
+<div class="w-10 h-10 rounded-full bg-secondary-fixed flex items-center justify-center">
+<span class="material-symbols-outlined text-on-secondary-fixed text-[24px]">work</span>
+</div>
+<div>
+<h1 class="font-display-lg text-display-lg text-secondary-fixed tracking-tight" style="font-size: 24px; line-height: 1;">Applica</h1>
+<p class="text-primary-fixed-dim font-label-bold text-label-bold mt-1">Executive Career Suite</p>
+</div>
+</div>
+<div class="flex-1 px-sm space-y-2">
+<!-- Feed (Active) -->
+<a class="flex items-center gap-md bg-primary-container text-on-primary-container rounded-lg p-md mx-sm active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">explore</span>
+<span class="font-body-md text-body-md font-bold">Feed</span>
+</a>
+<!-- Applications -->
+<a class="flex items-center gap-md text-on-primary dark:text-on-surface-variant p-md mx-sm hover:bg-primary-container/50 dark:hover:bg-surface-variant transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">work_history</span>
+<span class="font-body-md text-body-md">Applications</span>
+</a>
+<!-- Pending -->
+<a class="flex items-center gap-md text-on-primary dark:text-on-surface-variant p-md mx-sm hover:bg-primary-container/50 dark:hover:bg-surface-variant transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">hourglass_empty</span>
+<span class="font-body-md text-body-md">Pending</span>
+</a>
+<!-- Profile -->
+<a class="flex items-center gap-md text-on-primary dark:text-on-surface-variant p-md mx-sm hover:bg-primary-container/50 dark:hover:bg-surface-variant transition-all active:scale-95 duration-200" href="#">
+<span class="material-symbols-outlined">account_circle</span>
+<span class="font-body-md text-body-md">Profile</span>
+</a>
+</div>
+<div class="px-md mt-auto mb-md">
+<button class="w-full bg-secondary-fixed text-on-secondary-fixed font-body-md text-body-md font-bold py-sm rounded-full flex items-center justify-center gap-2 hover:bg-secondary-fixed-dim transition-colors shadow-md active:scale-95">
+<span class="material-symbols-outlined text-[18px]">workspace_premium</span>
+                Premium Membership
+            </button>
+</div>
+<div class="px-sm space-y-1 mt-4">
+<a class="flex items-center gap-md text-on-primary/70 p-sm mx-sm hover:text-on-primary transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">help_outline</span>
+<span>Support</span>
+</a>
+<a class="flex items-center gap-md text-on-primary/70 p-sm mx-sm hover:text-on-primary transition-colors text-sm" href="#">
+<span class="material-symbols-outlined text-[20px]">logout</span>
+<span>Sign Out</span>
+</a>
+</div>
+</nav>
+<!-- Main Content Area -->
+<main class="ml-64 flex-1 flex h-full overflow-hidden bg-surface-bright relative">
+<!-- Decorative Background Element -->
+<div class="absolute top-0 right-0 w-[50vw] h-[1024px] bg-gradient-to-bl from-primary-fixed/20 to-transparent pointer-events-none"></div>
+<!-- Layout Grid: 3 Columns (Filters, Feed, Details Preview) -->
+<div class="w-full h-full max-w-screen-2xl mx-auto flex p-lg gap-lg relative z-10">
+<!-- LEFT COLUMN: Filters & Insights (Glassmorphism Bento) -->
+<aside class="w-1/4 hidden lg:flex flex-col gap-lg h-full overflow-y-auto hide-scrollbar pb-lg pr-2">
+<div class="glass-panel rounded-xl p-lg shadow-sm border border-outline-variant/30">
+<h2 class="font-title-lg text-title-lg text-primary mb-md">Curated Match</h2>
+<div class="flex items-center gap-sm mb-4">
+<div class="w-12 h-12 rounded-full bg-secondary-fixed/20 flex items-center justify-center border border-secondary-fixed/50">
+<span class="material-symbols-outlined text-primary text-[28px]">radar</span>
+</div>
+<div>
+<p class="font-headline-md text-headline-md text-primary">94%</p>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider">Overall Fit Score</p>
+</div>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-4">Based on your recent executive tenure in FinTech, we are prioritizing VP and C-Level roles in high-growth European markets.</p>
+<button class="text-primary font-body-md text-body-md font-bold flex items-center gap-1 hover:text-primary-container transition-colors">
+                        Refine Parameters <span class="material-symbols-outlined text-[18px]">arrow_forward</span>
+</button>
+</div>
+<div class="glass-panel rounded-xl p-lg shadow-sm border border-outline-variant/30 flex-1">
+<h3 class="font-body-lg text-body-lg text-primary font-bold mb-md border-b border-outline-variant/30 pb-2">Active Filters</h3>
+<div class="space-y-4">
+<div>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase mb-2">Seniority</p>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-primary text-on-primary rounded-full font-label-bold text-label-bold">C-Suite</span>
+<span class="px-3 py-1 bg-primary text-on-primary rounded-full font-label-bold text-label-bold">VP / SVP</span>
+<span class="px-3 py-1 bg-surface-variant text-on-surface-variant rounded-full font-label-bold text-label-bold border border-outline-variant">Director</span>
+</div>
+</div>
+<div>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase mb-2">Compensation</p>
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-outline">payments</span>
+<span class="font-body-md text-body-md font-medium">€180k - €250k+</span>
+</div>
+<input class="w-full mt-2 accent-primary" max="300" min="150" type="range" value="180"/>
+</div>
+<div>
+<p class="font-label-bold text-label-bold text-on-surface-variant uppercase mb-2">Location Strategy</p>
+<div class="flex flex-col gap-2">
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary h-4 w-4 border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md">Hybrid (London/Paris)</span>
+</label>
+<label class="flex items-center gap-2 cursor-pointer">
+<input checked="" class="rounded text-primary focus:ring-primary h-4 w-4 border-outline" type="checkbox"/>
+<span class="font-body-md text-body-md">Remote (EMEA)</span>
+</label>
+</div>
+</div>
+</div>
+</div>
+</aside>
+<!-- CENTER COLUMN: The Feed (Job Cards) -->
+<section class="w-full lg:w-2/4 h-full flex flex-col items-center justify-center relative">
+<div class="w-full max-w-[448px] h-[716px] relative mb-xl">
+<div class="job-card-deck" id="cardDeck">
+<!-- Card 1 (Front) -->
+<div class="job-card card-front bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20" id="card1">
+<!-- Image Header -->
+<div class="h-1/3 w-full relative">
+<img class="w-full h-full object-cover" data-alt="A high-end, modern corporate office interior with floor-to-ceiling windows overlooking a European city skyline. Warm, sophisticated lighting. Quiet luxury aesthetic, minimal clutter. Rich petrol blues and muted golds in the decor." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCst0encppf7ARv1K8_h4flXw0WOD7RdpLAlZ8gN-m68DDl8MoUPe78Hw_pMl9zhio8Kh4YvyGjAVNiYNY8gNR9IgKsg2NoTxJQwfiwCVXGRQ6G1Go1kUwyZsOPlZhjUgJ8-v3BLOrDVASGa01KfE3V_DcWt92VvZt0vXtk_FPpombWuO4hdwydiv7qKD-egqvH1BuqRu_gUByYcrPyUKVcFvn9o8CqJU-pTDBXMUDqujVm6vwjRJzj"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent"></div>
+<div class="absolute top-4 right-4 bg-secondary-fixed text-on-secondary-fixed px-3 py-1 rounded-full flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[16px]" style="font-variation-settings: 'FILL' 1;">workspace_premium</span>
+<span class="font-label-bold text-label-bold">Exclusive</span>
+</div>
+<div class="absolute bottom-4 left-4 flex items-end gap-3">
+<div class="w-14 h-14 bg-white rounded-lg p-2 shadow-lg flex items-center justify-center">
+<!-- Fake Logo -->
+<div class="w-full h-full bg-primary-container rounded flex items-center justify-center text-white font-bold text-xl">V</div>
+</div>
+<div class="text-white pb-1">
+<p class="font-label-caps text-label-caps opacity-80 mb-1">Fintech • Series C</p>
+<h2 class="font-title-lg text-title-lg leading-tight">Chief Operating Officer</h2>
+</div>
+</div>
+</div>
+<!-- Card Body -->
+<div class="flex-1 p-lg flex flex-col">
+<div class="flex gap-2 mb-6">
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full font-label-bold text-label-bold">€220k - €280k</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full font-label-bold text-label-bold">Equity: 1.5%</span>
+<span class="px-3 py-1 bg-surface-container-high text-on-surface-variant rounded-full font-label-bold text-label-bold flex items-center gap-1"><span class="material-symbols-outlined text-[14px]">location_on</span> Hybrid (London)</span>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant mb-6 line-clamp-4">
+                                    Valence is seeking a seasoned COO to scale operations across EMEA. You will partner directly with the Founder/CEO to transition the company from Series C hyper-growth into a sustainable enterprise model pre-IPO. Strong background in regulatory compliance and cross-border payment infrastructure required.
+                                </p>
+<div class="mt-auto">
+<p class="font-label-bold text-label-bold text-primary mb-3">Key Requirements Highlight</p>
+<ul class="space-y-2">
+<li class="flex items-start gap-2 font-body-md text-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary-fixed-dim text-[20px]">check_circle</span>
+                                            10+ years operational leadership in FinTech.
+                                        </li>
+<li class="flex items-start gap-2 font-body-md text-body-md text-on-surface-variant">
+<span class="material-symbols-outlined text-secondary-fixed-dim text-[20px]">check_circle</span>
+                                            Experience managing teams of 150+.
+                                        </li>
+</ul>
+</div>
+</div>
+</div>
+<!-- Card 2 (Middle) -->
+<div class="job-card card-middle bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20" id="card2">
+<div class="h-1/3 w-full relative">
+<img class="w-full h-full object-cover grayscale opacity-80" data-alt="A sleek, minimalist executive boardroom with a large polished dark wood table. Subtle glass partitions. Professional, quiet luxury aesthetic. Soft ambient lighting reflecting off glass surfaces." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA0td04cXU5zmlA-Yjx5HLuzJaf7AJ9DSxa7ZnGVY0TrSOCD1ZtzHSNImgUwvBmXbMBCC4LYOzu2F3RWAz4jfleVAZhJtpOv4clomwc8CtanfShsCGlidf6dPcxiLHbW0uUm9ctg1qq8kbuz9BqsbFqBM304qTiKLO-9dO7nj9g7kH0UMffFez9_EXYV_gWf1Ybbo_BgIwFfcRTBJOsnzBvN7ecKxoPkVooD_gbPS3JgGcuNURNspXi"/>
+<div class="absolute inset-0 bg-primary/40 mix-blend-multiply"></div>
+<div class="absolute bottom-4 left-4 flex items-end gap-3">
+<div class="w-14 h-14 bg-white rounded-lg p-2 shadow-lg flex items-center justify-center opacity-80">
+<div class="w-full h-full bg-slate-800 rounded flex items-center justify-center text-white font-bold text-xl">A</div>
+</div>
+<div class="text-white pb-1">
+<h2 class="font-title-lg text-title-lg leading-tight">VP of Engineering</h2>
+</div>
+</div>
+</div>
+</div>
+<!-- Card 3 (Back) -->
+<div class="job-card card-back bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20" id="card3">
+<div class="h-1/3 w-full bg-surface-container-highest"></div>
+</div>
+</div>
+</div>
+<!-- Desktop 'Swipe' Actions (Buttons below card) -->
+<div class="flex items-center justify-center gap-8 z-20">
+<button class="w-16 h-16 rounded-full border-2 border-outline-variant bg-surface-container-lowest flex items-center justify-center text-outline hover:border-error hover:text-error hover:bg-error-container/20 transition-all shadow-md active:scale-95 group" onclick="simulateSwipe('left')">
+<span class="material-symbols-outlined text-[32px] group-hover:scale-110 transition-transform">close</span>
+</button>
+<button class="px-6 py-3 rounded-full bg-surface-container-high text-on-surface-variant font-body-md text-body-md font-bold hover:bg-surface-variant transition-colors shadow-sm active:scale-95">
+                        Save for later
+                    </button>
+<button class="w-16 h-16 rounded-full bg-primary flex items-center justify-center text-white hover:bg-primary-container transition-all shadow-lg active:scale-95 group shadow-primary/30" onclick="simulateSwipe('right')">
+<span class="material-symbols-outlined text-[32px] group-hover:scale-110 transition-transform" style="font-variation-settings: 'FILL' 1;">check</span>
+</button>
+</div>
+</section>
+<!-- RIGHT COLUMN: Contextual Preview / Details (Glassmorphism) -->
+<aside class="w-1/4 hidden xl:flex flex-col h-full pl-2">
+<div class="glass-panel rounded-[24px] h-[870px] w-full p-0 shadow-lg border border-outline-variant/30 flex flex-col overflow-hidden relative">
+<!-- Top Header (Context) -->
+<div class="bg-primary/5 p-lg border-b border-outline-variant/20">
+<div class="flex justify-between items-start mb-2">
+<h3 class="font-title-lg text-title-lg text-primary">Company Insights</h3>
+<button class="text-outline hover:text-primary transition-colors">
+<span class="material-symbols-outlined">open_in_new</span>
+</button>
+</div>
+<p class="font-body-md text-body-md text-on-surface-variant">Valence (FinTech)</p>
+</div>
+<!-- Content Area -->
+<div class="flex-1 overflow-y-auto p-lg space-y-8 hide-scrollbar">
+<!-- Financials -->
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">trending_up</span> Growth Metrics
+                             </h4>
+<div class="grid grid-cols-2 gap-4">
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/30">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Funding</p>
+<p class="font-headline-md text-headline-md text-primary">$120M</p>
+<p class="font-label-bold text-label-bold text-success-green mt-1">Series C</p>
+</div>
+<div class="bg-surface-container-lowest p-3 rounded-lg border border-outline-variant/30">
+<p class="font-label-caps text-label-caps text-on-surface-variant mb-1">Headcount</p>
+<p class="font-headline-md text-headline-md text-primary">350+</p>
+<p class="font-label-bold text-label-bold text-success-green mt-1">+40% YoY</p>
+</div>
+</div>
+</div>
+<!-- Leadership Team -->
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4 flex items-center gap-2">
+<span class="material-symbols-outlined text-[16px]">groups</span> Hiring Manager
+                             </h4>
+<div class="flex items-center gap-4 bg-surface-container-lowest p-4 rounded-xl border border-outline-variant/30">
+<div class="w-12 h-12 rounded-full bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="Professional headshot of a middle-aged female executive with a confident smile, wearing a dark navy blazer against a neutral grey background. High-quality corporate photography." src="https://lh3.googleusercontent.com/aida-public/AB6AXuAZwGVwi-69KG8fHGQDA2ovTv8kchSlxJGGY5J9jnqCZa6sm2Sjk8j8XiVOGBKOlhrS_2cvHj4hDg3G24JI6Ab3ct64Iq30E8fuG9sW_74-hOxIlMisJoUUdwvfPwdlUPwb_OLvgaf2FoGxbc19jeZfnPrFqnkV9CAwIrxpTpWys8SN1_Vu1WOaFP0MLVoxWAGYDa92D-R7yza78ZXg4o-dGiAR3omtYUmHLQY5rrFE6akL73u-u3mA"/>
+</div>
+<div>
+<p class="font-body-md text-body-md font-bold text-on-surface">Elena Rostova</p>
+<p class="font-label-bold text-label-bold text-on-surface-variant">Founder &amp; CEO</p>
+<div class="flex items-center gap-1 mt-1 text-linkedin-blue">
+<span class="material-symbols-outlined text-[14px]">link</span>
+<span class="text-xs font-medium">View LinkedIn Profile</span>
+</div>
+</div>
+</div>
+</div>
+<!-- Similar Opportunities (Small List) -->
+<div>
+<h4 class="font-label-bold text-label-bold text-on-surface-variant uppercase tracking-wider mb-4">
+                                 Similar Roles
+                             </h4>
+<div class="space-y-3">
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest rounded-lg cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded bg-tertiary-container flex items-center justify-center text-on-tertiary-container text-xs font-bold">N</div>
+<div class="flex-1">
+<p class="font-label-bold text-label-bold font-bold">COO • NeoBank</p>
+<p class="text-xs text-on-surface-variant">€200k • Remote</p>
+</div>
+</div>
+<div class="flex items-center gap-3 p-2 hover:bg-surface-container-lowest rounded-lg cursor-pointer transition-colors">
+<div class="w-8 h-8 rounded bg-primary-fixed-dim flex items-center justify-center text-on-primary-fixed text-xs font-bold">P</div>
+<div class="flex-1">
+<p class="font-label-bold text-label-bold font-bold">VP Ops • PayScale</p>
+<p class="text-xs text-on-surface-variant">€180k • London</p>
+</div>
+</div>
+</div>
+</div>
+</div>
+<!-- Bottom fade for scroll -->
+<div class="absolute bottom-0 left-0 w-full h-12 bg-gradient-to-t from-surface-bright/90 to-transparent pointer-events-none"></div>
+</div>
+</aside>
+</div>
+</main>
+<script>
+        // Simple swipe interaction simulator for the desktop deck
+        function simulateSwipe(direction) {
+            const card1 = document.getElementById('card1');
+            const card2 = document.getElementById('card2');
+            const card3 = document.getElementById('card3');
+
+            if (direction === 'left') {
+                card1.classList.add('swipe-left');
+            } else {
+                card1.classList.add('swipe-right');
+            }
+
+            // Promote cards
+            setTimeout(() => {
+                card2.className = 'job-card card-front bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20';
+                card2.style.filter = "brightness(1)";
+                card2.querySelector('img').style.filter = "none";
+                card2.querySelector('img').style.opacity = "1";
+                card2.querySelector('.mix-blend-multiply').style.display = 'none';
+
+                card3.className = 'job-card card-middle bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20';
+                
+                // Add a new back card (mock)
+                const newCard = document.createElement('div');
+                newCard.className = 'job-card card-back bg-surface-container-lowest rounded-[24px] shadow-xl overflow-hidden flex flex-col border border-outline-variant/20';
+                newCard.innerHTML = '<div class="h-1/3 w-full bg-surface-container-highest"></div>';
+                document.getElementById('cardDeck').appendChild(newCard);
+                
+                card1.remove();
+
+                // Reassign IDs for next swipe
+                card2.id = 'card1';
+                card3.id = 'card2';
+                newCard.id = 'card3';
+
+            }, 300); // Wait for transition
+        }
+    </script>
+</body></html>
