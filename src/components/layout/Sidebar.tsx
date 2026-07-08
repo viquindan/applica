@@ -3,9 +3,25 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/i18n/context';
 
-const STEPS = [
-  { href: '/profile', number: '1', label: 'nav.profile' },
-  { href: '/applications', number: '2', label: 'nav.applications' },
+const NAV = [
+  {
+    href: '/profile', label: 'nav.profile',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <circle cx="12" cy="8" r="4" />
+        <path d="M4 20c0-3.3 3.6-5 8-5s8 1.7 8 5" strokeLinecap="round" />
+      </svg>
+    ),
+  },
+  {
+    href: '/applications', label: 'nav.applications',
+    icon: (
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+        <rect x="3" y="7" width="18" height="13" rx="2" />
+        <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+      </svg>
+    ),
+  },
 ];
 
 function getLabel(key: string, t: any): string {
@@ -19,46 +35,39 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <Link href="/" className="sidebar-logo" style={{ textDecoration: 'none' }}>
-        <div style={{ width: 32, height: 32, background: 'var(--petrol)', borderRadius: 'var(--radius-sm)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C12.8 7.8 16.2 11.2 22 12C16.2 12.8 12.8 16.2 12 22C11.2 16.2 7.8 12.8 2 12C7.8 11.2 11.2 7.8 12 2Z" fill="var(--gold)"/>
+        <div style={{ width: 36, height: 36, background: 'var(--gold)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--petrol)" strokeWidth="2">
+            <rect x="3" y="7" width="18" height="13" rx="2" />
+            <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
           </svg>
         </div>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: '1.25rem', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Applica</span>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span className="sidebar-wordmark">Applica</span>
+          <span className="sidebar-tagline">Executive Career Suite</span>
+        </div>
       </Link>
 
       <nav className="sidebar-nav">
-        <div className="nav-section">{getLabel('nav.journey', t) ?? 'Journey'}</div>
-        {STEPS.map((step) => {
-          const active = pathname === step.href || pathname.startsWith(step.href);
+        {NAV.map((item) => {
+          const active = pathname === item.href || pathname.startsWith(item.href);
           return (
-            <Link key={step.href} href={step.href} className={`nav-item ${active ? 'active' : ''}`}>
-              <span style={{
-                width: 20,
-                height: 20,
-                borderRadius: '999px',
-                display: 'inline-flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '.72rem',
-                border: '1px solid currentColor',
-              }}>{step.number}</span>
-              {getLabel(step.label, t)}
+            <Link key={item.href} href={item.href} className={`nav-item ${active ? 'active' : ''}`}>
+              {item.icon}
+              {getLabel(item.label, t)}
             </Link>
           );
         })}
       </nav>
 
       <div className="sidebar-footer">
-        <div style={{ display: 'flex', gap: '.375rem', marginBottom: '.75rem' }}>
+        <div style={{ display: 'flex', gap: '.375rem' }}>
           {(['es', 'en'] as const).map(l => (
             <button key={l} onClick={() => setLocale(l)} style={{
-              flex: 1, padding: '6px', borderRadius: '4px', fontSize: '.7rem', fontWeight: 700,
+              flex: 1, padding: '6px', borderRadius: 'var(--radius-full)', fontSize: '.7rem', fontWeight: 700,
               letterSpacing: '.06em', textTransform: 'uppercase',
-              background: locale === l ? 'var(--surface)' : 'transparent',
-              color: locale === l ? 'var(--text)' : 'var(--text-3)',
-              border: `1px solid ${locale === l ? 'var(--border)' : 'transparent'}`,
-              boxShadow: locale === l ? 'var(--shadow-sm)' : 'none',
+              background: locale === l ? 'rgba(255,255,255,.14)' : 'transparent',
+              color: locale === l ? '#fff' : 'rgba(241,240,240,.55)',
+              border: '1px solid ' + (locale === l ? 'rgba(255,255,255,.2)' : 'transparent'),
               cursor: 'pointer', transition: 'all var(--transition)',
             }}>
               {l}
@@ -69,6 +78,3 @@ export default function Sidebar() {
     </aside>
   );
 }
-
-
-

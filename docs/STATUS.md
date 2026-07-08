@@ -20,6 +20,7 @@
 - Fixtures `[TEST]` (2/ATS, score 200) + harness `scripts/_submit.ts`, `_dom.ts`, `_liveness.ts`, `_banner.ts`.
 
 ## En curso / verificar
+- **Branch `v3-web-app`**: ensayos de rediseño "Applica Executive" (base Stitch en `applica movil/` y `applica web/`): paleta forest #123338 + dorado #fed65b, sidebar oscura, botones pill, tipografía 900/300. `master` queda intacto como V1.
 - Aprendizaje de respuestas de combobox (deal size, hunting vs expansion...): fix verificado en sintético; confirmar que la próxima postulación real las pre-llene.
 
 ## Pendiente

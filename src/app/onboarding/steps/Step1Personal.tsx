@@ -130,7 +130,7 @@ export default function Step1Personal({ data, onNext, onBack, saving }: { data: 
 
           {/* Onsite / Hybrid */}
           <div className="field-group">
-            <label className="field-label" style={{ color: 'var(--gold)' }}>Acepto PRESENCIAL o HÍBRIDO en:</label>
+            <label className="field-label" style={{ color: 'var(--text-gold)' }}>Acepto PRESENCIAL o HÍBRIDO en:</label>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.75rem' }}>Escribe las ciudades o países donde puedes asistir físicamente o reubicarte. Si lo dejas vacío, asumimos que no buscas presencial.</p>
             <TagInput value={form.targetCities} onChange={v => set('targetCities', v)} placeholder="Ej. Madrid, Bogotá, CDMX..." />
           </div>

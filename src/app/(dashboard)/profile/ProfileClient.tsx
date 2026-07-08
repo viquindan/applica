@@ -431,7 +431,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                           padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500,
                           border: `1px solid ${form.workModalityPrefs.remoteScope === scope ? 'var(--gold)' : 'var(--border)'}`,
                           background: form.workModalityPrefs.remoteScope === scope ? 'var(--gold-dim)' : 'var(--surface)',
-                          color: form.workModalityPrefs.remoteScope === scope ? 'var(--gold)' : 'var(--text-3)',
+                          color: form.workModalityPrefs.remoteScope === scope ? 'var(--text-gold)' : 'var(--text-3)',
                           cursor: 'pointer', transition: 'all var(--transition)'
                         }}>
                         {scope === 'worldwide' ? 'Todo el mundo' : 'Regiones específicas'}
