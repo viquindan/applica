@@ -2,6 +2,7 @@ import { auth } from'@/lib/auth';
 import { redirect } from'next/navigation';
 import Sidebar from'@/components/layout/Sidebar';
 import Header from'@/components/layout/Header';
+import BottomNavigation from'@/components/layout/BottomNavigation';
 import { db } from'@/db/client';
 import { users } from'@/db/schema';
 import { eq } from'drizzle-orm';
@@ -27,6 +28,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           {children}
         </div>
       </main>
+      <BottomNavigation />
     </div>
   );
 }

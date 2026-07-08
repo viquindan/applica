@@ -6,6 +6,8 @@ import { users, professionalProfiles, userSettings, vacancies, applications } fr
 import { IconX } from'@tabler/icons-react';
 import { FunnelFlow } from'@/components/FunnelFlow';
 import { unresolvedBlockers } from'@/core/automation/blockers';
+import { CompanyLogo, ScoreRing, STATUS_META, MODE_META } from'@/components/JobCardUI';
+import SwipeDeck from'@/components/SwipeDeck';
 
 /** Smoothly tweens a displayed number toward `value` whenever it changes. */
 function AnimatedCounter({ value }: { value: number }) {
@@ -30,27 +32,6 @@ function AnimatedCounter({ value }: { value: number }) {
   }, [value]);
   return <>{display.toLocaleString('es')}</>;
 }
-
-const CompanyLogo = ({ companyName }: { companyName: string }) => {
-  const [error, setError] = useState(false);
-  const initial = companyName.charAt(0).toUpperCase();
-
-  if (error || !companyName || companyName === 'N/A') {
-    return <div className="company-avatar">{initial}</div>;
-  }
-
-  const domain = companyName.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com';
-
-  return (
-    <img
-      src={`https://logo.clearbit.com/${domain}`}
-      alt={companyName}
-      className="company-avatar"
-      style={{ objectFit: 'contain', background: 'white' }}
-      onError={() => setError(true)}
-    />
-  );
-};
 
 const MOCK_COMPANIES = ['BairesDev', 'MercadoLibre', 'Globant', 'Nubank', 'Rappi', 'Auth0', 'Kavak', 'Ualá', 'Despegar', 'Vercel', 'Stripe', 'Google', 'Microsoft', 'Amazon', 'Meta'];
 const MOCK_ROLES = ['Frontend Engineer', 'Fullstack Developer', 'Backend Engineer', 'React Native Developer', 'Software Engineer', 'Tech Lead', 'Senior Developer'];
@@ -142,27 +123,8 @@ type AppRow = typeof applications.$inferSelect & {
   vacancy: Pick<typeof vacancies.$inferSelect, 'title' | 'company' | 'platform' | 'url' | 'score' | 'location' | 'warnings' | 'description'> | null;
 };
 
-const STATUS_META: Record<string, { label: string; badge: string }> = {
-  draft: { label: 'Preparando materiales', badge: 'badge-petrol' },
-  pending_review: { label: 'Necesita tu atención', badge: 'badge-warning' },
-  approved: { label: 'Abriendo la oferta…', badge: 'badge-warning' },
-  submitted: { label: 'Enviado', badge: 'badge-success' },
-  failed: { label: 'Fallido', badge: 'badge-danger' },
-  skipped: { label: 'Omitido', badge: 'badge-ghost' },
-  archived: { label: 'Archivado', badge: 'badge-ghost' },
-  filtered: { label: 'Puntaje Bajo (No recomendada)', badge: 'badge-danger' },
-};
-
-const MODE_META: Record<string, string> = {
-  auto: 'Auto',
-  semi: 'Semi',
-  manual: 'Manual',
-  none: '-',
-};
-
 const FILTERS = [
-  { key: 'pending_review', label: 'Nuevos Matches (Por revisar)' },
-  { key: 'submitted', label: 'En Progreso / Enviadas' },
+  { key: 'submitted', label: 'Enviadas' },
   { key: 'filtered', label: 'Descartadas por IA' },
   { key: 'all', label: 'Todas' },
 ];
@@ -172,24 +134,6 @@ function countFeedback(apps: AppRow[]) {
     contacted: apps.filter((app) => app.responseStatus === 'contacted').length,
     rejected: apps.filter((app) => app.responseStatus === 'rejected').length,
   };
-}
-
-function ScoreRing({ score }: { score: number | null | undefined }) {
-  if (!score) return <span style={{ color: 'var(--text-3)', fontSize: '.75rem' }}>-</span>;
-  const cls = score >= 80 ? 'score-high' : score >= 60 ? 'score-mid' : 'score-low';
-  const r = 14, c = 2 * Math.PI * r, fill = (score / 100) * c;
-  const color = score >= 80 ? '#4ecca3' : score >= 60 ? '#f0c040' : '#e57373';
-  return (
-    <svg width="38" height="38" style={{ transform: 'rotate(-90deg)' }}>
-      <circle cx="19" cy="19" r={r} fill="none" stroke="var(--surface-2)" strokeWidth="3" />
-      <circle cx="19" cy="19" r={r} fill="none" stroke={color} strokeWidth="3"
-        strokeDasharray={`${fill} ${c}`} strokeLinecap="round" />
-      <text x="19" y="19" textAnchor="middle" dominantBaseline="central"
-        style={{ transform: 'rotate(90deg)', transformOrigin: '19px 19px', fill: color, fontSize: 9, fontWeight: 700 }}>
-        {score}
-      </text>
-    </svg>
-  );
 }
 
 export default function ApplicationsClient({
@@ -573,7 +517,13 @@ export default function ApplicationsClient({
     return () => clearInterval(interval);
   }, [isSearching, router]);
 
-  const filtered = apps.filter(a => !discardedIds.has(a.id)).filter(a => {
+  // Feed (swipe): decisions still pending, plus the one currently being auto-applied.
+  const queueApps = apps.filter(a => !discardedIds.has(a.id) && (a.status === 'pending_review' || a.status === 'approved'));
+  // History: everything that already moved past the decision stage.
+  const historyApps = apps.filter(a => !discardedIds.has(a.id) && a.status !== 'pending_review');
+  const pendingInterventions = apps.filter(a => !discardedIds.has(a.id) && a.status === 'approved');
+
+  const filtered = historyApps.filter(a => {
     if (filter === 'all') return true;
     if (filter === 'contacted') return a.responseStatus === 'contacted';
     if (filter === 'rejected') return a.responseStatus === 'rejected';
@@ -632,7 +582,7 @@ export default function ApplicationsClient({
 
   return (
     <div className="animate-fadein">
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div className="page-eyebrow">Gestión</div>
           <h1 style={{ fontSize: '2rem', fontWeight: 600, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
@@ -796,6 +746,58 @@ export default function ApplicationsClient({
         </div>
       )}
 
+      {/* ── Feed: one vacancy at a time, swipe to decide ── */}
+      <div style={{ marginBottom: '2.5rem' }}>
+        <div className="card-label" style={{ marginBottom: '1rem' }}>Feed</div>
+        <SwipeDeck
+          apps={queueApps}
+          actioningId={actioningId}
+          attentionApp={attentionApp}
+          setAttentionApp={setAttentionApp}
+          attentionReason={attentionReason}
+          applyApp={applyApp}
+          discardApp={discardApp}
+          markApplied={markApplied}
+          cancelAssisted={cancelAssisted}
+          openApp={openApp}
+          isAtsApp={isAtsApp}
+          ExtensionOffer={ExtensionOffer}
+        />
+      </div>
+
+      {/* ── Pending interventions: apps mid-flight that need a human click ── */}
+      {pendingInterventions.length > 0 && (
+        <div style={{ marginBottom: '2.5rem' }}>
+          <div className="card-label" style={{ marginBottom: '1rem' }}>
+            Intervenciones Pendientes <span className="badge badge-warning" style={{ marginLeft: '.5rem' }}>{pendingInterventions.length}</span>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+            {pendingInterventions.map((app) => (
+              <div key={app.id} className="bento-card" style={{ padding: '1.25rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', marginBottom: '.85rem' }}>
+                  <CompanyLogo companyName={app.vacancy?.company ?? 'N/A'} />
+                  <div style={{ minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '.95rem', color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.vacancy?.title ?? '-'}</div>
+                    <div style={{ fontSize: '.8rem', color: 'var(--text-3)' }}>{app.vacancy?.company ?? '-'}</div>
+                  </div>
+                </div>
+                <div style={{ fontSize: '.78rem', color: 'var(--text-2)', background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', padding: '.6rem .75rem', marginBottom: '.85rem', lineHeight: 1.5 }}>
+                  Applica está aplicando por ti. Confirma cuando termines de enviar en la ventana abierta.
+                </div>
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <button className="btn btn-primary btn-sm" disabled={actioningId === app.id} onClick={() => markApplied(app)}>
+                    {actioningId === app.id ? <span className="spinner" style={{ width: 12, height: 12 }} /> : 'Ya envié'}
+                  </button>
+                  <button className="btn btn-ghost btn-sm" disabled={actioningId === app.id} onClick={() => cancelAssisted(app)} style={{ color: 'var(--text-3)' }}>
+                    No se envió
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="card-label" style={{ marginBottom: '1rem' }}>Historial de Aplicaciones</div>
 
       {/* Toolbar */}
@@ -873,12 +875,10 @@ export default function ApplicationsClient({
                   // After an auto-apply attempt that couldn't complete, the worker
                   // leaves a warning - surface it so the user isn't left guessing.
                   const lastWarn = ((app.vacancy?.warnings as string[] | null) ?? []).slice(-1)[0] ?? '';
-                  const needsAttention = app.status === 'pending_review' && /aplica manualmente|aplicaci[oó]n externa|requiere registro|recon[eé]ctala|no usa easy apply|no es viable/i.test(lastWarn);
                   // The worker archives postings whose URL no longer points at the
                   // job (company closed it); tell the user instead of a bare "Omitido".
                   const vacancyGone = app.status === 'skipped' && /ya no est[aá] publicada/i.test(lastWarn);
 
-                  const wfOpen = attentionApp?.id === app.id;
                   return (
                     <Fragment key={app.id}>
                     <tr
@@ -923,9 +923,6 @@ export default function ApplicationsClient({
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                           <span className={`badge ${sm.badge}`}>{sm.label}</span>
                           {needsInfo && <span className="badge badge-warning" title="Esta vacante pide datos adicionales. Entra para completarlos.">Faltan datos</span>}
-                          {needsAttention && !needsInfo && (
-                            <span className="badge badge-warning" title={lastWarn} onClick={(e) => { e.stopPropagation(); setAttentionApp(app); }} style={{ cursor: 'pointer' }}>Requiere tu atención</span>
-                          )}
                           {vacancyGone && <span className="badge badge-ghost" title={lastWarn}>Vacante cerrada</span>}
                           {app.responseStatus === 'contacted' && <span className="badge badge-success">Te llamaron</span>}
                           {app.responseStatus === 'rejected' && <span className="badge badge-danger">Rechazada</span>}
@@ -938,27 +935,6 @@ export default function ApplicationsClient({
                       </td>
                       <td onClick={(e) => e.stopPropagation()}>
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', alignItems: 'stretch' }}>
-                          {app.status === 'pending_review' && (
-                            <button
-                              className="btn btn-primary btn-sm"
-                              disabled={actioningId === app.id || (connectingLi && isLinkedIn(app))}
-                              title={autoCapable(app) ? 'Abrimos la oferta en tu navegador con el formulario ya lleno; tú solo resuelves el captcha y envías.' : 'Veamos cómo aplicar a esta oferta.'}
-                              onClick={() => applyApp(app)}
-                              style={{ whiteSpace: 'nowrap', minWidth: 84 }}
-                            >
-                              {actioningId === app.id ? <span className="spinner" style={{ width: 12, height: 12 }} /> : autoCapable(app) ? 'Abrir y aplicar' : 'Aplicar'}
-                            </button>
-                          )}
-                          {app.status === 'pending_review' && autoCapable(app) && actioningId !== app.id && (
-                            <button
-                              className="btn btn-ghost btn-sm"
-                              title="Si ya enviaste esta aplicación, márcala como aplicada."
-                              onClick={() => markApplied(app)}
-                              style={{ whiteSpace: 'nowrap', color: 'var(--text-3)' }}
-                            >
-                              Ya apliqué
-                            </button>
-                          )}
                           {app.status === 'approved' && (
                             <button
                               className="btn btn-secondary btn-sm"
@@ -1008,30 +984,6 @@ export default function ApplicationsClient({
                         </td>
                       </tr>
                     )}
-                    {wfOpen && (() => {
-                      const r = attentionReason(app);
-                      return (
-                        <tr className="animate-fadein">
-                          <td colSpan={5} style={{ padding: 0 }}>
-                            <div style={{ background: 'rgba(240,192,64,.10)', border: '1px solid rgba(240,192,64,.4)', borderRadius: 'var(--radius-md)', padding: '0.85rem 1.1rem', marginTop: '-0.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
-                              <div style={{ minWidth: 0 }}>
-                                <div style={{ fontWeight: 700, fontSize: '.82rem', color: 'var(--text)' }}>{r.title}</div>
-                                <div style={{ fontSize: '.78rem', color: 'var(--text-2)', marginTop: '.15rem', maxWidth: 560 }}>{r.detail}</div>
-                              </div>
-                              <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap', flexShrink: 0 }}>
-                                <button className="btn btn-primary btn-sm" onClick={() => { setAttentionApp(null); openApp(app); }} style={{ whiteSpace: 'nowrap' }}>
-                                  {r.cta === 'fill' ? 'Completar datos' : 'Ver materiales y aplicar'}
-                                </button>
-                                {r.cta !== 'fill' && app.vacancy?.url && (
-                                  <a className="btn btn-secondary btn-sm" href={app.vacancy.url} target="_blank" rel="noopener" onClick={() => setAttentionApp(null)} style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}>Ir a la oferta</a>
-                                )}
-                                <button className="btn btn-ghost btn-sm" onClick={() => setAttentionApp(null)} style={{ color: 'var(--text-3)', whiteSpace: 'nowrap' }}>Cancelar</button>
-                              </div>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })()}
                     </Fragment>
                   );
                 })}

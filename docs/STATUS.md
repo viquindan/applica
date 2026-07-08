@@ -20,7 +20,12 @@
 - Fixtures `[TEST]` (2/ATS, score 200) + harness `scripts/_submit.ts`, `_dom.ts`, `_liveness.ts`, `_banner.ts`.
 
 ## En curso / verificar
-- **Branch `v3-web-app`**: ensayos de rediseño "Applica Executive" (base Stitch en `applica movil/` y `applica web/`): paleta forest #123338 + dorado #fed65b, sidebar oscura, botones pill, tipografía 900/300. `master` queda intacto como V1.
+- **Branch `v3-web-app`**: rediseño "Applica Executive" (base Stitch en `applica movil/` y `applica web/`). `master` queda intacto como V1.
+  - Tema global: paleta forest #123338 + dorado #fed65b, sidebar oscura, botones pill, tipografía 900/300.
+  - `/applications` reestructurado: Feed swipe (`SwipeDeck.tsx`, una vacante a la vez) para decisiones `pending_review`; tarjetas "Intervenciones Pendientes" para apps en `approved`; tabla "Historial" con todo lo demás. La máquina de estados y endpoints del apply engine (docs/APPLY-ENGINE.md §9) no se tocaron, solo se reorganizó la UI; se quitó el botón "Ya apliqué" (redundante con el swipe) a pedido del usuario.
+  - `/profile` rediseñado a "Executive Profile" (avatar, portafolio de CV, preferencias con slider de salario) conservando el auto-save y toda la lógica de subida/activación de CV.
+  - Responsive mobile-first casi idéntico al diseño móvil de Stitch: `BottomNavigation.tsx` + sidebar oculta bajo 768px, para ensayar cómo se vería la futura app (probablemente React Native).
+  - Verificado con `tsc --noEmit` limpio y capturas Playwright de landing (desktop/mobile). Las páginas autenticadas (`/applications`, `/profile`) no se verificaron visualmente en esta sesión por falta de sesión de prueba a mano; pendiente que el usuario las revise en su navegador.
 - Aprendizaje de respuestas de combobox (deal size, hunting vs expansion...): fix verificado en sintético; confirmar que la próxima postulación real las pre-llene.
 
 ## Pendiente

@@ -179,14 +179,27 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
 
       <div className="page-header">
         <div className="page-eyebrow">Perfil</div>
-        <h1 className="page-title">Lo que Applica sabe de ti</h1>
+        <h1 className="page-title">Executive Profile</h1>
         <p className="page-subtitle">Ningún campo es obligatorio. Mientras más completo esté tu perfil, mejor podrá Applica encontrar vacantes relevantes y preparar aplicaciones fuertes por ti.</p>
       </div>
 
       <form onSubmit={save} className="grid-2" style={{ alignItems: 'start' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+          <div className="card" style={{ alignItems: 'center', textAlign: 'center' }}>
+            <div style={{
+              width: 84, height: 84, borderRadius: '50%', margin: '0 auto',
+              background: 'linear-gradient(135deg, var(--petrol), var(--petrol-light))',
+              border: '3px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: '1.75rem', fontWeight: 800, fontFamily: 'var(--font-display)',
+            }}>
+              {(form.name || 'U').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+            </div>
+            <div style={{ marginTop: '.85rem', fontSize: '1.15rem', fontWeight: 800, color: 'var(--text)' }}>{form.name || 'Tu nombre'}</div>
+            <div style={{ fontSize: '.8125rem', color: 'var(--text-3)', fontWeight: 600 }}>{form.targetRoles?.[0] ?? 'Rol objetivo pendiente'}</div>
+          </div>
+
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-            <div className="card-label">CV activo</div>
+            <div className="card-label">Portafolio de CV</div>
             <div style={{ border: '2px dashed var(--border)', borderRadius: 'var(--radius-lg)', padding: '2rem', textAlign: 'center', cursor: 'pointer', transition: 'border-color var(--transition)', background: 'var(--bg)' }}
               onClick={() => fileInputRef.current?.click()}
               onDragOver={e => e.preventDefault()}
@@ -265,7 +278,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                             {r.label}
                           </span>
                         </div>
-                        {r.id === activeId && <span style={{ fontSize: '.65rem', padding: '2px 8px', background: 'var(--petrol)', color: 'white', borderRadius: '12px', fontWeight: 600, letterSpacing: '0.02em', flexShrink: 0 }}>ACTIVO</span>}
+                        {r.id === activeId && <span style={{ fontSize: '.65rem', padding: '2px 10px', background: 'var(--gold)', color: 'var(--text-gold)', borderRadius: 'var(--radius-full)', fontWeight: 800, letterSpacing: '0.04em', flexShrink: 0 }}>ACTIVO</span>}
                       </div>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
                         <span style={{ color: 'var(--text-3)', fontSize: '0.75rem' }}>
@@ -408,10 +421,10 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                   <button key={key} type="button"
                     onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, [key]: !form.workModalityPrefs[key] } })}
                     style={{
-                      padding: '0.5rem 1rem', borderRadius: 'var(--radius-sm)', fontSize: '0.8125rem', fontWeight: 600,
+                      padding: '0.5rem 1.1rem', borderRadius: 'var(--radius-full)', fontSize: '0.8125rem', fontWeight: 700,
                       border: `1px solid ${form.workModalityPrefs[key] ? 'var(--petrol)' : 'var(--border)'}`,
-                      background: form.workModalityPrefs[key] ? 'rgba(42,74,79,0.08)' : 'var(--surface)',
-                      color: form.workModalityPrefs[key] ? 'var(--petrol)' : 'var(--text-3)',
+                      background: form.workModalityPrefs[key] ? 'var(--petrol)' : 'var(--surface)',
+                      color: form.workModalityPrefs[key] ? '#fff' : 'var(--text-3)',
                       cursor: 'pointer', transition: 'all var(--transition)'
                     }}>
                     {label}
@@ -428,7 +441,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                       <button key={scope} type="button"
                         onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, remoteScope: scope } })}
                         style={{
-                          padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-sm)', fontSize: '0.75rem', fontWeight: 500,
+                          padding: '0.35rem 0.85rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600,
                           border: `1px solid ${form.workModalityPrefs.remoteScope === scope ? 'var(--gold)' : 'var(--border)'}`,
                           background: form.workModalityPrefs.remoteScope === scope ? 'var(--gold-dim)' : 'var(--surface)',
                           color: form.workModalityPrefs.remoteScope === scope ? 'var(--text-gold)' : 'var(--text-3)',
@@ -595,6 +608,16 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                     <option value="MXN">MXN</option>
                   </select>
                   <input className="input" type="number" placeholder="Ej. 60000" value={form.salaryMin} onChange={(e) => setForm({ ...form, salaryMin: parseInt(e.target.value) || '' })} style={{ flex: 1 }} />
+                </div>
+                <input
+                  className="slider" type="range" min={0} max={300000} step={5000}
+                  value={typeof form.salaryMin === 'number' ? form.salaryMin : 0}
+                  onChange={(e) => setForm({ ...form, salaryMin: parseInt(e.target.value) || 0 })}
+                  style={{ marginTop: '.6rem' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '.68rem', color: 'var(--text-3)', marginTop: '.25rem' }}>
+                  <span>{form.salaryCurrency} 0</span>
+                  <span>{form.salaryCurrency} 300k+</span>
                 </div>
               </div>
             </div>
