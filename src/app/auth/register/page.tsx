@@ -30,7 +30,7 @@ export default function RegisterPage() {
     const data = await res.json();
     if (!res.ok) { setError(data.error || 'Error al crear cuenta.'); setLoading(false); return; }
     await signIn('credentials', { email: form.email, password: form.password, redirect: false });
-    router.push('/onboarding');
+    router.push('/onboarding/intro');
   }
 
   return (
