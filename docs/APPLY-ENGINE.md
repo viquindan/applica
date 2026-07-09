@@ -392,6 +392,49 @@ script). Particularidades:
   radios por label con verificación; esperar "uploading/updating" del CV antes
   del submit (si no, warning "We're updating your forms").
 
+## 8.1 GenericAdapter (`src/core/platforms/genericAdapter.ts`) - sitios sin adapter dedicado
+
+Antes, cualquier vacante en una plataforma sin adapter (una empresa con su propia
+página de carreras, o LinkedIn redirigiendo a un sitio externo) solo generaba
+preguntas EXTRAÍDAS (`genericFormScraper.ts`) para que el usuario las respondiera
+en nuestra UI - pero eso NUNCA se auto-enviaba a ningún lado, así que el usuario
+terminaba escribiendo la misma respuesta dos veces (una para nosotros, otra en el
+sitio real). Decisión consciente documentada en el comentario de
+`genericFormScraper.ts`, pero incompleta: dejaba al usuario sin la ventana real.
+
+`GenericAdapter` cierra ese hueco reutilizando el mismo motor, sin tocar los ATS:
+
+- Usado SOLO por el handler `assisted_apply` (ventana visible, supervisada por el
+  usuario) - jamás por `process_application` (el flujo silencioso/headless de
+  `action:'approve'`, que sigue fallando con "No adapter" para plataformas
+  desconocidas, A PROPÓSITO: nunca auto-envíes sin supervisión en un sitio no
+  probado).
+- `applyPlaywright` hace lo MÍNIMO que el loop de vigilancia (`assistedApply.ts`)
+  no puede hacer por sí solo: `page.goto`, clic en un botón "Apply"/"Aplicar"
+  genérico para revelar el form, intento de adjuntar el CV (file chooser nativo
+  primero, `setInputFiles` como respaldo), y UN pase de `fillEverythingKnown`. El
+  loop retoma desde ahí exactamente igual que con cualquier ATS (re-fill cada
+  tick, freeze en captcha, auto-avance genérico) - **nunca hace clic en enviar
+  por su cuenta**, eso queda igual de gateado que siempre
+  (`missingRequiredCount` + `ENABLE_REAL_SUBMISSIONS`).
+- Gating en frontend (`useApplicationActions.ts`): `isGenericCapable` excluye
+  LinkedIn (tiene su propio Easy Apply engine) y sitios que exigen registro
+  (`workday|icims|taleo|brassring` en la URL - abrir una ventana ahí solo
+  encuentra un login wall). Todo lo demás ahora es `autoCapable` igual que los
+  ATS conocidos.
+- Cambio quirúrgico en `worker.ts`: el `adapters` map NO incluye `genericAdapter`
+  (para no alterar ningún otro lookup - `search`, `process_application`,
+  `formPreview` siguen fallando/saltando exactamente igual para plataformas
+  desconocidas). Solo el handler `assisted_apply` hace fallback a
+  `genericAdapter` cuando `adapters[platform]` no existe y la plataforma no es
+  `'linkedin'`. Verificado con Playwright que Greenhouse sigue disparando
+  `{action:'assisted'}` sin cambios (regresión) y que una plataforma desconocida
+  ahora también lo hace (antes caía en un mensaje muerto "ve tú mismo").
+- Fiabilidad esperada MENOR que los 5 ATS conocidos (sin meses de casos
+  documentados por sitio): si el llenado genérico no encuentra ni un campo o
+  falla el CV, el usuario igual tiene la ventana abierta con sus materiales
+  listos para completar a mano - nunca peor que el comportamiento anterior.
+
 ## 9. UI (dashboard)
 
 - Estado `approved` = "Applica está aplicando por ti" con botones "Ya envié" /

@@ -21,6 +21,7 @@ import { LeverAdapter } from '../platforms/lever';
 import { AshbyAdapter } from '../platforms/ashby';
 import { SmartRecruitersAdapter } from '../platforms/smartrecruiters';
 import { RecruiteeAdapter } from '../platforms/recruitee';
+import { GenericAdapter } from '../platforms/genericAdapter';
 import { processVacancyForUser } from '../pipeline/processVacancy';
 import { generateCoverLetter, tailorCV } from '../tailoring/cvTailor';
 import { getInternalAiConfig } from '../ai/config';
@@ -55,6 +56,11 @@ const adapters = {
   smartrecruiters: new SmartRecruitersAdapter(),
   recruitee: new RecruiteeAdapter(),
 };
+// Fallback used ONLY by the assisted_apply handler below, for platforms with
+// no dedicated adapter. Never added to `adapters` itself - every other lookup
+// against that map (search, process_application, formPreview) must keep
+// failing/skipping exactly as before for unknown platforms.
+const genericAdapter = new GenericAdapter();
 
 async function getSearchCursorState() {
   let state = await db.select().from(systemSettings).where(eq(systemSettings.id, 1)).limit(1).then(r => r[0]);
@@ -589,8 +595,13 @@ export async function startWorkers() {
         db.select().from(users).where(eq(users.id, application.userId)).limit(1),
       ]);
       if (!vacancy || !profile || !user) { await resetToReview(); return { message: 'Missing context' }; }
-      const adapter = adapters[vacancy.platform as keyof typeof adapters];
+      // LinkedIn has its own dedicated Easy Apply engine (runLinkedInEasyApply) and
+      // never reaches this handler via the normal UI flow - keep failing loudly here
+      // rather than silently generic-filling linkedin.com's own React app.
+      const knownAdapter = adapters[vacancy.platform as keyof typeof adapters];
+      const adapter = knownAdapter ?? (vacancy.platform === 'linkedin' ? null : genericAdapter);
       if (!adapter) { await resetToReview(); return { message: `No adapter for ${vacancy.platform}` }; }
+      if (!knownAdapter) console.log(`[Worker] No dedicated adapter for "${vacancy.platform}" - using GenericAdapter (best-effort, user-supervised).`);
 
       // Closed postings don't 404 on ATS: Greenhouse redirects them to the
       // company's careers page, which strands the user on a page we can't fill.

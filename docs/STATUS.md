@@ -26,14 +26,17 @@
   - Responsive mobile-first casi idéntico al diseño móvil de Stitch: bottom nav pill flotante, mazo de tarjetas apiladas en el Feed, botones circulares SVG, para ensayar cómo se vería la futura app (probablemente React Native).
   - Verificado con `tsc --noEmit` limpio en cada paso y capturas Playwright (desktop/mobile) de las 6 pantallas (landing, login, register, Feed, Pendientes, Apps, Perfil) vía rutas `dev-preview` temporales con datos mock, siempre borradas tras verificar (no se tocó la DB real). Cuenta demo del login (`test@example.com`) no existe en esta DB - no es una vía de verificación viable.
 
+- **GenericAdapter (`src/core/platforms/genericAdapter.ts`)**: sitios sin adapter dedicado (empresa propia, LinkedIn->externo) ahora pasan por el MISMO flujo asistido real que los ATS conocidos, en vez de solo "leer preguntas y que el usuario retipeara en el sitio real". Detalle completo y por qué es seguro (no toca `process_application`, no toca ningún adapter existente) en `APPLY-ENGINE.md` §8.1. Verificado con Playwright: Greenhouse sigue disparando exactamente `{action:'assisted'}` (sin regresión) y una plataforma desconocida ahora también, en vez de caer en el mensaje muerto anterior.
+
 ## En curso / verificar
 - Aprendizaje de respuestas de combobox (deal size, hunting vs expansion...): fix verificado en sintético; confirmar que la próxima postulación real las pre-llene.
+- GenericAdapter recién construido - sin verificar aún contra un sitio real (solo regresión sintética de que no rompe los ATS). Probar en un sitio no-ATS real antes de confiar en su fiabilidad.
 
 ## Pendiente
 - Fixtures `[TEST]` se mantienen; las pruebas las corre el usuario (NO borrarlas salvo pedido explícito).
 - Paridad del guard de país de location en extensión y barrido universal (hoy solo el adapter de Greenhouse la tiene).
 - "Current location" de Lever: el geocoder no responde en el entorno de prueba; verificar en el navegador real del usuario.
-- App móvil (Option B): LinkedIn auto-apply vía webview (backend listo, falta wiring de cookies).
+- **App móvil (nueva, no existe todavía)**: el usuario pidió construirla (React Native u otra, a decidir) con LinkedIn auto-apply vía webview - requiere una conversación de planeación de alcance/stack aparte (dado el tamaño, candidata a `/EnterPlanMode`) antes de empezar. No confundir con el LinkedIn Easy Apply del web, que YA está completo (`linkedinApplyEngine.ts`/`linkedinSession.ts`/`linkedinLoginCapture.ts`, sin stubs).
 - Abrir el navegador POR DEFECTO real del usuario (leer registro `UrlAssociations\https`) y detectar instalaciones per-user de Chrome/Brave (`%LOCALAPPDATA%`); hoy el orden es fijo Brave>Chrome>Edge y solo rutas de sistema. Safari/macOS no soportado (rutas Windows-only).
 - El worker relanzado por Claude murió en silencio una vez; si reaparece, que el usuario lo lance con su comando de siempre.
 - Proxies residenciales para escalar (idea futura).

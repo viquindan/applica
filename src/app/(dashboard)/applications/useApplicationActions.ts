@@ -20,8 +20,16 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
 
   const AUTO_APPLY = new Set(['greenhouse', 'lever', 'ashby', 'smartrecruiters']);
   const isAtsApp = (app: AppRow) => AUTO_APPLY.has(app.vacancy?.platform ?? '');
-  const canAuto = (app: AppRow) => isAtsApp(app) && app.status === 'pending_review';
   const isLinkedIn = (app: AppRow) => app.vacancy?.platform === 'linkedin';
+  // Sites that require creating an account before any form even exists - opening
+  // an assisted window there would just strand the user on a login wall.
+  const REGISTRATION_GATED_RX = /myworkdayjobs|workday|icims|taleo|brassring/i;
+  const isRegistrationGated = (app: AppRow) => REGISTRATION_GATED_RX.test(app.vacancy?.url ?? '');
+  // Any other site (a company's own vanilla careers page, generic form) goes
+  // through the SAME real-browser assisted flow as the known ATS now, via
+  // GenericAdapter - see docs/APPLY-ENGINE.md and genericAdapter.ts.
+  const isGenericCapable = (app: AppRow) => !isAtsApp(app) && !isLinkedIn(app) && !isRegistrationGated(app);
+  const canAuto = (app: AppRow) => (isAtsApp(app) || isGenericCapable(app)) && app.status === 'pending_review';
   const autoCapable = (app: AppRow) => app.status === 'pending_review' && canAuto(app);
   const needsInfoFor = (app: AppRow) =>
     !isAtsApp(app) &&
@@ -151,7 +159,7 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
     queueApps, pendingApps, historyApps,
     actioningId, navigatingId, attentionApp, setAttentionApp, attentionReason,
     applyApp, discardApp, markApplied, cancelAssisted, openApp,
-    isAtsApp, autoCapable, needsInfoFor,
+    isAtsApp, isGenericCapable, autoCapable, needsInfoFor,
     liStatus, connectingLi, liMsg, connectLinkedIn, linkedinPendingCount,
   };
 }
