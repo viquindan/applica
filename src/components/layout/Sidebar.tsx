@@ -87,9 +87,9 @@ export default function Sidebar() {
             <button key={l} onClick={() => setLocale(l)} style={{
               flex: 1, padding: '6px', borderRadius: 'var(--radius-full)', fontSize: '.7rem', fontWeight: 700,
               letterSpacing: '.06em', textTransform: 'uppercase',
-              background: locale === l ? 'rgba(255,255,255,.14)' : 'transparent',
-              color: locale === l ? '#fff' : 'rgba(241,240,240,.55)',
-              border: '1px solid ' + (locale === l ? 'rgba(255,255,255,.2)' : 'transparent'),
+              background: locale === l ? 'var(--gold-dim)' : 'transparent',
+              color: locale === l ? 'var(--text-gold)' : 'var(--text-3)',
+              border: '1px solid ' + (locale === l ? 'var(--gold-light)' : 'transparent'),
               cursor: 'pointer', transition: 'all var(--transition)',
             }}>
               {l}

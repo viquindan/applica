@@ -158,56 +158,55 @@ export default function SwipeDeck({
           {/* NOPE / APLICAR stamps, driven by drag distance - mirrors the Stitch prototype */}
           <div aria-hidden style={{ position: 'absolute', inset: 0, zIndex: 40, pointerEvents: 'none', display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', padding: '1.75rem' }}>
             <div style={{
-              opacity: nopeOpacity, transform: 'rotate(-14deg)', border: '4px solid var(--danger)', color: 'var(--danger)',
-              fontWeight: 900, fontSize: '1.5rem', padding: '.25rem 1rem', borderRadius: 'var(--radius-md)',
-              background: 'rgba(255,255,255,.85)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
+              opacity: nopeOpacity, transform: 'rotate(-14deg)', border: '3px solid var(--danger)', color: 'var(--danger)',
+              fontWeight: 900, fontSize: '1.15rem', padding: '.2rem .85rem', borderRadius: 'var(--radius-md)',
+              background: 'rgba(255,255,255,.9)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
             }}>
               NOPE
             </div>
             <div style={{
-              opacity: applyOpacity, transform: 'rotate(14deg)', border: '4px solid var(--success)', color: 'var(--success)',
-              fontWeight: 900, fontSize: '1.5rem', padding: '.25rem 1rem', borderRadius: 'var(--radius-md)',
-              background: 'rgba(255,255,255,.85)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
+              opacity: applyOpacity, transform: 'rotate(14deg)', border: '3px solid var(--success)', color: 'var(--success)',
+              fontWeight: 900, fontSize: '1.15rem', padding: '.2rem .85rem', borderRadius: 'var(--radius-md)',
+              background: 'rgba(255,255,255,.9)', letterSpacing: '.04em', transition: dragging ? 'none' : 'opacity .2s ease',
             }}>
               APLICAR
             </div>
           </div>
 
+          <div style={{ height: 5, background: 'linear-gradient(90deg, var(--petrol), var(--gold))' }} />
           <div style={{
-            position: 'relative', height: 220,
-            background: `linear-gradient(160deg, var(--petrol) 0%, var(--petrol-light) 55%, #3d6a70 100%)`,
-            display: 'flex', alignItems: 'flex-end', padding: '1.5rem 1.5rem 1.35rem',
+            position: 'relative', background: 'var(--surface)',
+            display: 'flex', alignItems: 'center', padding: '1.35rem 1.35rem 1.1rem',
           }}>
-            <div style={{ position: 'absolute', inset: 0, opacity: .5, background: 'radial-gradient(circle at 85% 15%, rgba(254,214,91,.35) 0%, transparent 45%)' }} />
             <span style={{
-              position: 'absolute', top: 18, right: 18, padding: '.35rem .85rem', borderRadius: 'var(--radius-full)',
-              background: 'var(--gold)', color: 'var(--text-gold)', fontSize: '.68rem', fontWeight: 800,
-              textTransform: 'uppercase', letterSpacing: '.06em', boxShadow: 'var(--shadow-sm)',
+              position: 'absolute', top: 14, right: 16, padding: '.3rem .75rem', borderRadius: 'var(--radius-full)',
+              background: 'var(--gold-dim)', color: 'var(--text-gold)', fontSize: '.62rem', fontWeight: 800,
+              textTransform: 'uppercase', letterSpacing: '.05em', border: '1px solid var(--gold-light)',
             }}>
               {isAtsApp(current) ? 'Auto-Apply' : current.vacancy?.platform ?? 'Directo'}
             </span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', position: 'relative' }}>
-              <div style={{ width: 60, height: 60, borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '2px solid rgba(255,255,255,.3)', flexShrink: 0, boxShadow: 'var(--shadow-md)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.9rem' }}>
+              <div style={{ width: 52, height: 52, borderRadius: 'var(--radius-lg)', overflow: 'hidden', border: '1.5px solid var(--border)', flexShrink: 0, boxShadow: 'var(--shadow-sm)' }}>
                 <CompanyLogo companyName={companyName} />
               </div>
               <div style={{ minWidth: 0 }}>
-                <div style={{ fontSize: '.78rem', color: 'rgba(241,240,240,.75)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>{companyName}</div>
-                <div style={{ fontSize: '1.55rem', fontWeight: 800, color: '#fff', lineHeight: 1.15, letterSpacing: '-0.01em' }}>{current.vacancy?.title ?? '-'}</div>
+                <div style={{ fontSize: '.72rem', color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em' }}>{companyName}</div>
+                <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1.2, letterSpacing: '-0.01em' }}>{current.vacancy?.title ?? '-'}</div>
               </div>
             </div>
           </div>
 
-          <div style={{ padding: '1.5rem 1.5rem 1.75rem' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', marginBottom: '1.1rem' }}>
+          <div style={{ padding: '0 1.35rem 1.5rem', borderTop: '1px solid var(--border-light)' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.5rem', margin: '1.1rem 0' }}>
               {current.vacancy?.location && <span className="tag" style={{ background: 'var(--bg-2)', color: 'var(--text-2)', border: 'none' }}>{current.vacancy.location}</span>}
               {typeof current.vacancy?.score === 'number' && <span className="tag" style={{ background: 'var(--gold-dim)', color: 'var(--text-gold)', border: 'none' }}>Fit {current.vacancy.score}%</span>}
             </div>
 
-            <p style={{ fontSize: '.9rem', color: 'var(--text-2)', lineHeight: 1.7, margin: 0, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
+            <p style={{ fontSize: '.85rem', color: 'var(--text-2)', lineHeight: 1.65, margin: 0, display: '-webkit-box', WebkitLineClamp: 4, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
               {descriptionText || 'Sin descripción disponible.'}
             </p>
 
-            <div style={{ marginTop: '1.75rem' }}>
+            <div style={{ marginTop: '1.5rem' }}>
               {isProcessing ? (
                 <div style={{ background: 'rgba(18,51,56,.06)', border: '1px solid rgba(18,51,56,.14)', borderRadius: 'var(--radius-lg)', padding: '1.1rem 1.25rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '.4rem' }}>
@@ -282,11 +281,11 @@ export default function SwipeDeck({
       <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
         <div className="bento-card" style={{ padding: '1.25rem' }}>
           <div className="card-label">Curated Match</div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '.85rem' }}>
-            <ScoreRing score={current.vacancy?.score} size={52} />
+          <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem' }}>
+            <ScoreRing score={current.vacancy?.score} size={44} />
             <div>
-              <div style={{ fontSize: '1.3rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{current.vacancy?.score ?? '-'}%</div>
-              <div style={{ fontSize: '.68rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>Overall Fit Score</div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', lineHeight: 1 }}>{current.vacancy?.score ?? '-'}%</div>
+              <div style={{ fontSize: '.63rem', color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '.06em', fontWeight: 700 }}>Overall Fit Score</div>
             </div>
           </div>
           {warnings.length > 0 && (

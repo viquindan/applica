@@ -194,26 +194,26 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
 .step-dot.active{border-color:var(--gold-light);background:var(--gold-dim);color:var(--text-gold)}
 .step-dot.done{border-color:var(--success);background:var(--success-dim);color:#4ecca3}
 
-/* ── App Layout (V3: dark forest sidebar) ─ */
+/* ── App Layout (V3: light chrome, petrol/gold as accent - not fill) ─ */
 .app-layout{display:flex;height:100vh;overflow:hidden;background:var(--bg)}
-.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--petrol);color:#f1f0f0;display:flex;flex-direction:column;padding:1rem 0}
+.sidebar{width:var(--sidebar-w);flex-shrink:0;background:var(--surface);color:var(--text-2);display:flex;flex-direction:column;padding:1rem 0;border-right:1px solid var(--border)}
 .sidebar-logo{padding:1rem 1.5rem;display:flex;align-items:center;gap:.75rem;margin-bottom:1.5rem}
-.sidebar-wordmark{font-family:var(--font-display);font-size:1.5rem;font-weight:800;color:var(--gold);letter-spacing:-0.01em}
-.sidebar-tagline{font-size:.6rem;font-weight:700;text-transform:uppercase;letter-spacing:.12em;color:rgba(241,240,240,.55)}
-.sidebar-nav{flex:1;display:flex;flex-direction:column;gap:.35rem;padding:0 1rem}
-.nav-section{font-size:.65rem;text-transform:uppercase;letter-spacing:.1em;color:rgba(241,240,240,.45);font-weight:700;padding:0 .75rem;margin:1.5rem 0 .5rem 0}
-.nav-item{display:flex;align-items:center;gap:.75rem;padding:.7rem .9rem;border-radius:var(--radius-md);color:rgba(241,240,240,.75);text-decoration:none;font-size:.875rem;font-weight:500;transition:all var(--transition);border:1px solid transparent}
-.nav-item:hover{background:rgba(255,255,255,.06);color:#fff}
-.nav-item.active{background:rgba(255,255,255,.12);color:#fff;font-weight:700}
-.sidebar-footer{padding:1.25rem 1rem;border-top:1px solid rgba(255,255,255,.08);display:flex;flex-direction:column;gap:.75rem}
-.sidebar-premium{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.7rem 1rem;border-radius:var(--radius-full);background:var(--gold);color:var(--text-gold);font-size:.8125rem;font-weight:700;transition:all var(--transition)}
+.sidebar-wordmark{font-family:var(--font-display);font-size:1.2rem;font-weight:800;color:var(--petrol);letter-spacing:-0.01em}
+.sidebar-tagline{font-size:.58rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3)}
+.sidebar-nav{flex:1;display:flex;flex-direction:column;gap:.3rem;padding:0 1rem}
+.nav-section{font-size:.62rem;text-transform:uppercase;letter-spacing:.1em;color:var(--text-3);font-weight:700;padding:0 .75rem;margin:1.5rem 0 .5rem 0}
+.nav-item{display:flex;align-items:center;gap:.7rem;padding:.65rem .85rem;border-radius:var(--radius-md);color:var(--text-2);text-decoration:none;font-size:.8125rem;font-weight:500;transition:all var(--transition);border:1px solid transparent}
+.nav-item:hover{background:var(--bg-2);color:var(--text)}
+.nav-item.active{background:var(--gold-dim);color:var(--text-gold);font-weight:700}
+.sidebar-footer{padding:1.25rem 1rem;border-top:1px solid var(--border-light);display:flex;flex-direction:column;gap:.75rem}
+.sidebar-premium{display:flex;align-items:center;justify-content:center;gap:.5rem;width:100%;padding:.65rem 1rem;border-radius:var(--radius-full);background:var(--gold);color:var(--text-gold);font-size:.78rem;font-weight:700;transition:all var(--transition)}
 .sidebar-premium:hover{background:var(--gold-light)}
-.main-content{flex:1;min-width:0;overflow-y:auto;background:radial-gradient(ellipse 900px 500px at 15% 0%,rgba(18,51,56,.05) 0%,transparent 60%),radial-gradient(ellipse 700px 500px at 100% 15%,rgba(254,214,91,.06) 0%,transparent 55%),var(--bg)}
+.main-content{flex:1;min-width:0;overflow-y:auto;background:var(--bg)}
 .page-container{max-width:1200px;margin:0 auto;padding:2.5rem 3rem}
 
-/* ── Typography & Structure (V3: editorial 900/300 contrast) ─ */
-.page-title{font-family:var(--font-display);font-size:2.5rem;font-weight:900;color:var(--text);margin:0 0 .5rem 0;line-height:1.15;letter-spacing:-0.02em}
-.page-description{font-size:1rem;color:var(--text-2);margin:0 0 2.5rem 0;font-weight:400;max-width:600px;line-height:1.6}
+/* ── Typography & Structure (V3: editorial contrast, kept modest) ─ */
+.page-title{font-family:var(--font-display);font-size:1.85rem;font-weight:800;color:var(--text);margin:0 0 .4rem 0;line-height:1.2;letter-spacing:-0.015em}
+.page-description{font-size:.9rem;color:var(--text-2);margin:0 0 2rem 0;font-weight:400;max-width:600px;line-height:1.6}
 
 /* ── Auth ─ */
 .auth-layout{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--bg);padding:2rem}
@@ -260,20 +260,20 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
   .page-container{padding:1.25rem 1.1rem calc(104px + env(safe-area-inset-bottom))}
   .page-title{font-size:clamp(1.6rem,7vw,2.25rem)}
 
-  /* Floating pill nav, native-app feel */
+  /* Floating pill nav, native-app feel - light surface, petrol/gold as accent */
   .bottom-nav{
     display:flex;position:fixed;left:14px;right:14px;bottom:calc(14px + env(safe-area-inset-bottom));z-index:60;
-    height:66px;padding:0 10px;border-radius:var(--radius-xl);
-    background:var(--petrol);box-shadow:var(--shadow-lg);
+    height:64px;padding:0 8px;border-radius:var(--radius-xl);
+    background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-lg);
     align-items:center;gap:4px;
   }
   .bottom-nav-item{
     flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;
-    color:rgba(241,240,240,.55);text-decoration:none;font-size:.63rem;font-weight:700;
-    padding:8px 0;border-radius:var(--radius-lg);transition:all var(--transition);
+    color:var(--text-3);text-decoration:none;font-size:.6rem;font-weight:700;
+    padding:7px 0;border-radius:var(--radius-lg);transition:all var(--transition);
     letter-spacing:.02em;
   }
-  .bottom-nav-item.active{color:var(--text-gold);background:var(--gold)}
+  .bottom-nav-item.active{color:var(--text-gold);background:var(--gold-dim)}
   .swipe-deck-grid{grid-template-columns:1fr!important}
   .swipe-card{border-radius:var(--radius-xl)!important}
   .swipe-btn.swipe-btn-apply{width:72px;height:72px}
