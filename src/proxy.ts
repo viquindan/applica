@@ -38,19 +38,23 @@ export default auth((req) => {
     }
   }
 
-  // 2. Admin Route Protection at the Edge
+  // 2. Admin Route Protection at the Edge - gated by its own login, not the user one.
   const isAdminRoute = pathname.startsWith('/b2b-hq') || pathname.startsWith('/api/admin');
+  const isAdminLoginPage = pathname === '/admin/login';
 
   if (isAdminRoute) {
     if (!isAuth) {
-      return NextResponse.redirect(new URL('/auth/login', req.url));
+      return NextResponse.redirect(new URL('/admin/login', req.url));
     }
     if (role !== 'admin') {
       return NextResponse.redirect(new URL('/applications', req.url)); // Unauthorized users go to home
     }
   }
+  if (isAdminLoginPage && isAuth && role === 'admin') {
+    return NextResponse.redirect(new URL('/b2b-hq', req.url));
+  }
 
-  const isPublicRoute = pathname === '/' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public');
+  const isPublicRoute = pathname === '/' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || isAdminLoginPage;
 
   if (isApi) return NextResponse.next();
   if (pathname === '/home') return NextResponse.redirect(new URL('/applications', req.url));
