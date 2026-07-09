@@ -3,7 +3,7 @@
 > Vivo y BREVE (se auto-carga en cada sesión: cada línea aquí cuesta tokens siempre).
 > Historial detallado de iteraciones: `docs/CHANGELOG-2026-07.md` (no auto-cargado).
 > El motor de aplicación a fondo: `docs/APPLY-ENGINE.md` (lectura obligatoria antes de tocarlo).
-> Última actualización: 2026-07-06.
+> Última actualización: 2026-07-09.
 
 ## Hecho (estado actual, estable)
 - **Los 4 ATS (Ashby, Greenhouse, Lever, SmartRecruiters) con el mismo flujo asistido**, verificado por el usuario en su Brave real: CV adjunto con verificación en página, llenado completo (shadow DOM incluido), multi-página (SR), banner de estado, aprendizaje silencioso.
@@ -18,15 +18,15 @@
 - **Worker**: resiliente, rescata huérfanos `approved` al arrancar, cola sin throttle. Fallback a Chromium bundled SOLO si el navegador real no lanza. Sin hot-reload: reiniciar tras tocar adapters/core.
 - **IA**: Gemini de pago (`gemini-2.5-flash`), limiter ajustado.
 - Fixtures `[TEST]` (2/ATS, score 200) + harness `scripts/_submit.ts`, `_dom.ts`, `_liveness.ts`, `_banner.ts`.
+- **Branch `v3-web-app`: rediseño "Applica Executive" completo** (base Stitch en `applica movil/` y `applica web/`), las 4 pantallas del mockup + auth + landing verificadas. `master` queda intacto como V1.
+  - Tema global: paleta forest #123338 + dorado #fed65b sobre superficies blancas/crema (no fondo oscuro salvo acentos puntuales: landing hero, avatar, botones primarios), sombras ambientales "quiet luxury", botones pill, tipografía editorial moderada (se redujo tras feedback de "texto muy grande / muy oscuro").
+  - **Navegación en 4 pantallas reales**: `/applications` = Feed (`SwipeDeck.tsx`, una vacante a la vez con gesto de swipe real - drag/rotate + sellos NOPE/APLICAR igual al prototipo Stitch -, botón discreto de "buscar ahora"); `/applications/pending` = Pendientes (captcha/confirmación de apps `approved` + `pending_review` con datos faltantes); `/applications/apps` = historial + "Motor de búsqueda" (cifras del funnel, frecuencia, automatización) colapsado por defecto; `/profile` = Executive Profile (avatar, portafolio de CV, preferencias con slider de salario). Sidebar y `BottomNavigation.tsx` (pill flotante en móvil) muestran las mismas 4 secciones. `/review` y `/dashboard` redirigen a las rutas nuevas.
+  - Lógica compartida en `applications/data.ts` (query server-side única) + `useApplicationActions.ts`/`useSearchEngine.ts` (hooks cliente) para que la máquina de estados del apply engine (docs/APPLY-ENGINE.md §9) viva una sola vez y no diverja entre pantallas. `ApplicationsClient.tsx` (monolito V1) fue eliminado.
+  - Auth (`/auth/login`, `/auth/register`) y landing pública heredan el tema automáticamente (clases `.auth-*`/`.card`/`.btn` compartidas) sin haberlas tocado directamente - verificado visualmente, sin inconsistencias.
+  - Responsive mobile-first casi idéntico al diseño móvil de Stitch: bottom nav pill flotante, mazo de tarjetas apiladas en el Feed, botones circulares SVG, para ensayar cómo se vería la futura app (probablemente React Native).
+  - Verificado con `tsc --noEmit` limpio en cada paso y capturas Playwright (desktop/mobile) de las 6 pantallas (landing, login, register, Feed, Pendientes, Apps, Perfil) vía rutas `dev-preview` temporales con datos mock, siempre borradas tras verificar (no se tocó la DB real). Cuenta demo del login (`test@example.com`) no existe en esta DB - no es una vía de verificación viable.
 
 ## En curso / verificar
-- **Branch `v3-web-app`**: rediseño "Applica Executive" (base Stitch en `applica movil/` y `applica web/`). `master` queda intacto como V1.
-  - Tema global: paleta forest #123338 + dorado #fed65b, sombras ambientales tipo "quiet luxury", botones pill, tipografía 900/300.
-  - **Navegación reestructurada en 4 pantallas reales** (antes todo vivía en `/applications`): `/applications` = Feed (solo `SwipeDeck.tsx`, una vacante a la vez, botón discreto de "buscar ahora"); `/applications/pending` = Pendientes (captcha/confirmación de apps `approved` + `pending_review` con datos faltantes); `/applications/apps` = historial + "Motor de búsqueda" (cifras del funnel, frecuencia, automatización) colapsado por defecto; `/profile` sin cambios de ruta. Sidebar y `BottomNavigation.tsx` muestran las mismas 4 secciones. `/review` redirige a `/applications/pending`.
-  - Lógica compartida en `applications/data.ts` (query server-side única) + `useApplicationActions.ts`/`useSearchEngine.ts` (hooks cliente) para que la máquina de estados del apply engine (docs/APPLY-ENGINE.md §9) viva una sola vez y no diverja entre las 3 pantallas. `ApplicationsClient.tsx` (monolito V1) fue eliminado.
-  - `/profile` rediseñado a "Executive Profile" (avatar, portafolio de CV, preferencias con slider de salario) conservando el auto-save y toda la lógica de subida/activación de CV.
-  - Responsive mobile-first casi idéntico al diseño móvil de Stitch: bottom nav pill flotante, mazo de tarjetas apiladas en el Feed, botones circulares SVG, para ensayar cómo se vería la futura app (probablemente React Native).
-  - Verificado con `tsc --noEmit` limpio y capturas Playwright (desktop/mobile) de landing, Feed, Pendientes, Apps y Perfil vía rutas `dev-preview` temporales con datos mock, borradas tras cada verificación (no se tocó la DB real).
 - Aprendizaje de respuestas de combobox (deal size, hunting vs expansion...): fix verificado en sintético; confirmar que la próxima postulación real las pre-llene.
 
 ## Pendiente
