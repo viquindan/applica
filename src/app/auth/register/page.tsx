@@ -4,6 +4,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useI18n } from '@/i18n/context';
+import { LogoBadge, LogoMark } from '@/components/Logo';
 
 export default function RegisterPage() {
   const { t, locale, setLocale } = useI18n();
@@ -37,11 +38,7 @@ export default function RegisterPage() {
       {/* Top Header */}
       <div style={{ position: 'absolute', top: 0, left: 0, width: '100%', padding: '2rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', textDecoration: 'none' }}>
-          <div style={{ width: 28, height: 28, background: 'var(--petrol)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C12.8 7.8 16.2 11.2 22 12C16.2 12.8 12.8 16.2 12 22C11.2 16.2 7.8 12.8 2 12C7.8 11.2 11.2 7.8 12 2Z" fill="var(--gold)"/>
-            </svg>
-          </div>
+          <LogoBadge size={28} radius="var(--radius-sm)" />
           <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.5rem', fontWeight: 700, color: 'var(--text)' }}>Applica</span>
         </Link>
         <select
@@ -58,9 +55,7 @@ export default function RegisterPage() {
         {/* Logo */}
         <div className="auth-logo-wrap">
           <div className="auth-logo-icon">
-            <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-              <path d="M12 2C12.8 7.8 16.2 11.2 22 12C16.2 12.8 12.8 16.2 12 22C11.2 16.2 7.8 12.8 2 12C7.8 11.2 11.2 7.8 12 2Z" fill="#B09460"/>
-            </svg>
+            <LogoMark size={24} stroke="var(--gold)" />
           </div>
           <div className="auth-wordmark">Applic<em>a</em></div>
           <div className="auth-tagline">Job Search Intelligence</div>

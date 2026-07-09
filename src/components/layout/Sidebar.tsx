@@ -2,6 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useI18n } from '@/i18n/context';
+import { LogoBadge } from '@/components/Logo';
 
 const NAV = [
   {
@@ -55,12 +56,7 @@ export default function Sidebar() {
   return (
     <aside className="sidebar">
       <Link href="/" className="sidebar-logo" style={{ textDecoration: 'none' }}>
-        <div style={{ width: 36, height: 36, background: 'var(--gold)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--petrol)" strokeWidth="2">
-            <rect x="3" y="7" width="18" height="13" rx="2" />
-            <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-          </svg>
-        </div>
+        <LogoBadge size={36} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span className="sidebar-wordmark">Applica</span>
           <span className="sidebar-tagline">Executive Career Suite</span>

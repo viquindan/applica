@@ -307,7 +307,7 @@ export const translations = {
       login: 'Iniciar sesión',
       register: 'Comenzar',
       journey: 'Tu recorrido',
-      profile: 'Revisar perfil',
+      profile: 'Perfil',
     },
     landing: {
       heroTitle: 'Busca ampliamente. Aplica selectivamente.',

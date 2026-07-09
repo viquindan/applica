@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Profile &amp; Resume Management - Applica</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .active-ring {
+            box-shadow: 0 0 0 2px #ffffff, 0 0 0 4px #735c00;
+        }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface min-h-screen pb-24">
+<!-- Top App Bar (Shared Component: TopAppBar) -->
+<header class="fixed top-0 w-full bg-surface dark:bg-petroleo-oscuro border-b border-outline-variant dark:border-primary-container z-50">
+<div class="flex items-center justify-between px-margin-mobile h-16 w-full max-w-7xl mx-auto px-6">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary dark:text-primary-fixed hover:bg-surface-variant dark:hover:bg-primary-container transition-colors p-2 rounded-full active:scale-95 transition-transform">
+                    menu
+                </button>
+<h1 class="font-headline-lg text-headline-lg font-black tracking-tighter text-primary dark:text-primary-fixed">Applica</h1>
+</div>
+<div class="w-10 h-10 rounded-full border-2 border-primary-container overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="A professional close-up portrait of a high-level executive in a well-lit corporate office. The person has a confident expression, wearing premium business attire. The lighting is soft and cinematic, following a luxury aesthetic with deep petroleum and subtle gold tones in the blurred background. High-end, sharp focus, 8k resolution." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDzZTP3me8sARsdOMJwEow4OvlTm9mDzVm-d54SHUq-1JeOvk0nc0g0RXzSYZ3KwenLcqYPv4hOn5MD7XLIGthdgg95Z-Ms7QZFuNMyzOaC1BO67Qiw5ocYd8GRrHyfGvPXjPRpL0VJgJkZ95CYXyELjcGlgWmL6p1iT46NkR22zINZXlElYP55vdfVxM2L7nC2mTJjCBvR0l5vWRPfN-jQ2jpJmQlapOFGcSWqEdKEWDsEXMKuIu0Z"/>
+</div>
+</div>
+</header>
+<main class="pt-20 px-6 max-w-md mx-auto space-y-8">
+<!-- Profile Header Section -->
+<section class="flex flex-col items-center mt-6">
+<div class="relative group">
+<div class="w-32 h-32 rounded-full overflow-hidden border-4 border-white shadow-xl">
+<img class="w-full h-full object-cover" data-alt="A clean, professional headshot of a diverse tech executive against a minimalist architectural background. The image is styled with high-key lighting and a sophisticated corporate feel. Soft shadows and a neutral color palette emphasize elite status and professional excellence. The subject wears a charcoal suit, with a hint of warm gold light reflecting off the glass behind them." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC0rxp5c_wZaYrFsM2mUK_7WBpx2tvsYHE117YjDWptMv9WJ9P3drbkdEFkT7VYbyTxWHHVKuGl92BANcUREOalMY6zdSlzrK-PgqYNq5TlrwLeGEhxhZ-azRjxFzisDEW91uQkbjDgmn-oRDQ8LkIls2ZoVPks_byI90nSNsQVRy9f1jCQ_H6RfoP7qt6J0yuXXpU9tGhCOAm24bDBYMrCHsdAQMzs32wOsuQpFv2qEPeoqjX3I4vf"/>
+</div>
+<button class="absolute bottom-1 right-1 bg-primary text-white p-2 rounded-full shadow-lg hover:scale-105 transition-transform active:scale-95">
+<span class="material-symbols-outlined text-sm">edit</span>
+</button>
+</div>
+<div class="text-center mt-4">
+<h2 class="font-title-lg text-title-lg text-primary">Alexander Sterling</h2>
+<p class="font-body-md text-body-md text-outline">Senior Strategy Director</p>
+</div>
+</section>
+<!-- Personal Info Form -->
+<section class="space-y-4">
+<h3 class="font-label-caps text-label-caps text-outline uppercase tracking-widest">Personal Information</h3>
+<div class="glass-panel border border-outline-variant rounded-xl p-6 space-y-5 shadow-sm">
+<div class="space-y-1.5">
+<label class="font-label-bold text-label-bold text-on-surface-variant">Full Name</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-4 py-3 font-body-md text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="text" value="Alexander Sterling"/>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-bold text-label-bold text-on-surface-variant">Email</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-4 py-3 font-body-md text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="email" value="a.sterling@executive.com"/>
+</div>
+<div class="space-y-1.5">
+<label class="font-label-bold text-label-bold text-on-surface-variant">Phone Number</label>
+<input class="w-full bg-transparent border border-outline-variant rounded-lg px-4 py-3 font-body-md text-body-md focus:ring-1 focus:ring-primary focus:border-primary outline-none transition-all" type="tel" value="+1 (555) 012-3456"/>
+</div>
+</div>
+</section>
+<!-- My Resumes Section -->
+<section class="space-y-4">
+<div class="flex items-center justify-between">
+<h3 class="font-label-caps text-label-caps text-outline uppercase tracking-widest">My Resumes</h3>
+<button class="text-primary font-label-bold text-label-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[16px]">add</span>
+                    Upload New
+                </button>
+</div>
+<!-- Resume Item 1 (Active) -->
+<div class="relative overflow-hidden bg-white border border-secondary text-on-surface rounded-xl p-4 shadow-md transition-all hover:shadow-lg">
+<div class="flex items-center gap-4">
+<div class="bg-secondary-container/20 p-3 rounded-lg">
+<span class="material-symbols-outlined text-secondary" style="font-variation-settings: 'FILL' 1;">description</span>
+</div>
+<div class="flex-1">
+<div class="flex items-center gap-2">
+<span class="font-label-bold text-label-bold text-secondary-fixed-dim bg-secondary px-2 py-0.5 rounded uppercase">Active</span>
+<h4 class="font-title-lg text-body-lg font-semibold text-primary truncate">Strategic_Director_2024.pdf</h4>
+</div>
+<p class="font-body-md text-body-md text-outline mt-1">Updated 2 days ago</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<label class="relative inline-flex items-center cursor-pointer">
+<input checked="" class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+<button class="material-symbols-outlined text-outline">more_vert</button>
+</div>
+</div>
+</div>
+<!-- Resume Item 2 -->
+<div class="relative overflow-hidden bg-surface-container border border-outline-variant rounded-xl p-4 transition-all hover:bg-white">
+<div class="flex items-center gap-4">
+<div class="bg-surface-variant p-3 rounded-lg">
+<span class="material-symbols-outlined text-outline">description</span>
+</div>
+<div class="flex-1">
+<h4 class="font-title-lg text-body-lg font-semibold text-primary truncate">Finance_Focused_CV.pdf</h4>
+<p class="font-body-md text-body-md text-outline mt-1">Updated Oct 12, 2023</p>
+</div>
+<div class="flex flex-col items-end gap-2">
+<label class="relative inline-flex items-center cursor-pointer">
+<input class="sr-only peer" type="checkbox"/>
+<div class="w-11 h-6 bg-surface-variant peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-secondary"></div>
+</label>
+<button class="material-symbols-outlined text-outline">more_vert</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Danger Zone / Account Settings -->
+<section class="pt-4 pb-8 space-y-4">
+<button class="w-full py-4 border border-outline rounded-pill font-label-bold text-label-bold text-outline hover:bg-surface-variant transition-colors rounded-full uppercase tracking-widest active:scale-95">
+                Sign Out
+            </button>
+<p class="text-center font-label-caps text-label-caps text-outline-variant">Applica Premium Member Since 2022</p>
+</section>
+</main>
+<!-- Bottom Navigation Bar (Shared Component: BottomNavBar) -->
+<nav class="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-2 py-3 pb-safe bg-surface dark:bg-petroleo-oscuro border-t border-outline-variant dark:border-primary-container shadow-lg rounded-t-xl">
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[28px]">style</span>
+<span class="font-label-sm text-label-sm">Feed</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[28px]">dashboard</span>
+<span class="font-label-sm text-label-sm">Dashboard</span>
+</a>
+<a class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 hover:text-primary dark:hover:text-primary-fixed active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[28px]">assignment_turned_in</span>
+<span class="font-label-sm text-label-sm">Apps</span>
+</a>
+<!-- Perfil Active State (Logic: Current screen is Profile) -->
+<a class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 active:scale-90 transition-all duration-200" href="#">
+<span class="material-symbols-outlined text-[28px]" style="font-variation-settings: 'FILL' 1;">person</span>
+<span class="font-label-sm text-label-sm">Perfil</span>
+</a>
+</nav>
+<script>
+        // Simple micro-interaction for the resume toggles
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                const parent = this.closest('.relative');
+                if (this.checked) {
+                    // Uncheck others if we wanted a single active resume logic
+                    document.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+                        if (cb !== this) {
+                            cb.checked = false;
+                            cb.closest('.relative').classList.remove('border-secondary', 'shadow-md');
+                            cb.closest('.relative').classList.add('bg-surface-container', 'border-outline-variant');
+                            // Replace "Active" tag if it exists in others
+                            const tag = cb.closest('.relative').querySelector('.bg-secondary');
+                            if(tag) tag.remove();
+                        }
+                    });
+                    
+                    parent.classList.add('border-secondary', 'shadow-md');
+                    parent.classList.remove('bg-surface-container', 'border-outline-variant');
+                } else {
+                    parent.classList.remove('border-secondary', 'shadow-md');
+                    parent.classList.add('bg-surface-container', 'border-outline-variant');
+                }
+            });
+        });
+    </script>
+</body></html>

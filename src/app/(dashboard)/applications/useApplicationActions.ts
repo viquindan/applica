@@ -30,7 +30,15 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   const live = apps.filter((a) => !discardedIds.has(a.id));
   // Feed: fresh matches to decide on (clean swipe). Apps that already need info
   // live in Pendientes instead, so a card never needs two different homes.
-  const queueApps = live.filter((a) => a.status === 'pending_review' && !needsInfoFor(a));
+  // Priority = fit score; tie-broken by the OLDEST match first, so nothing sits
+  // forgotten just because a newer, equally-good match showed up later.
+  const queueApps = live
+    .filter((a) => a.status === 'pending_review' && !needsInfoFor(a))
+    .sort((a, b) => {
+      const scoreDiff = (b.vacancy?.score ?? 0) - (a.vacancy?.score ?? 0);
+      if (scoreDiff !== 0) return scoreDiff;
+      return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+    });
   // Pendientes: mid-flight (captcha/confirmation) or blocked on missing data.
   const pendingApps = live.filter((a) => a.status === 'approved' || (a.status === 'pending_review' && needsInfoFor(a)));
   // Apps (historial): everything that has moved past the decision stage.

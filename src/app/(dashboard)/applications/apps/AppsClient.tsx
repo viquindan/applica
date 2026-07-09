@@ -1,5 +1,5 @@
 'use client';
-import { useState, useEffect, useMemo, useRef, Fragment } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { IconX } from '@tabler/icons-react';
 import { CompanyLogo, ScoreRing, STATUS_META, MODE_META } from '@/components/JobCardUI';
 import { useApplicationActions } from '../useApplicationActions';
@@ -113,18 +113,6 @@ export default function AppsClient({
   const safePage = Math.min(page, totalPages);
   const paged = useMemo(() => sorted.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE), [sorted, safePage]);
 
-  const tableScrollRef = useRef<HTMLDivElement | null>(null);
-  const [showScrollHint, setShowScrollHint] = useState(false);
-  useEffect(() => {
-    const el = tableScrollRef.current;
-    if (!el) { setShowScrollHint(false); return; }
-    const check = () => setShowScrollHint(el.scrollWidth - el.clientWidth > 8);
-    check();
-    const ro = new ResizeObserver(check);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [sorted.length]);
-
   const related = Math.max(liveProgress.lastSearchResultCount ?? 0, (liveProgress.lastSearchFilteredCount ?? 0) + (liveProgress.lastSearchPreparedCount ?? 0));
   const monitored = Math.max(supply.jobsSeen ?? 0, related);
   const discarded = liveProgress.lastSearchFilteredCount ?? 0;
@@ -141,9 +129,7 @@ export default function AppsClient({
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
         <div>
           <div className="page-eyebrow">Apps</div>
-          <h1 style={{ fontSize: 'clamp(1.6rem,4vw,2rem)', fontWeight: 800, color: 'var(--text)', margin: 0, letterSpacing: '-0.02em' }}>
-            Tus aplicaciones
-          </h1>
+          <h1 className="page-title" style={{ margin: 0 }}>Tus aplicaciones</h1>
         </div>
         <div style={{ background: 'var(--surface)', padding: '1rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', width: 260 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.8125rem', marginBottom: '0.5rem', fontWeight: 600 }}>
@@ -249,89 +235,61 @@ export default function AppsClient({
           </div>
         </div>
       ) : (
-        <>
-          <style>{`
-            .app-table-scroll { overflow-x: scroll; scrollbar-width: thin; scrollbar-color: var(--petrol) var(--bg-2); transform: rotateX(180deg); }
-            .app-table-scroll > table { transform: rotateX(180deg); }
-            .app-table-scroll::-webkit-scrollbar { height: 10px; -webkit-appearance: none; }
-            .app-table-scroll::-webkit-scrollbar-track { background: var(--bg-2); border-radius: 999px; }
-            .app-table-scroll::-webkit-scrollbar-thumb { background: var(--petrol); border-radius: 999px; border: 2px solid var(--bg-2); }
-          `}</style>
-          {showScrollHint && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '.4rem', fontSize: '.73rem', fontWeight: 600, color: 'var(--petrol)', marginBottom: '.5rem' }}>
-              Desliza la tabla horizontalmente (barra arriba) para ver todas las columnas
-            </div>
-          )}
-          <div ref={tableScrollRef} className="modern-table-wrapper app-table-scroll" style={{ width: '100%' }}>
-            <table className="modern-table" style={{ borderCollapse: 'separate', borderSpacing: '0 0.75rem', width: '100%', minWidth: '860px' }}>
-              <thead>
-                <tr>
-                  <th onClick={() => toggleSort('company')} style={{ cursor: 'pointer', userSelect: 'none', width: '400px' }}>Empresa & Rol</th>
-                  <th onClick={() => toggleSort('score')} style={{ cursor: 'pointer', textAlign: 'center', userSelect: 'none', width: '64px' }}>Score</th>
-                  <th onClick={() => toggleSort('status')} style={{ cursor: 'pointer', userSelect: 'none', width: '160px' }}>Estado</th>
-                  <th onClick={() => toggleSort('date')} style={{ cursor: 'pointer', userSelect: 'none', width: '92px' }}>Fecha</th>
-                  <th style={{ userSelect: 'none', width: '140px', minWidth: '140px' }}>Acciones</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((app) => {
-                  const sm = STATUS_META[app.status as string] || { label: String(app.status), badge: 'badge-ghost' };
-                  const companyName = app.vacancy?.company ?? 'N/A';
-                  const isNavigating = navigatingId === app.id;
-                  const lastWarn = ((app.vacancy?.warnings as string[] | null) ?? []).slice(-1)[0] ?? '';
-                  const vacancyGone = app.status === 'skipped' && /ya no est[aá] publicada/i.test(lastWarn);
-                  return (
-                    <Fragment key={app.id}>
-                      <tr className="modern-row" style={{ opacity: isNavigating ? 0.6 : ((app.status as string) === 'filtered' ? 0.75 : 1) }} onClick={() => openApp(app)}>
-                        <td style={{ width: '400px', maxWidth: '400px' }}>
-                          <div style={{ display: 'flex', gap: '0.85rem', alignItems: 'flex-start' }}>
-                            <CompanyLogo companyName={companyName} />
-                            <div style={{ minWidth: 0 }}>
-                              <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '0.95rem', fontFamily: 'var(--font-display)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</div>
-                              <div style={{ fontWeight: 500, fontSize: '0.85rem', color: 'var(--text-2)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', lineHeight: 1.3 }}>{app.vacancy?.title ?? '-'}</div>
-                              <div style={{ fontSize: '0.75rem', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.25rem', minWidth: 0 }}>
-                                <span style={{ textTransform: 'capitalize', flexShrink: 0 }}>{app.vacancy?.platform ?? '-'}</span>
-                                {app.vacancy?.location && (
-                                  <>
-                                    <span style={{ margin: '0 0.15rem', flexShrink: 0 }}>•</span>
-                                    <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.vacancy.location}</span>
-                                  </>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td style={{ textAlign: 'center' }}>
-                          <div style={{ display: 'inline-block' }}><ScoreRing score={app.vacancy?.score} /></div>
-                        </td>
-                        <td>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                            <span className={`badge ${sm.badge}`}>{sm.label}</span>
-                            {vacancyGone && <span className="badge badge-ghost" title={lastWarn}>Vacante cerrada</span>}
-                            {app.responseStatus === 'contacted' && <span className="badge badge-success">Te llamaron</span>}
-                            {app.responseStatus === 'rejected' && <span className="badge badge-danger">Rechazada</span>}
-                          </div>
-                        </td>
-                        <td style={{ whiteSpace: 'nowrap' }}>
-                          <span style={{ fontSize: '0.8rem', color: 'var(--text-2)', fontWeight: 500 }}>
-                            {new Date(app.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
-                          </span>
-                        </td>
-                        <td onClick={(e) => e.stopPropagation()}>
-                          {app.status !== 'archived' && (
-                            <button className="btn btn-ghost btn-sm" disabled={actioningId === app.id} title="No me interesa - quitar de la lista." onClick={() => discardApp(app)} style={{ color: 'var(--text-3)' }}>
-                              Descartar
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    </Fragment>
-                  );
-                })}
-              </tbody>
-            </table>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '.6rem' }}>
+          {/* Sort controls - the table's clickable headers become a small toolbar,
+              since a responsive row-list has no column headers to click on. */}
+          <div style={{ display: 'flex', gap: '.4rem', flexWrap: 'wrap', marginBottom: '.25rem' }}>
+            {[{ key: 'date', label: 'Fecha' }, { key: 'score', label: 'Score' }, { key: 'company', label: 'Empresa' }, { key: 'status', label: 'Estado' }].map((s) => (
+              <button key={s.key} onClick={() => toggleSort(s.key)}
+                style={{
+                  fontSize: '.7rem', fontWeight: 700, padding: '.3rem .7rem', borderRadius: 'var(--radius-full)',
+                  background: sortKey === s.key ? 'var(--gold-dim)' : 'var(--bg-2)',
+                  color: sortKey === s.key ? 'var(--text-gold)' : 'var(--text-3)',
+                  border: '1px solid ' + (sortKey === s.key ? 'var(--gold-light)' : 'transparent'),
+                }}>
+                {s.label} {sortKey === s.key ? (sortDir === 'asc' ? '↑' : '↓') : ''}
+              </button>
+            ))}
           </div>
-        </>
+
+          {paged.map((app) => {
+            const sm = STATUS_META[app.status as string] || { label: String(app.status), badge: 'badge-ghost' };
+            const companyName = app.vacancy?.company ?? 'N/A';
+            const isNavigating = navigatingId === app.id;
+            const lastWarn = ((app.vacancy?.warnings as string[] | null) ?? []).slice(-1)[0] ?? '';
+            const vacancyGone = app.status === 'skipped' && /ya no est[aá] publicada/i.test(lastWarn);
+            return (
+              <div key={app.id} className="app-row" onClick={() => openApp(app)}
+                style={{ opacity: isNavigating ? 0.6 : ((app.status as string) === 'filtered' ? 0.75 : 1) }}>
+                <CompanyLogo companyName={companyName} />
+                <div style={{ minWidth: 0, flex: '1 1 200px' }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text)', fontSize: '.9rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{companyName}</div>
+                  <div style={{ fontSize: '.82rem', color: 'var(--text-2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{app.vacancy?.title ?? '-'}</div>
+                  <div style={{ fontSize: '.73rem', color: 'var(--text-3)', textTransform: 'capitalize' }}>
+                    {app.vacancy?.platform ?? '-'}{app.vacancy?.location ? ` · ${app.vacancy.location}` : ''}
+                  </div>
+                </div>
+                <div className="app-row-meta" style={{ display: 'flex', alignItems: 'center', gap: '.6rem', flexWrap: 'wrap' }}>
+                  <ScoreRing score={app.vacancy?.score} size={32} />
+                  <span className={`badge ${sm.badge}`}>{sm.label}</span>
+                  {vacancyGone && <span className="badge badge-ghost" title={lastWarn}>Vacante cerrada</span>}
+                  {app.responseStatus === 'contacted' && <span className="badge badge-success">Te llamaron</span>}
+                  {app.responseStatus === 'rejected' && <span className="badge badge-danger">Rechazada</span>}
+                  <span style={{ fontSize: '.75rem', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+                    {new Date(app.createdAt).toLocaleDateString('es', { day: '2-digit', month: 'short' })}
+                  </span>
+                </div>
+                {app.status !== 'archived' && (
+                  <button className="btn btn-ghost btn-sm" disabled={actioningId === app.id}
+                    title="No me interesa - quitar de la lista." onClick={(e) => { e.stopPropagation(); discardApp(app); }}
+                    style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+                    Descartar
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
       )}
 
       <div style={{ marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>

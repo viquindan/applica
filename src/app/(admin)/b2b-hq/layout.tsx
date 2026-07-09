@@ -3,6 +3,7 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
+import { LogoMark } from '@/components/Logo';
 
 export default async function AdminLayout({
   children,
@@ -28,10 +29,7 @@ export default async function AdminLayout({
       <aside style={{ width: '250px', flexShrink: 0, background: 'var(--surface)', borderRight: '1px solid var(--border)', padding: '1.5rem' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '2rem' }}>
           <div style={{ width: 32, height: 32, background: 'var(--petrol)', borderRadius: 'var(--radius-md)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--gold)" strokeWidth="2">
-              <rect x="3" y="7" width="18" height="13" rx="2" />
-              <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-            </svg>
+            <LogoMark size={16} stroke="var(--gold)" />
           </div>
           <div>
             <div style={{ fontWeight: 800, fontSize: '.95rem', color: 'var(--petrol)', lineHeight: 1.2 }}>Applica Admin</div>

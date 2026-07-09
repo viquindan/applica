@@ -1,13 +1,12 @@
 import Link from 'next/link';
+import { LogoBadge } from '@/components/Logo';
 
 export default function PrivacyPage() {
   return (
     <div className="min-h-screen bg-[var(--bg-1)] flex flex-col font-sans">
       <header className="w-full flex justify-between items-center px-8 py-6 max-w-7xl mx-auto border-b border-white/10">
         <Link href="/" className="flex items-center gap-2">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M12 2C12.8 7.8 16.2 11.2 22 12C16.2 12.8 12.8 16.2 12 22C11.2 16.2 7.8 12.8 2 12C7.8 11.2 11.2 7.8 12 2Z" fill="#B09460"/>
-          </svg>
+          <LogoBadge size={24} radius="var(--radius-sm)" />
           <span className="font-display text-xl font-bold tracking-tight text-white">Applica</span>
         </Link>
       </header>

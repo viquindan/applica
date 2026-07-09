@@ -1,6 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useI18n } from '@/i18n/context';
+import { LogoBadge } from '@/components/Logo';
 
 export default function LandingClient() {
   const { t, locale, setLocale } = useI18n();
@@ -17,12 +18,7 @@ export default function LandingClient() {
       <div style={{ background: 'linear-gradient(160deg, var(--petrol) 0%, var(--petrol-light) 100%)', color: '#f1f0f0' }}>
         <header style={{ width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1.5rem 2rem', maxWidth: '1200px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-            <div style={{ width: 34, height: 34, background: 'var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--radius-md)' }}>
-              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--petrol)" strokeWidth="2">
-                <rect x="3" y="7" width="18" height="13" rx="2" />
-                <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-              </svg>
-            </div>
+            <LogoBadge size={34} />
             <span style={{ fontSize: '1.5rem', fontWeight: 800, color: '#fff', letterSpacing: '-0.02em' }}>Applica</span>
           </div>
           <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>

@@ -212,7 +212,7 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
 .page-container{max-width:1200px;margin:0 auto;padding:2.5rem 3rem}
 
 /* ── Typography & Structure (V3: editorial contrast, kept modest) ─ */
-.page-title{font-family:var(--font-display);font-size:1.85rem;font-weight:800;color:var(--text);margin:0 0 .4rem 0;line-height:1.2;letter-spacing:-0.015em}
+.page-title{font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--text);margin:0 0 .3rem 0;line-height:1.25;letter-spacing:-0.01em}
 .page-description{font-size:.9rem;color:var(--text-2);margin:0 0 2rem 0;font-weight:400;max-width:600px;line-height:1.6}
 
 /* ── Auth ─ */
@@ -258,7 +258,9 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
   .sidebar{display:none}
   .main-content{margin-left:0;background:var(--bg)}
   .page-container{padding:1.25rem 1.1rem calc(104px + env(safe-area-inset-bottom))}
-  .page-title{font-size:clamp(1.6rem,7vw,2.25rem)}
+  .page-title{font-size:clamp(1.35rem,6vw,1.75rem)}
+  .header-brand{display:flex!important}
+  .app-header{padding:.7rem 1.1rem!important}
 
   /* Floating pill nav, native-app feel - light surface, petrol/gold as accent */
   .bottom-nav{
@@ -300,6 +302,31 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
   background:linear-gradient(135deg,var(--petrol-light),var(--petrol));
 }
 .swipe-btn-apply:hover{transform:translateY(-2px);box-shadow:var(--shadow-lg),0 0 0 6px rgba(254,214,91,.18)}
+
+/* ── Feed: single card, Tinder-style, no page scroll ─ */
+.feed-shell{
+  display:flex;align-items:center;justify-content:center;
+  min-height:calc(100vh - 150px);
+}
+.feed-single{
+  display:flex;flex-direction:column;align-items:center;gap:1.5rem;
+  width:100%;max-width:400px;
+}
+.swipe-card-wrap{max-width:400px}
+.swipe-card{
+  width:100%;
+  height:min(560px,calc(100vh - 320px));
+  min-height:420px;
+}
+.swipe-actions-row{width:100%}
+.swipe-status-panel{
+  background:rgba(18,51,56,.06);border:1px solid rgba(18,51,56,.14);
+  border-radius:var(--radius-lg);padding:1.1rem 1.25rem;
+}
+@media(max-width:768px){
+  .feed-shell{min-height:calc(100vh - 190px)}
+  .swipe-card{height:min(520px,calc(100vh - 300px));min-height:380px}
+}
 
 /* ── Tags ─ */
 .tag-input-wrapper{display:flex;flex-wrap:wrap;gap:.375rem;padding:.5rem .75rem;background:var(--bg-2);border:1px solid var(--border);border-radius:var(--radius-sm);min-height:42px;cursor:text}
@@ -431,6 +458,20 @@ h1,h2,h3{font-family:var(--font-display);font-weight:600;letter-spacing:-.01em}
 .modern-table td:last-child {
   border-top-right-radius: var(--radius-md);
   border-bottom-right-radius: var(--radius-md);
+}
+
+/* ── Responsive list row (Pendientes backlog, Apps history) - replaces the
+   old table-with-horizontal-scroll pattern, which was unusable on mobile ─ */
+.app-row{
+  display:flex;align-items:center;gap:.85rem;flex-wrap:wrap;
+  padding:.85rem 1.1rem;border-radius:var(--radius-md);
+  background:var(--surface);box-shadow:var(--shadow-sm);cursor:pointer;
+  transition:all var(--transition-slow);
+}
+.app-row:hover{transform:translateY(-2px);box-shadow:var(--shadow-md)}
+@media(max-width:640px){
+  .app-row{align-items:flex-start}
+  .app-row-meta{width:100%;padding-left:calc(40px + .85rem)}
 }
 
 .company-avatar {

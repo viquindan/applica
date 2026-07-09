@@ -3,6 +3,7 @@ import { useState, useRef, useEffect } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import { useI18n } from '@/i18n/context';
+import { LogoBadge } from '@/components/Logo';
 
 export default function Header({ userName }: { userName: string }) {
   const { t } = useI18n();
@@ -27,11 +28,16 @@ export default function Header({ userName }: { userName: string }) {
     .toUpperCase() || 'U';
 
   return (
-    <header style={{
-      width: '100%', display: 'flex', justifyContent: 'flex-end', alignItems: 'center',
-      padding: '1rem 2rem', borderBottom: '1px solid var(--border)',
+    <header className="app-header" style={{
+      width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '.85rem 2rem', borderBottom: '1px solid var(--border)',
       background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 50
     }}>
+      <Link href="/applications" className="header-brand" style={{ display: 'none', alignItems: 'center', gap: '.5rem', textDecoration: 'none' }}>
+        <LogoBadge size={30} radius="var(--radius-sm)" />
+        <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Applica</span>
+      </Link>
+
       <div style={{ position: 'relative' }} ref={ref}>
         <button
           onClick={() => setOpen(!open)}

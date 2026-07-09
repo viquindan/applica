@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0, viewport-fit=cover" name="viewport"/>
+<title>Applica - Pendientes</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            "colors": {
+                    "secondary-fixed": "#ffe088",
+                    "on-surface-variant": "#414849",
+                    "outline": "#717879",
+                    "on-secondary-fixed": "#241a00",
+                    "surface-tint": "#446469",
+                    "inverse-primary": "#abccd2",
+                    "primary-fixed": "#c6e9ef",
+                    "surface-container-low": "#f4f3f3",
+                    "surface-container-highest": "#e3e2e2",
+                    "on-background": "#1a1c1c",
+                    "on-tertiary-fixed": "#261900",
+                    "on-primary": "#ffffff",
+                    "secondary": "#735c00",
+                    "outline-variant": "#C1C8C9",
+                    "surface-bright": "#faf9f9",
+                    "on-tertiary-fixed-variant": "#57441c",
+                    "tertiary-container": "#56421b",
+                    "inverse-surface": "#2f3131",
+                    "on-secondary-fixed-variant": "#574500",
+                    "tertiary-fixed-dim": "#dfc390",
+                    "surface-container-lowest": "#ffffff",
+                    "surface": "#FAF9F9",
+                    "error-container": "#ffdad6",
+                    "on-primary-fixed-variant": "#2c4c51",
+                    "success-green": "#10B981",
+                    "surface-variant": "#E3E2E2",
+                    "secondary-container": "#fed65b",
+                    "tertiary-fixed": "#fddfa9",
+                    "on-tertiary-container": "#cbaf7e",
+                    "surface-dim": "#dadada",
+                    "surface-container-high": "#e8e8e8",
+                    "linkedin-blue": "#0A66C2",
+                    "error": "#BA1A1A",
+                    "secondary-fixed-dim": "#e9c349",
+                    "on-error-container": "#93000a",
+                    "background": "#faf9f9",
+                    "primary": "#123338",
+                    "on-surface": "#1A1C1C",
+                    "on-tertiary": "#ffffff",
+                    "primary-fixed-dim": "#abccd2",
+                    "on-secondary": "#ffffff",
+                    "on-error": "#ffffff",
+                    "surface-container": "#eeeeed",
+                    "inverse-on-surface": "#f1f0f0",
+                    "primary-container": "#2a4a4f",
+                    "on-primary-fixed": "#001f24",
+                    "tertiary": "#3d2c06",
+                    "on-primary-container": "#97b9be",
+                    "on-secondary-container": "#745c00"
+            },
+            "borderRadius": {
+                    "DEFAULT": "0.25rem",
+                    "lg": "0.5rem",
+                    "xl": "0.75rem",
+                    "full": "9999px"
+            },
+            "spacing": {
+                    "gutter": "16px",
+                    "lg": "24px",
+                    "xl": "32px",
+                    "sm": "12px",
+                    "md": "16px",
+                    "base": "4px",
+                    "xs": "8px",
+                    "container-margin": "24px"
+            },
+            "fontFamily": {
+                    "label-bold": ["Inter"],
+                    "headline-md": ["Inter"],
+                    "title-lg": ["Inter"],
+                    "display-lg-light": ["Inter"],
+                    "display-lg": ["Inter"],
+                    "body-lg": ["Inter"],
+                    "body-md": ["Inter"],
+                    "label-caps": ["Inter"]
+            },
+            "fontSize": {
+                    "label-bold": ["11px", {"lineHeight": "1.0", "fontWeight": "700"}],
+                    "headline-md": ["24px", {"lineHeight": "1.3", "fontWeight": "700"}],
+                    "title-lg": ["20px", {"lineHeight": "1.4", "fontWeight": "600"}],
+                    "display-lg-light": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.01em", "fontWeight": "300"}],
+                    "display-lg": ["36px", {"lineHeight": "1.2", "letterSpacing": "-0.02em", "fontWeight": "900"}],
+                    "body-lg": ["18px", {"lineHeight": "1.6", "fontWeight": "400"}],
+                    "body-md": ["14px", {"lineHeight": "1.5", "fontWeight": "400"}],
+                    "label-caps": ["10px", {"lineHeight": "1.0", "letterSpacing": "0.1em", "fontWeight": "900"}]
+            }
+          },
+        },
+      }
+    </script>
+<style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+        }
+        .scroll-hide::-webkit-scrollbar { display: none; }
+        .scroll-hide { -ms-overflow-style: none; scrollbar-width: none; }
+        .active-scale:active { transform: scale(0.95); }
+    </style>
+<style>
+    body {
+      min-height: max(884px, 100dvh);
+    }
+  </style>
+  </head>
+<body class="bg-background text-on-surface">
+<!-- Top Navigation Bar -->
+<header class="fixed top-0 w-full z-50 bg-surface dark:bg-petroleo-oscuro border-b border-outline-variant dark:border-primary-container h-16">
+<div class="flex items-center justify-between px-container-margin h-full max-w-7xl mx-auto">
+<div class="flex items-center gap-4">
+<button class="material-symbols-outlined text-primary hover:bg-surface-variant transition-colors p-2 rounded-full active:scale-95">menu</button>
+<h1 class="font-headline-md text-headline-md font-black tracking-tighter text-primary dark:text-primary-fixed">Applica</h1>
+</div>
+<div class="w-10 h-10 rounded-full overflow-hidden border border-outline-variant">
+<img class="w-full h-full object-cover" data-alt="A professional, high-end headshot of a corporate executive in Tech or Finance. The individual has a confident, approachable expression, wearing a tailored navy suit against a soft, blurred office interior background with warm gold lighting. The image quality is crisp, mimicking premium editorial photography with shallow depth of field." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBcDmxeYy7PEe6T6hzD-W2DLnUf1cqanQRda7XCjSA87jwRov6W4lwW_-u47vj5bPpRpBn6HKU4D3UdSIJ8xedoSyGNJo1JVz0mp8CJJ284D29VHH5b0P2WK-jxu1q_6z8JI_vyhSZGAqzp7eNlVcYlc-9vDxZZBcVkh0uBnNq9Ccr3cwqhkEkUfmafRD_kjGXah6Y3FftIaKVMGd6M2_cubmv4Wt8VLLDaqTlHYzrCN15w9uBdEJlx"/>
+</div>
+</div>
+</header>
+<main class="pt-20 pb-24 px-container-margin max-w-md mx-auto min-h-screen">
+<!-- Section Header -->
+<div class="mb-6">
+<h2 class="font-display-lg text-display-lg text-primary mb-1">Pendientes</h2>
+<p class="font-body-md text-body-md text-outline">Acciones requeridas para avanzar en tus procesos exclusivos.</p>
+</div>
+<!-- Pending Actions Section -->
+<section class="space-y-4 mb-10">
+<div class="flex items-center justify-between mb-2">
+<span class="font-label-caps text-label-caps text-secondary tracking-[0.2em] uppercase">Requiere Atención</span>
+<span class="px-2 py-0.5 bg-error-container text-on-error-container rounded-full font-label-bold text-label-bold">2 NUEVOS</span>
+</div>
+<!-- Priority Card: TechNova -->
+<div class="relative bg-surface rounded-xl shadow-xl overflow-hidden border border-outline-variant group transition-all active:scale-[0.98]">
+<div class="h-32 relative">
+<img class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500" data-alt="A sophisticated, minimalist architectural photo of a high-tech corporate headquarters building in London. The building features dark glass panels and warm interior gold lighting reflecting on clean metallic surfaces. The style is executive and high-end, using a palette of deep petroleum blues and golden highlights to emphasize elite corporate status." src="https://lh3.googleusercontent.com/aida-public/AB6AXuBB2y1BSPQ7ykDtiq0WvHex56vDFX0bezXRKgV217j-Y64FPxrPHr5QpA4LlrBFq-csvGDxEA6FZP17EEatBb_sSIm7OeGT74J6jfFA4umNMHmy0TxfSbwLls1qcY_Xrk-BpMt2_0YiPK9JevHuuLFZfaFyyMNxc9tgDDjROoA6ZFFvIZnDbaKun9XQvI27TGG4iLNybRYu3663gS9C4i0l_CY1s7vtZCy8i64_oID1yrl74Msza0h1"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute top-3 right-3 px-3 py-1 bg-secondary-container text-on-secondary-container rounded-full font-label-bold text-label-bold flex items-center gap-1 shadow-md">
+<span class="material-symbols-outlined text-[14px]" style="font-variation-settings: 'FILL' 1;">warning</span>
+                        URGE
+                    </div>
+</div>
+<div class="p-lg">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h3 class="font-title-lg text-title-lg text-primary leading-tight">Senior UX Designer</h3>
+<p class="font-label-bold text-label-bold text-secondary uppercase tracking-wider">TechNova Solutions</p>
+</div>
+<div class="bg-surface-container-low p-2 rounded-lg border border-outline-variant">
+<img class="w-8 h-8 object-contain" data-alt="A minimalist and sleek corporate logo for a technology company called TechNova. The logo is a stylized geometric letter T in deep forest green and gold. The background is a clean white with a subtle texture. The overall aesthetic is professional, modern, and elite." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCmCQogLrNBSAZhMus4Kwsj3dflPteVmxi0Uk2iSbf5LPn0keqgBQAyISs0y9OhP-Tb8ea7y1HA2zWK788bVpi-bdNNKYNkTqceOSR3jznaDLbERGSDxofu-s15L5cAM4BMKAKf5Lf_m5Te7zhis5B0sIfTrE_yzymrfFXyaiI_mIUiHVhMo3LbAb6OIOjQ9cNsIS1rgSQ-OG7rpopc7Z5XioT-D1D-YygUIuvvPa5Gfw3apeE3R01L"/>
+</div>
+</div>
+<div class="flex gap-2 mb-4">
+<span class="px-2 py-1 bg-primary-container/10 text-primary-container rounded-lg font-label-bold text-label-bold border border-primary-container/20">Remoto</span>
+<span class="px-2 py-1 bg-primary-container/10 text-primary-container rounded-lg font-label-bold text-label-bold border border-primary-container/20">$120k - $160k</span>
+</div>
+<div class="p-md bg-secondary-fixed/30 rounded-xl border border-secondary-fixed mb-4">
+<p class="font-body-md text-body-md text-on-secondary-fixed-variant">
+<strong>Acción:</strong> Completa el portafolio técnico para la revisión final del Hiring Manager.
+                        </p>
+</div>
+<button class="w-full py-4 bg-primary text-on-primary rounded-full font-label-bold text-[14px] uppercase tracking-widest shadow-md hover:bg-primary-container transition-all active:scale-95">
+                        COMPLETAR ACCIÓN
+                    </button>
+</div>
+</div>
+<!-- Pending Card: FinStream -->
+<div class="relative bg-surface rounded-xl shadow-xl overflow-hidden border border-outline-variant group transition-all active:scale-[0.98]">
+<div class="h-32 relative">
+<img class="w-full h-full object-cover grayscale-[0.2] group-hover:grayscale-0 transition-all duration-500" data-alt="A professional finance-themed interior shot of a modern boardroom. Polished dark wood tables, leather chairs, and floor-to-ceiling windows overlooking a financial district at sunset. The lighting is warm gold and deep petroleum green. The atmosphere is quiet luxury and executive power." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcoXZR6tNCZWV1RtmF-YEQBvrftnT7KaAM0zI_EPpw1V-9Z2Wo-b_8OTNC-e1E-3qpiRP-BA6wUEWgdb79URirKNhUaIXJSWl1k-EmyfjWTmYEu-6JG5qU0ZQ6VMvrYIh4-XCJBl2Xj6vpLa-nhX_iRHXCKCbesXRRFleVVraN7DG2FBblh6MlU2fb3KeSvC17nO7u3mieg5e6qvlGVnd893_tTdQXFVsfzVRr-fTWVcI7dB3cQAcb"/>
+<div class="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+<div class="absolute top-3 right-3 px-3 py-1 bg-surface/90 text-primary rounded-full font-label-bold text-label-bold flex items-center gap-1">
+<span class="material-symbols-outlined text-[14px]">schedule</span>
+                        48H RESTANTES
+                    </div>
+</div>
+<div class="p-lg">
+<div class="flex justify-between items-start mb-2">
+<div>
+<h3 class="font-title-lg text-title-lg text-primary leading-tight">VP of Growth</h3>
+<p class="font-label-bold text-label-bold text-secondary uppercase tracking-wider">FinStream Partners</p>
+</div>
+</div>
+<div class="p-md bg-surface-container rounded-xl border border-outline-variant mb-4">
+<p class="font-body-md text-body-md text-on-surface-variant">
+<strong>Siguiente paso:</strong> Programar entrevista cultural con el CEO.
+                        </p>
+</div>
+<button class="w-full py-4 border-2 border-primary text-primary rounded-full font-label-bold text-[14px] uppercase tracking-widest hover:bg-primary/5 transition-all active:scale-95">
+                        AGENDAR AHORA
+                    </button>
+</div>
+</div>
+</section>
+<!-- Divider -->
+<div class="h-px w-full bg-outline-variant my-8"></div>
+<!-- Active/Successful Section -->
+<section class="space-y-4">
+<span class="font-label-caps text-label-caps text-outline tracking-[0.2em] uppercase">En Proceso (Sin Acciones)</span>
+<!-- Minimalist Mini Card -->
+<div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="w-12 h-12 rounded-lg bg-white p-2 border border-outline-variant">
+<img class="w-full h-full object-contain" data-alt="Corporate logo for Global Assets. Minimalist emblem featuring a stylized globe in deep petroleum green. Elegant and stable aesthetic." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDUVz_yrI3j0qvDPpLelDEWaiSEYF_ple5rIZCYc9EtypG0vMOeqOq-65VrGXGWRuf1pT21h1hC5LHD7COMcfI1GbHA02ZbVe166cE5UC_UDEDDiyAvK0qVEmR_u1R1j2z_OOoPlWjJ3wgWzIRf4cr1-dgs5wd28nOBxM1NJ5tfAitfMM9s-7JVFGCiKWJkmOWXIMFDjKb097Lv4E-WtNlr6zYxjmwC1kYaDbw2b-aRSrLXUXAO3pJ2"/>
+</div>
+<div class="flex-1">
+<h4 class="font-label-bold text-[14px] text-primary">Equity Analyst</h4>
+<p class="text-xs text-outline">Global Assets • <span class="text-success-green font-semibold">Revisión de CV</span></p>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</div>
+<div class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl border border-outline-variant">
+<div class="w-12 h-12 rounded-lg bg-white p-2 border border-outline-variant">
+<img class="w-full h-full object-contain" data-alt="Corporate logo for Quantum AI. Modern minimalist icon in emerald and navy. Technological and elite feel." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCKDjnTSHrNR6yN-nt3h-4hWHPKVZO_kYU4tuAfAjp6lutUQkDYHptCBigB6_AP1XjAiQt5Ks99ARGSZF9R-_BOavVOXTmSh3yqP4RffQkEH2psRRLe4_w1Ard-IfJdK-rHbDx-9RYS2mySfH3EfFo-zVoRO3KBSf-s2huL8kTgD62ucx2jjgteNsEsaKzxaW1TcKI8I3IOr3RS84PZCkg5yUowN18IrRzlOQr-70X_aVMLzeaE6Bb-"/>
+</div>
+<div class="flex-1">
+<h4 class="font-label-bold text-[14px] text-primary">AI Strategy Lead</h4>
+<p class="text-xs text-outline">Quantum AI • <span class="text-primary font-semibold">Entrevista Final</span></p>
+</div>
+<span class="material-symbols-outlined text-outline">chevron_right</span>
+</div>
+</section>
+</main>
+<!-- Bottom Navigation Bar -->
+<nav class="fixed bottom-0 left-0 w-full z-50 bg-surface dark:bg-petroleo-oscuro border-t border-outline-variant dark:border-primary-container shadow-lg flex justify-around items-center px-2 py-3 pb-safe">
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">style</span>
+<span class="font-label-sm text-label-sm mt-1">Feed</span>
+</button>
+<button class="flex flex-col items-center justify-center bg-secondary-container dark:bg-secondary text-on-secondary-container dark:text-on-secondary rounded-full px-4 py-1 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">dashboard</span>
+<span class="font-label-sm text-label-sm mt-1">Dashboard</span>
+</button>
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">assignment_turned_in</span>
+<span class="font-label-sm text-label-sm mt-1">Apps</span>
+</button>
+<button class="flex flex-col items-center justify-center text-outline dark:text-outline-variant py-1 active:scale-90 transition-all duration-200">
+<span class="material-symbols-outlined">person</span>
+<span class="font-label-sm text-label-sm mt-1">Perfil</span>
+</button>
+</nav>
+<script>
+        // Micro-interactions for feedback
+        document.querySelectorAll('button').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(5);
+                }
+            });
+        });
+
+        // Simple scroll observer for top bar shadow
+        window.addEventListener('scroll', () => {
+            const header = document.querySelector('header');
+            if (window.scrollY > 10) {
+                header.classList.add('shadow-md');
+            } else {
+                header.classList.remove('shadow-md');
+            }
+        });
+    </script>
+</body></html>
