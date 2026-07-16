@@ -26,6 +26,7 @@ export default function SwipeDeck({
   cancelAssisted,
   openApp,
   isAtsApp,
+  emptyState,
 }: {
   apps: AppRow[];
   actioningId: string | null;
@@ -38,6 +39,8 @@ export default function SwipeDeck({
   cancelAssisted: (app: AppRow) => void;
   openApp: (app: AppRow) => void;
   isAtsApp: (app: AppRow) => boolean;
+  /** Overrides the default "Estás al día" block when the queue is empty. */
+  emptyState?: React.ReactNode;
 }) {
   const [savedForLaterIds, setSavedForLaterIds] = useState<string[]>([]);
   // Cards the user has decisively swiped/tapped away. Hidden immediately so the
@@ -70,15 +73,19 @@ export default function SwipeDeck({
 
   if (!current) {
     return (
-      <div className="bento-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', maxWidth: 460, margin: '0 auto' }}>
-        <div className="ambient-radar" style={{ margin: '0 auto 1.25rem auto' }}>
-          <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--petrol)', boxShadow: '0 0 10px var(--petrol)' }} />
-        </div>
-        <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '.5rem' }}>Estás al día</h3>
-        <p style={{ fontSize: '.85rem', color: 'var(--text-2)', maxWidth: 380, margin: '0 auto' }}>
-          No hay vacantes nuevas para revisar ahora mismo. Te avisamos en cuanto Applica encuentre la próxima.
-        </p>
-      </div>
+      <>
+        {emptyState ?? (
+          <div className="bento-card" style={{ padding: '3.5rem 2rem', textAlign: 'center', borderRadius: 'var(--radius-xl)', maxWidth: 460, margin: '0 auto' }}>
+            <div className="ambient-radar" style={{ margin: '0 auto 1.25rem auto' }}>
+              <div style={{ width: 12, height: 12, borderRadius: '50%', background: 'var(--petrol)', boxShadow: '0 0 10px var(--petrol)' }} />
+            </div>
+            <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text)', marginBottom: '.5rem' }}>Estás al día</h3>
+            <p style={{ fontSize: '.85rem', color: 'var(--text-2)', maxWidth: 380, margin: '0 auto' }}>
+              No hay vacantes nuevas para revisar ahora mismo. Te avisamos en cuanto Applica encuentre la próxima.
+            </p>
+          </div>
+        )}
+      </>
     );
   }
 

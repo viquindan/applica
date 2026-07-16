@@ -7,7 +7,7 @@ export const metadata = { title: 'Feed' };
 export default async function FeedPage() {
   const session = await auth();
   const userId = session!.user.id;
-  const { apps, user, profile, settings, linkedinStatus } = await loadApplicationsData(userId);
+  const { apps, user, profile, settings, stats, supply, linkedinStatus } = await loadApplicationsData(userId);
 
   return (
     <FeedClient
@@ -15,6 +15,8 @@ export default async function FeedPage() {
       user={user}
       profile={profile}
       settings={settings}
+      stats={stats}
+      supply={supply}
       linkedinStatus={linkedinStatus}
     />
   );
