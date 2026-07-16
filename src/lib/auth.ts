@@ -107,4 +107,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     error: '/auth/error',
   },
   session: { strategy: 'jwt' },
+  // Required off Vercel: without it, Auth.js throws UntrustedHost for every
+  // request behind our own Nginx/PM2 setup instead of resolving a session.
+  trustHost: true,
 });

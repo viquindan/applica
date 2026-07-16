@@ -24,7 +24,10 @@ function applyRateLimit(ip: string, maxRequests: number, windowMs: number): bool
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
-  const isAuth = !!req.auth;
+  // req.auth can be an Auth.js error object (e.g. UntrustedHost) instead of a
+  // session or undefined - only a real session has .user, never treat an
+  // error as "authenticated".
+  const isAuth = !!req.auth && !('message' in req.auth) && !!req.auth.user;
   const role = (req.auth?.user as any)?.role;
   const ip = req.headers.get('x-forwarded-for') ?? 'unknown-ip';
   const isAuthPage = pathname.startsWith('/auth');
