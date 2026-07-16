@@ -3,7 +3,7 @@ name: Deploy to Hostinger VPS
 on:
   push:
     branches:
-      - main
+      - master
   workflow_dispatch: {}
 
 jobs:
@@ -30,8 +30,8 @@ jobs:
           cd "${{ secrets.VPS_APP_PATH }}"
 
           # Pull latest code
-          git fetch origin main
-          git reset --hard origin/main
+          git fetch origin master
+          git reset --hard origin/master
 
           # Install dependencies (mobile/ has its own package.json, untouched
           # by this - only the root Next.js app is installed/built/deployed
