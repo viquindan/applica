@@ -27,9 +27,10 @@ jobs:
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
           set -e
-          # The VPS's system/default Node is too old for Next.js 16; use the
-          # nvm-managed Node 20 install reserved for this app (see ecosystem.config.js).
-          export PATH="/root/.nvm/versions/node/v20.20.2/bin:$PATH"
+          # The VPS's system/default Node is too old for Next.js 16 and pg-boss
+          # (needs >=22.12); use the nvm-managed Node 22 install reserved for
+          # this app (see ecosystem.config.js).
+          export PATH="/root/.nvm/versions/node/v22.23.1/bin:$PATH"
           cd "${{ secrets.VPS_APP_PATH }}"
 
           # Pull latest code
