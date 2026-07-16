@@ -4,24 +4,29 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import crypto from 'crypto';
 
-// Lemon Squeezy webhook secret from env
-// const WEBHOOK_SECRET = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || '';
+const WEBHOOK_SECRET = process.env.LEMON_SQUEEZY_WEBHOOK_SECRET || '';
 
 export async function POST(req: NextRequest) {
   try {
+    // Fail closed: without a configured secret this endpoint would otherwise
+    // let anyone POST a fake 'subscription_created' event and upgrade any
+    // account to pro for free - never allow that, even in the interim before
+    // LEMON_SQUEEZY_WEBHOOK_SECRET is set in production.
+    if (!WEBHOOK_SECRET) {
+      console.error('[LemonSqueezy Webhook] LEMON_SQUEEZY_WEBHOOK_SECRET not configured - rejecting.');
+      return NextResponse.json({ error: 'Webhook not configured' }, { status: 503 });
+    }
+
     const rawBody = await req.text();
     const signature = req.headers.get('x-signature') ?? '';
 
-    // Verify signature (TODO: uncomment when secret is available)
-    /*
     const hmac = crypto.createHmac('sha256', WEBHOOK_SECRET);
     const digest = Buffer.from(hmac.update(rawBody).digest('hex'), 'utf8');
     const signatureBuffer = Buffer.from(signature, 'utf8');
 
-    if (!crypto.timingSafeEqual(digest, signatureBuffer)) {
+    if (digest.length !== signatureBuffer.length || !crypto.timingSafeEqual(digest, signatureBuffer)) {
       return NextResponse.json({ error: 'Invalid signature' }, { status: 400 });
     }
-    */
 
     const payload = JSON.parse(rawBody);
     const eventName = payload.meta.event_name;
