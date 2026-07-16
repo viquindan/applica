@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useI18n } from '@/i18n/context';
-import TagInput from '@/components/ui/TagInput';
+import CountryTagInput from '@/components/ui/CountryTagInput';
 
 // value = canonical English name (matches the CV extraction); label = display text.
 const LANGUAGES = [
@@ -131,8 +131,8 @@ export default function Step1Personal({ data, onNext, onBack, saving, isLastStep
           {/* Onsite / Hybrid */}
           <div className="field-group">
             <label className="field-label" style={{ color: 'var(--text-gold)' }}>Acepto PRESENCIAL o HÍBRIDO en:</label>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.75rem' }}>Escribe las ciudades o países donde puedes asistir físicamente o reubicarte. Si lo dejas vacío, asumimos que no buscas presencial.</p>
-            <TagInput value={form.targetCities} onChange={v => set('targetCities', v)} placeholder="Ej. Madrid, Bogotá, CDMX..." />
+            <p style={{ fontSize: '0.75rem', color: 'var(--text-3)', marginBottom: '0.75rem' }}>Selecciona los países donde puedes asistir físicamente o reubicarte. Si lo dejas vacío, asumimos que no buscas presencial.</p>
+            <CountryTagInput value={form.targetCities} onChange={v => set('targetCities', v)} placeholder="Escribe un país..." />
           </div>
         </div>
       </div>

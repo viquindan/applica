@@ -2,6 +2,8 @@
 import { useMemo, useState, useRef, useEffect } from'react';
 import { useRouter } from'next/navigation';
 import type { ProfessionalProfile, Resume, User } from'@/db/schema';
+import CountryTagInput from '@/components/ui/CountryTagInput';
+import { COUNTRIES } from '@/lib/countries';
 
 // The page never selects users.* (password hash) - this mirrors the exact
 // column list of that safe select. See profile/page.tsx.
@@ -173,10 +175,6 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
     if (e) e.preventDefault();
   }
 
-  const COUNTRY_OPTIONS = [
-    'Panamá', 'Colombia', 'México', 'España', 'Argentina', 'Chile', 'Perú', 'Ecuador',
-    'Estados Unidos', 'Canadá', 'Reino Unido', 'Alemania', 'Francia', 'Italia', 'Otro'
-  ];
   const DIAL_CODES = [
     ['Panamá', '+507'], ['Colombia', '+57'], ['México', '+52'], ['EE. UU. / Canadá', '+1'],
     ['Argentina', '+54'], ['Chile', '+56'], ['Perú', '+51'], ['Ecuador', '+593'],
@@ -393,7 +391,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                   <label className="field-label">País de residencia</label>
                   <select className="select" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>
                     <option value="">Selecciona un país...</option>
-                    {COUNTRY_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
+                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
               </div>
@@ -646,29 +644,11 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
               <p style={{ fontSize: '.75rem', color: 'var(--text-3)', margin: '0 0 0.5rem' }}>
                 Applica no descarta vacantes presenciales/híbridas en estos países aunque sean extranjeros - úsalo si buscas activamente reubicarte a un mercado específico.
               </p>
-              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                {form.targetCountries.map((c: string, i: number) => (
-                  <span key={i} className="tag">
-                    {c}
-                    <button type="button" onClick={() => {
-                      const targetCountries = form.targetCountries.filter((_: string, idx: number) => idx !== i);
-                      setForm({ ...form, targetCountries });
-                    }}></button>
-                  </span>
-                ))}
-                <input className="input" style={{ maxWidth: 220, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                  placeholder="Añadir país y presionar Enter..."
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') {
-                      e.preventDefault();
-                      const val = (e.target as HTMLInputElement).value.trim();
-                      if (val && !form.targetCountries.includes(val)) {
-                        setForm({ ...form, targetCountries: [...form.targetCountries, val] });
-                        (e.target as HTMLInputElement).value = '';
-                      }
-                    }
-                  }} />
-              </div>
+              <CountryTagInput
+                value={form.targetCountries}
+                onChange={(targetCountries) => setForm({ ...form, targetCountries })}
+                placeholder="Añadir país..."
+              />
             </div>
             <div className="grid-2" style={{ gap: '1rem', marginTop: '1rem' }}>
               <div className="field-group">
@@ -765,35 +745,17 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
               {form.workModalityPrefs.acceptsHybrid && (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1rem', marginBottom: '0.75rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Países donde aceptas híbrido</div>
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {form.workModalityPrefs.hybridLocations.map((loc: string, i: number) => (
-                      <span key={i} className="tag">
-                        {loc}
-                        <button type="button" onClick={() => {
-                          const hybridLocations = form.workModalityPrefs.hybridLocations.filter((_: string, idx: number) => idx !== i);
-                          setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, hybridLocations } });
-                        }}></button>
-                      </span>
-                    ))}
-                    {form.country && !form.workModalityPrefs.hybridLocations.includes(form.country) && (
-                      <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, hybridLocations: [...form.workModalityPrefs.hybridLocations, form.country] } })}>
-                        + {form.country}
-                      </button>
-                    )}
-                    <input className="input" style={{ maxWidth: 160, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                      placeholder="Añadir país..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = (e.target as HTMLInputElement).value.trim();
-                          if (val && !form.workModalityPrefs.hybridLocations.includes(val)) {
-                            setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, hybridLocations: [...form.workModalityPrefs.hybridLocations, val] } });
-                            (e.target as HTMLInputElement).value = '';
-                          }
-                        }
-                      }} />
-                  </div>
+                  {form.country && !form.workModalityPrefs.hybridLocations.includes(form.country) && (
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 8px', marginBottom: '0.5rem' }}
+                      onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, hybridLocations: [...form.workModalityPrefs.hybridLocations, form.country] } })}>
+                      + {form.country}
+                    </button>
+                  )}
+                  <CountryTagInput
+                    value={form.workModalityPrefs.hybridLocations}
+                    onChange={(hybridLocations) => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, hybridLocations } })}
+                    placeholder="Añadir país..."
+                  />
                 </div>
               )}
 
@@ -801,35 +763,17 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
               {form.workModalityPrefs.acceptsOnsite && (
                 <div style={{ background: 'var(--bg)', border: '1px solid var(--border-light)', borderRadius: 'var(--radius-md)', padding: '1rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-2)', marginBottom: '0.5rem' }}>Países donde aceptas presencial</div>
-                  <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
-                    {form.workModalityPrefs.onsiteLocations.map((loc: string, i: number) => (
-                      <span key={i} className="tag">
-                        {loc}
-                        <button type="button" onClick={() => {
-                          const onsiteLocations = form.workModalityPrefs.onsiteLocations.filter((_: string, idx: number) => idx !== i);
-                          setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, onsiteLocations } });
-                        }}></button>
-                      </span>
-                    ))}
-                    {form.country && !form.workModalityPrefs.onsiteLocations.includes(form.country) && (
-                      <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 8px' }}
-                        onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, onsiteLocations: [...form.workModalityPrefs.onsiteLocations, form.country] } })}>
-                        + {form.country}
-                      </button>
-                    )}
-                    <input className="input" style={{ maxWidth: 160, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
-                      placeholder="Añadir país..."
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          const val = (e.target as HTMLInputElement).value.trim();
-                          if (val && !form.workModalityPrefs.onsiteLocations.includes(val)) {
-                            setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, onsiteLocations: [...form.workModalityPrefs.onsiteLocations, val] } });
-                            (e.target as HTMLInputElement).value = '';
-                          }
-                        }
-                      }} />
-                  </div>
+                  {form.country && !form.workModalityPrefs.onsiteLocations.includes(form.country) && (
+                    <button type="button" className="btn btn-ghost" style={{ fontSize: '0.72rem', padding: '2px 8px', marginBottom: '0.5rem' }}
+                      onClick={() => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, onsiteLocations: [...form.workModalityPrefs.onsiteLocations, form.country] } })}>
+                      + {form.country}
+                    </button>
+                  )}
+                  <CountryTagInput
+                    value={form.workModalityPrefs.onsiteLocations}
+                    onChange={(onsiteLocations) => setForm({ ...form, workModalityPrefs: { ...form.workModalityPrefs, onsiteLocations } })}
+                    placeholder="Añadir país..."
+                  />
                 </div>
               )}
             </div>

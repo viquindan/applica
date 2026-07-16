@@ -17,6 +17,7 @@ import { Gold, GoldDim, Gradients, Petrol, Radius, Shadows, Spacing, TextGold } 
 import { useAuth } from '@/hooks/use-auth';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import type { Language, ProfessionalProfile, ProfileUser, Resume } from '@/types';
+import { COUNTRIES } from '@/constants/countries';
 
 const REMOTE_REGIONS = ['Europa', 'América del Norte', 'América Latina', 'Asia', 'Medio Oriente', 'África', 'Oceanía'];
 const LANGUAGE_OPTIONS = ['Spanish', 'English', 'French', 'Portuguese', 'German', 'Italian', 'Mandarin', 'Japanese', 'Other'];
@@ -349,7 +350,7 @@ export default function ProfileScreen() {
                 <Section title="Datos de contacto">
                   <LabeledInput label="Teléfono" value={form.phone} onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} />
                   <LabeledInput label="Ubicación" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} />
-                  <LabeledInput label="País" value={form.country} onChangeText={(v) => setForm((f) => ({ ...f, country: v }))} />
+                  <CountryInput label="País" value={form.country} onChangeText={(v) => setForm((f) => ({ ...f, country: v }))} />
                   <LabeledInput label="LinkedIn" value={form.linkedin} onChangeText={(v) => setForm((f) => ({ ...f, linkedin: v }))} autoCapitalize="none" />
                   <LabeledInput label="Portafolio" value={form.portfolio} onChangeText={(v) => setForm((f) => ({ ...f, portfolio: v }))} autoCapitalize="none" />
                 </Section>
@@ -483,6 +484,41 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+function CountryInput({ label, value, onChangeText }: { label: string; value: string; onChangeText: (v: string) => void }) {
+  const [draft, setDraft] = useState(value);
+  // Sync from outside (e.g. initial profile load) without fighting local typing.
+  useEffect(() => { setDraft(value); }, [value]);
+
+  const query = draft.trim().toLowerCase();
+  // Never gated on focus/blur: blur fires before a tap on a suggestion
+  // registers and would unmount the list before the press completes.
+  const suggestions = draft !== value && query
+    ? COUNTRIES.filter((c) => c.toLowerCase().includes(query)).slice(0, 6)
+    : [];
+
+  return (
+    <View style={styles.fieldWrap}>
+      <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+      <TextInput
+        style={styles.input}
+        value={draft}
+        onChangeText={setDraft}
+        placeholder="Escribe un país..."
+        placeholderTextColor="#a3a9aa"
+      />
+      {suggestions.length > 0 ? (
+        <View style={styles.suggestionBox}>
+          {suggestions.map((s) => (
+            <AnimatedPressable key={s} haptic="light" onPress={() => onChangeText(s)} style={styles.suggestionRow}>
+              <ThemedText style={styles.suggestionText}>{s}</ThemedText>
+            </AnimatedPressable>
+          ))}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 function LabeledInput(props: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string; autoCapitalize?: 'none' | 'sentences'; keyboardType?: 'default' | 'number-pad' }) {
   return (
     <View style={styles.fieldWrap}>
@@ -512,6 +548,16 @@ function LocationList({ title, locations, homeCountry, onChange }: {
   title: string; locations: string[]; homeCountry: string; onChange: (locs: string[]) => void;
 }) {
   const [draft, setDraft] = useState('');
+  const query = draft.trim().toLowerCase();
+  const suggestions = query
+    ? COUNTRIES.filter((c) => !locations.includes(c) && c.toLowerCase().includes(query)).slice(0, 6)
+    : [];
+
+  function addCountry(country: string) {
+    if (!locations.includes(country)) onChange([...locations, country]);
+    setDraft('');
+  }
+
   return (
     <View style={styles.subCard}>
       <ThemedText style={styles.subCardTitle}>{title}</ThemedText>
@@ -532,14 +578,19 @@ function LocationList({ title, locations, homeCountry, onChange }: {
           style={[styles.input, styles.addInput]}
           value={draft}
           onChangeText={setDraft}
-          placeholder="Añadir país..."
+          placeholder="Escribe un país..."
           placeholderTextColor="#a3a9aa"
-          onSubmitEditing={() => {
-            const v = draft.trim();
-            if (v && !locations.includes(v)) onChange([...locations, v]);
-            setDraft('');
-          }}
+          onSubmitEditing={() => { if (suggestions.length === 1) addCountry(suggestions[0]); }}
         />
+        {suggestions.length > 0 ? (
+          <View style={styles.suggestionBox}>
+            {suggestions.map((s) => (
+              <AnimatedPressable key={s} haptic="light" onPress={() => addCountry(s)} style={styles.suggestionRow}>
+                <ThemedText style={styles.suggestionText}>{s}</ThemedText>
+              </AnimatedPressable>
+            ))}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -679,6 +730,9 @@ const styles = StyleSheet.create({
   subCardTitle: { fontSize: 12, fontWeight: '700', color: '#414849' },
   addRow: { marginTop: 2 },
   addInput: { fontSize: 13, paddingVertical: 8 },
+  suggestionBox: { marginTop: 4, backgroundColor: '#FFFFFF', borderRadius: Radius.sm, borderWidth: 1, borderColor: '#eeeeed', overflow: 'hidden' },
+  suggestionRow: { paddingHorizontal: Spacing.three, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f4f3f3' },
+  suggestionText: { fontSize: 13, color: '#414849' },
   saveWrap: { marginTop: Spacing.four },
   resumeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.three, marginBottom: Spacing.two },
   resumeLabel: { flexShrink: 1, color: '#414849', fontSize: 13 },
