@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
 import { professionalProfiles, resumes, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -12,9 +12,8 @@ import { refreshCoreMemory } from '@/core/memory/memoryStore';
 import { queueImmediateSearch } from '@/core/jobs/boss';
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = session.user.id;
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const fd = await req.formData();
   const file = fd.get('file') as File | null;
@@ -45,7 +44,14 @@ export async function POST(req: NextRequest) {
 
   const [resume] = await db.insert(resumes).values({
     userId,
-    label: file.name,
+    // Some pickers (content:// URIs without display-name metadata, e.g. a
+    // file surfaced from a bare device cache path) hand back a raw UUID
+    // instead of the name the user actually sees - that reads as "a resume I
+    // didn't upload" even though it's a real, unmodified upload. Fall back to
+    // a clean generated name when the filename looks machine-generated.
+    label: /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\.\w+$/i.test(file.name)
+      ? `CV subido ${new Date().toLocaleDateString('es')}.pdf`
+      : file.name,
     filePath,
     textContent: resumeText,
     isBase: true,

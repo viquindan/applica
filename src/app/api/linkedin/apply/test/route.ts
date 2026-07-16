@@ -3,7 +3,6 @@ import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
 import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
-import { runLinkedInEasyApply } from '@/core/automation/linkedinApplyEngine';
 
 // Long-running: walks the Easy Apply modal in a real browser.
 export const maxDuration = 300;
@@ -24,6 +23,11 @@ export async function POST(req: NextRequest) {
   }
 
   const [u] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+  // Dynamic require, not a static import: this transitively pulls in the
+  // playwright-extra/stealth automation stack, which breaks Next's build-time
+  // page-data collection if imported statically (same issue already worked
+  // around in worker.ts and extension/resume/route.ts).
+  const { runLinkedInEasyApply } = require('@/core/automation/linkedinApplyEngine');
   const result = await runLinkedInEasyApply({
     userId,
     jobUrl,

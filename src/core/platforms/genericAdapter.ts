@@ -55,6 +55,28 @@ export class GenericAdapter implements PlatformAdapter {
       await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 }).catch((e) => log(`goto warning: ${(e as Error)?.message ?? e}`));
     }
 
+    // Unlike ATS subdomains (mostly server-rendered), a vanilla company careers
+    // page is frequently a client-side-rendered SPA that's still blank right
+    // after 'domcontentloaded' - every locator below would see an empty DOM.
+    // Give it a beat to actually paint before looking for anything.
+    await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => undefined);
+    await page.waitForTimeout(1000);
+
+    // Vanilla company career pages (unlike ATS subdomains) commonly sit behind a
+    // full-page cookie-consent overlay on first load, which blocks every locator
+    // below (Apply trigger, form fields) even though they technically "exist" in
+    // the DOM. Dismiss it first, best-effort.
+    const cookieBtn = page.locator(
+      'button:has-text("Accept all"), button:has-text("Accept All"), button:has-text("Aceptar todo"), ' +
+      'button:has-text("Aceptar todas"), button:has-text("I agree"), button:has-text("Allow all"), ' +
+      '#onetrust-accept-btn-handler, button[id*="accept" i][id*="cookie" i]'
+    ).first();
+    if (await cookieBtn.count().catch(() => 0)) {
+      await cookieBtn.click({ timeout: 4000 }).catch(() => undefined);
+      await page.waitForTimeout(500);
+      log('Dismissed a cookie-consent overlay.');
+    }
+
     // Reveal the form if it's behind an "Apply"/"I'm interested" trigger (same
     // heuristic as genericFormScraper.ts, which only READS - we also fill).
     const startBtn = page.locator('a:has-text("Apply"), button:has-text("Apply"), button:has-text("I\'m interested"), a:has-text("Aplicar"), button:has-text("Aplicar")').first();

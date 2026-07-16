@@ -524,8 +524,15 @@ export default function ApplicationDetailClient({ app, vacancy, resume, coverLet
                     {resume?.textContent && (
                       <button className="btn btn-secondary btn-sm" title="Descargar tu CV adaptado a esta vacante" onClick={() => downloadText(`CV - ${vacancy?.company ?? 'vacante'}.txt`, resume.textContent!)}>CV</button>
                     )}
-                    {coverLetter?.content && (
+                    {coverLetter?.content ? (
                       <button className="btn btn-secondary btn-sm" title="Descargar tu carta de presentación" onClick={() => downloadText(`Carta - ${vacancy?.company ?? 'vacante'}.txt`, coverLetter.content)}>Carta</button>
+                    ) : (
+                      // Applica no genera carta salvo que el formulario la exija
+                      // explícitamente - si esta vacante sí la pide y no se detectó,
+                      // el usuario la pide aquí manualmente.
+                      <button className="btn btn-ghost btn-sm" disabled={actionLoading === 'regenerate_letter'} title="Esta vacante no mostró un campo obligatorio de carta - genera una solo si de verdad la piden" onClick={() => doAction('regenerate_letter')}>
+                        {actionLoading === 'regenerate_letter' ? 'Generando…' : '+ Generar carta'}
+                      </button>
                     )}
                     {hasAnswers && (
                       <button className="btn btn-secondary btn-sm" title="Descargar las preguntas y respuestas del formulario" onClick={() => downloadText(`Respuestas - ${vacancy?.company ?? 'vacante'}.txt`, Object.entries(answers).map(([q, a]) => `${q}\n${a}\n`).join('\n'))}>Preguntas y respuestas</button>

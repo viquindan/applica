@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch: {}
 
 jobs:
   deploy:
@@ -11,33 +12,40 @@ jobs:
 
     steps:
     - name: Checkout Code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
 
     - name: Setup Node.js
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4
       with:
         node-version: '20'
 
     - name: Deploy via SSH
-      uses: appleboy/ssh-action@v0.1.10
+      uses: appleboy/ssh-action@v1.0.3
       with:
         host: ${{ secrets.VPS_HOST }}
         username: ${{ secrets.VPS_USER }}
         key: ${{ secrets.VPS_SSH_KEY }}
         script: |
-          cd /path/to/applica
+          set -e
+          cd "${{ secrets.VPS_APP_PATH }}"
+
           # Pull latest code
-          git pull origin main
-          
-          # Install dependencies
-          npm install
-          
-          # Push DB Migrations (Make sure to have DATABASE_URL exported in VPS)
-          # using a local script because drizzle push requires TTY
-          npx tsx migrate_roles.ts
-          
+          git fetch origin main
+          git reset --hard origin/main
+
+          # Install dependencies (mobile/ has its own package.json, untouched
+          # by this - only the root Next.js app is installed/built/deployed
+          # here; the mobile app is distributed separately as an APK/store build)
+          npm ci
+
+          # Apply schema changes (DATABASE_URL must already be exported on the
+          # VPS - e.g. in ~/.bashrc or a systemd EnvironmentFile - never
+          # committed to the repo). --force skips the interactive TTY prompt.
+          npx drizzle-kit push --force
+
           # Build Next.js Web App
           npm run build
-          
-          # Restart via PM2
-          pm2 restart ecosystem.config.js --env production
+
+          # Restart both the web app and the job worker (see ecosystem.config.js)
+          pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+          pm2 save

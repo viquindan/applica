@@ -67,17 +67,20 @@ export default function SettingsClient({ settings, platforms }: { settings: User
           <div className="card">
             <h3 className="card-title">{t.settings.automation.globalMode}</h3>
             <div style={{ display: 'flex', gap: 'var(--space-3)' }}>
-              {(['off', 'semi', 'full'] as const).map(mode => (
-                <button key={mode} className={`btn btn-lg ${s.globalAutomationMode === mode ? 'btn-primary' : 'btn-secondary'}`}
-                  onClick={() => set('globalAutomationMode', mode)}>
-                  {mode === 'off' ? ' ' + t.settings.automation.off : mode === 'semi' ? ' ' + t.settings.automation.semi : ' ' + t.settings.automation.full}
-                </button>
-              ))}
+              {(['off', 'semi'] as const).map(mode => {
+                const effectiveMode = s.globalAutomationMode === 'full' ? 'semi' : s.globalAutomationMode;
+                return (
+                  <button key={mode} className={`btn btn-lg ${effectiveMode === mode ? 'btn-primary' : 'btn-secondary'}`}
+                    onClick={() => set('globalAutomationMode', mode)}>
+                    {mode === 'off' ? ' ' + t.settings.automation.off : ' ' + t.settings.automation.semi}
+                  </button>
+                );
+              })}
             </div>
             <div style={{ marginTop: 'var(--space-4)', padding: 'var(--space-4)', background: 'var(--color-bg-2)', borderRadius: 'var(--radius-md)', fontSize: 'var(--text-xs)', color: 'var(--color-text-3)' }}>
-              {s.globalAutomationMode === 'off' && 'El sistema no enviará ninguna aplicación automáticamente.'}
-              {s.globalAutomationMode === 'semi' && 'El sistema preparará aplicaciones pero esperará tu aprobación antes de enviar.'}
-              {s.globalAutomationMode === 'full' && 'El sistema aplicará automáticamente cuando se cumplan todas las condiciones del motor de reglas.'}
+              {s.globalAutomationMode === 'off'
+                ? 'El sistema no busca ni prepara aplicaciones automáticamente.'
+                : 'El sistema busca vacantes y prepara materiales solo. Nunca envía nada sin que primero le des swipe a la vacante en el Feed - eso es lo que autoriza el envío.'}
             </div>
           </div>
 

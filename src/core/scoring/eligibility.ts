@@ -19,6 +19,12 @@ type EligibilityProfile = {
   homeCountry?: string | null;
   targetCountries?: string[] | null;
   languages?: Array<{ language: string; proficiency: string } | string> | null;
+  // Both collected in Perfil/Preferencias but previously never consulted here -
+  // the hard onsite/work-auth gates below used to assume "home country only",
+  // ignoring a candidate who declared they'd relocate or already holds work
+  // authorization somewhere else (e.g. a visa, dual citizenship, PR).
+  relocationAvailable?: boolean | null;
+  workAuthorization?: Array<{ country: string; status: string }> | null;
 };
 
 export type EligibilityResult = { eligible: boolean; reasons: string[] };
@@ -161,6 +167,30 @@ function requiresForeignLanguage(text: string, known: Set<string>): string | nul
   return null;
 }
 
+function hasNegativeStatus(status?: string): boolean {
+  return !status?.trim() || /^(no|none|ninguna|sin autorizaci[oó]n|not authorized|denied|pending|en tr[aá]mite)$/i.test(status.trim());
+}
+
+/** Any declared workAuthorization entry for `country` with a real (non-negative) status. */
+function hasWorkAuthFor(country: string | undefined, profile: EligibilityProfile): boolean {
+  if (!country) return false;
+  const target = normalizeGeo(country);
+  return (profile.workAuthorization ?? []).some((w) => {
+    const c = normalizeGeo(w?.country);
+    if (!c || !(target.includes(c) || c.includes(target))) return false;
+    return !hasNegativeStatus(w?.status);
+  });
+}
+
+/** HARD_FOREIGN_AUTH_RX is specifically US-worded - check work auth for the US directly
+ * rather than relying on the job's `location` field resolving to a country. */
+function hasUsWorkAuth(profile: EligibilityProfile): boolean {
+  return (profile.workAuthorization ?? []).some((w) => {
+    const c = normalizeGeo(w?.country);
+    return !!c && /\b(united states|usa|u s)\b/.test(c) && !hasNegativeStatus(w?.status);
+  });
+}
+
 /**
  * Decide whether a vacancy is fundamentally applicable for this candidate.
  * Returns eligible:false with human reasons when it should be hidden entirely.
@@ -199,7 +229,13 @@ export function evaluateEligibility(vacancy: NormalizedVacancy, profile: Eligibi
   // R1 - Onsite/hybrid in ANY foreign country. You'd have to physically be at an
   // office abroad, which isn't viable even within your region (Mexico City from
   // Panama) and even for a "global" employer. (Brex Seattle, Adyen CDMX 3x/wk.)
-  if (onsiteForeign && foreignPlace && scope !== 'global') {
+  // EXCEPT when the candidate said they'd relocate, already holds work
+  // authorization there (visa, PR, dual citizenship), or explicitly listed that
+  // country as a target - all three are collected in onboarding/Perfil but were
+  // previously ignored here, so this always hard-excluded regardless.
+  const targetsThisCountry = !!jobCountry && (profile.targetCountries ?? []).some((c) => matchesCountry(jobCountry, c));
+  const canBeAbroad = (profile.relocationAvailable ?? false) || hasWorkAuthFor(jobCountry, profile) || targetsThisCountry;
+  if (onsiteForeign && foreignPlace && scope !== 'global' && !canBeAbroad) {
     reasons.push(`Presencial/híbrida en ${place} - tendrías que asistir a una oficina en otro país, no es viable.`);
   }
 
@@ -219,7 +255,9 @@ export function evaluateEligibility(vacancy: NormalizedVacancy, profile: Eligibi
   // R4 - Explicitly requires legal work authorization the candidate can't obtain
   // (e.g. "must be authorized to work in the US"). A hard "won't hire a foreigner"
   // signal not worth showing. Global-friendly postings are exempt by definition.
-  if (hardForeignBlock && !isHome) {
+  // EXCEPT when the candidate actually declared US work authorization in Perfil
+  // (previously ignored - this always hard-excluded regardless of that field).
+  if (hardForeignBlock && !isHome && !hasUsWorkAuth(profile)) {
     reasons.push('Exige autorización legal para trabajar en su país (no aceptan candidatos extranjeros).');
   }
 

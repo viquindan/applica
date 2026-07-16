@@ -114,9 +114,14 @@ export async function scrapeLinkedInRemoteLatAm(options?: ScraperOptions): Promi
           const linkMatch = cardHtml.match(/<a[^>]*base-card__full-link[^>]*href="([^"]+)"/i);
 
           if (titleMatch && companyMatch && linkMatch) {
-            const title = titleMatch[1].trim();
-            const company = companyMatch[1].trim();
-            const jobLocation = locationMatch ? locationMatch[1].trim() : location;
+            // LinkedIn's card HTML carries HTML entities (Church &amp;amp; Dwight) -
+            // regex-extraction alone doesn't decode them, so they leaked into the
+            // stored title/company/location verbatim and showed up literally in
+            // the UI. stripHtml() strips no actual tags here (there are none in
+            // these fields) but does decode entities.
+            const title = stripHtml(titleMatch[1].trim());
+            const company = stripHtml(companyMatch[1].trim());
+            const jobLocation = locationMatch ? stripHtml(locationMatch[1].trim()) : location;
             let link = linkMatch[1].trim();
             // clean tracking params + normalize country subdomains (pa./mx.…)
             // to www so the logged-in session is recognized when applying.

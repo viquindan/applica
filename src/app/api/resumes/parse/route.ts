@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { writeFile, mkdir } from 'fs/promises';
 import path from 'path';
 import { db } from '@/db/client';
@@ -9,8 +9,8 @@ import { google } from '@ai-sdk/google';
 import { z } from 'zod';
 
 export async function POST(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   try {
     const fd = await req.formData();
@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
     // Save file
     const uploadDir = process.env.UPLOAD_DIR || './uploads';
     await mkdir(uploadDir, { recursive: true });
-    const filename = `${session.user.id}_${Date.now()}_${file.name}`;
+    const filename = `${userId}_${Date.now()}_${file.name}`;
     const filepath = path.join(uploadDir, filename);
     await writeFile(filepath, buffer);
 

@@ -41,6 +41,9 @@ export default function Header({ userName }: { userName: string }) {
       <div style={{ position: 'relative' }} ref={ref}>
         <button
           onClick={() => setOpen(!open)}
+          aria-label={`Menú de cuenta de ${userName}`}
+          aria-haspopup="menu"
+          aria-expanded={open}
           style={{
             width: '40px', height: '40px', borderRadius: '50%',
             background: 'var(--petrol)',

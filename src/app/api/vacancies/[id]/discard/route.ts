@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
 import { vacancies } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -10,10 +10,9 @@ import { captureApplicationDecisionLearning } from '@/core/memory/memoryStore';
  * result). Marks it archived so it leaves the list, and feeds the discard to the
  * learning layer so the agent stops surfacing similar roles.
  */
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = (session.user as any).id as string;
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
 
   const [vacancy] = await db.select().from(vacancies)

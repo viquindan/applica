@@ -173,7 +173,7 @@ export function scoreVacancy(
       if (!prefs.acceptsRemote) {
         warnings.push('La vacante es remota pero no aceptas trabajo remoto');
         locationScore = Math.min(locationScore, 3);
-      } else if (prefs.remoteScope === 'regions' && prefs.remoteRegions.length > 0) {
+      } else if (prefs.remoteScope === 'regions' && (prefs.remoteRegions ?? []).length > 0) {
         const regionMatch = prefs.remoteRegions.some(r => matchesCountry(loc, r) || loc.includes(normalizeGeo(r)));
         if (!regionMatch) {
           warnings.push('La vacante remota puede estar fuera de tus regiones aceptadas');
@@ -184,7 +184,7 @@ export function scoreVacancy(
       if (!prefs.acceptsHybrid) {
         warnings.push('La vacante es híbrida pero no aceptas trabajo híbrido');
         locationScore = Math.min(locationScore, 3);
-      } else if (prefs.hybridLocations.length > 0) {
+      } else if ((prefs.hybridLocations ?? []).length > 0) {
         const hybridMatch = prefs.hybridLocations.some(c => matchesCountry(loc, c));
         if (!hybridMatch) {
           warnings.push('La vacante híbrida puede estar fuera de tus países aceptados para híbrido');
@@ -195,7 +195,7 @@ export function scoreVacancy(
       if (!prefs.acceptsOnsite) {
         warnings.push('La vacante es presencial pero no aceptas trabajo presencial');
         locationScore = Math.min(locationScore, 3);
-      } else if (prefs.onsiteLocations.length > 0) {
+      } else if ((prefs.onsiteLocations ?? []).length > 0) {
         const onsiteMatch = prefs.onsiteLocations.some(c => matchesCountry(loc, c));
         if (!onsiteMatch) {
           warnings.push('La vacante presencial puede estar fuera de tus países aceptados');
@@ -276,17 +276,20 @@ export function scoreVacancy(
     }
   }
 
-  // Excluded industries: hard-exclude if the description matches an industry the user opted out of
-  if ((profile.excludedIndustries || []).some((ind) => ind && desc.includes(ind.toLowerCase()))) {
+  // Excluded industries: hard-exclude if the description matches an industry the user
+  // opted out of. Word-boundary + accent-normalized match (like role matching below),
+  // not a raw substring - "gas" must not match inside "organizational".
+  if ((profile.excludedIndustries || []).some((ind) => ind && includesNormalizedPhrase(desc, ind))) {
     redFlags.push('La vacante coincide con una industria que excluiste');
     hardExclude = true;
   }
 
-  // Alert keyword penalty
+  // Alert keyword penalty - same word-boundary matching, not a raw substring
+  // ("ad" must not match inside "advisor").
   const alertWords = profile.alertKeywords || [];
   let alertPenalty = 0;
   for (const kw of alertWords) {
-    if (desc.includes(kw.toLowerCase())) {
+    if (kw && includesNormalizedPhrase(desc, kw)) {
       alertPenalty += 5;
       redFlags.push(`Alerta: "${kw}" encontrado en la descripción`);
     }

@@ -61,7 +61,13 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
   const eligibility = evaluateEligibility(vacancy, {
     homeCountry: user.country || user.location,
     targetCountries: profile.targetCountries,
-    languages: profile.languages,
+    // BUG FIX: languages lives on `users`, not `professionalProfiles` - this
+    // read `profile.languages` (always undefined) so the foreign-language
+    // hard-exclude (R2) never recognized any language the user actually
+    // declared, silently over-filtering roles requiring a language they have.
+    languages: user.languages,
+    relocationAvailable: user.relocationAvailable,
+    workAuthorization: user.workAuthorization,
   });
   if (!eligibility.eligible) {
     return { skipped: true, reason: 'ineligible', reasons: eligibility.reasons } as any;
@@ -129,7 +135,7 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     userId,
     vacancyId: storedVacancy.id,
     status: 'draft',
-    mode: settings.globalAutomationMode === 'full' ? 'auto' : 'semi',
+    mode: 'semi',
     formAnswers: reusableAnswers,
   }).returning();
 

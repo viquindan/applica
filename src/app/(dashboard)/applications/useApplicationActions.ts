@@ -79,8 +79,26 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   }
 
   function applyApp(app: AppRow) {
-    if (autoCapable(app)) { sendAssisted(app); return; }
-    setAttentionApp(app);
+    if (!autoCapable(app)) { setAttentionApp(app); return; }
+    // Known ATS: try a silent headless submit first (process_application).
+    // It only falls back to opening a real, visible browser (the 'assisted'
+    // flow) when the ATS actually shows a human-verification challenge - the
+    // worker escalates that automatically, no second click needed. Generic
+    // sites go straight to the assisted flow (GenericAdapter is real-browser
+    // only, see docs/APPLY-ENGINE.md §8.1).
+    if (isAtsApp(app)) sendApprove(app); else sendAssisted(app);
+  }
+
+  async function sendApprove(app: AppRow) {
+    setActioningId(app.id);
+    try {
+      await fetch(`/api/applications/${app.id}/action`, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve' }),
+      });
+    } finally {
+      setActioningId(null);
+      router.refresh();
+    }
   }
 
   async function sendAssisted(app: AppRow) {

@@ -20,7 +20,7 @@
 
   --text: #1A1C1C;            /* on-surface */
   --text-2: #414849;          /* on-surface-variant */
-  --text-3: #717879;          /* outline */
+  --text-3: #5c6366;          /* outline - was #717879 (4.28:1, fails WCAG AA 4.5:1); same fix applied to mobile's mirrored token */
   --text-gold: #735c00;       /* on-secondary-container */
 
   --success: #10B981;

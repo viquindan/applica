@@ -273,6 +273,7 @@ export default function SwipeDeck({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '1.25rem' }}>
             <button
               title="No me interesa"
+              aria-label="Descartar esta vacante"
               disabled={actioningId === current.id || exiting !== null}
               onClick={() => doExit('left')}
               className="swipe-btn swipe-btn-ghost"
@@ -284,11 +285,14 @@ export default function SwipeDeck({
               onClick={() => setSavedForLaterIds((prev) => prev.includes(current.id) ? prev : [...prev, current.id])}
               className="swipe-btn swipe-btn-save"
               title="Guardar para después"
+              aria-label="Guardar esta vacante para después"
             >
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 3.5h12a1 1 0 0 1 1 1V21l-7-4-7 4V4.5a1 1 0 0 1 1-1Z" /></svg>
             </button>
             <button
               title={isAtsApp(current) ? 'Abrimos la oferta con el formulario listo; solo resuelves el captcha y envías.' : 'Ver cómo aplicar a esta oferta.'}
+              aria-label={actioningId === current.id ? 'Aplicando…' : 'Aplicar a esta vacante'}
+              aria-busy={actioningId === current.id}
               disabled={actioningId === current.id || exiting !== null}
               onClick={() => doExit('right')}
               className="swipe-btn swipe-btn-apply"

@@ -48,6 +48,9 @@ async function embedText(text: string): Promise<number[] | null> {
     const { embedding } = await embed({
       model: google.textEmbeddingModel(EMBEDDING_MODEL),
       value: text.slice(0, 8000),
+      // A hung embedding request would freeze this pMap slot forever (a hang
+      // is not an error, so the catch below never fires). Abort for real.
+      abortSignal: AbortSignal.timeout(30_000),
     });
     return embedding ?? null;
   } catch (error) {

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
-import { vacancies, applications, userSettings } from '@/db/schema';
+import { vacancies, applications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { queuePrepareApplicationMaterials } from '@/core/jobs/boss';
 import { getReusableAnswersMap } from '@/core/memory/memoryStore';
@@ -12,10 +12,9 @@ import { trackApplicationPrepared } from '@/core/billing/usageTracker';
  * Creates the application and queues material preparation, so it joins the normal
  * apply flow (review send) even though it was below the auto threshold.
  */
-export async function POST(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = (session.user as any).id as string;
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
 
   const [vacancy] = await db.select().from(vacancies)
@@ -27,14 +26,13 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     .where(and(eq(applications.vacancyId, id), eq(applications.userId, userId))).limit(1);
   if (existing) return NextResponse.json({ success: true, applicationId: existing.id, existed: true });
 
-  const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
   const reusableAnswers = await getReusableAnswersMap(userId);
 
   const [application] = await db.insert(applications).values({
     userId,
     vacancyId: id,
     status: 'draft',
-    mode: settings?.globalAutomationMode === 'full' ? 'auto' : 'semi',
+    mode: 'semi',
     formAnswers: reusableAnswers,
   }).returning();
 

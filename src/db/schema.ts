@@ -14,6 +14,9 @@ import { relations } from 'drizzle-orm';
 
 // ─── Enums ────────────────────────────────────────────────────────────────────
 
+// 'full' kept in the enum only so old rows still deserialize; the rule engine
+// (submissionDecision.ts) treats it exactly like 'semi' - no mode can ever
+// auto-submit before the user's swipe. Nothing writes 'full' anymore.
 export const automationModeEnum = pgEnum('automation_mode', ['off', 'semi', 'full']);
 export const tailoringLevelEnum = pgEnum('tailoring_level', ['light', 'medium', 'deep']);
 export const workModalityEnum = pgEnum('work_modality', ['remote', 'hybrid', 'onsite', 'any']);
@@ -41,7 +44,15 @@ export const users = pgTable('users', {
   name: varchar('name', { length: 255 }).notNull(),
   email: varchar('email', { length: 255 }).notNull().unique(),
   password: text('password').notNull(),
+  // Password recovery without email (product decision: avoid running a
+  // transactional-email pipeline just for this). Answer is hashed like the
+  // password itself, never stored/returned in plain text.
+  securityQuestion: varchar('security_question', { length: 255 }),
+  securityAnswerHash: text('security_answer_hash'),
   role: userRoleEnum('role').default('user').notNull(),
+  // Server-relative path (like resumes.filePath), not a public URL - served
+  // back through the authenticated GET /api/profile/avatar route.
+  avatarPath: text('avatar_path'),
   phone: varchar('phone', { length: 50 }),
   linkedin: text('linkedin'),
   portfolio: text('portfolio'),
@@ -149,6 +160,19 @@ export const userSettings = pgTable('user_settings', {
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
+
+// ─── Device tokens (mobile push) ────────────────────────────────────────────
+
+export const deviceTokens = pgTable('device_tokens', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  expoPushToken: text('expo_push_token').notNull(),
+  platform: varchar('platform', { length: 10 }),
+  lastSeenAt: timestamp('last_seen_at').defaultNow().notNull(),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (t) => ({
+  uniqUserToken: uniqueIndex('device_tokens_user_token_idx').on(t.userId, t.expoPushToken),
+}));
 
 // ─── Subscriptions & Usage ──────────────────────────────────────────────────
 

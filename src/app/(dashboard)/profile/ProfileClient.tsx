@@ -3,6 +3,10 @@ import { useMemo, useState, useRef, useEffect } from'react';
 import { useRouter } from'next/navigation';
 import type { ProfessionalProfile, Resume, User } from'@/db/schema';
 
+// The page never selects users.* (password hash) - this mirrors the exact
+// column list of that safe select. See profile/page.tsx.
+type SafeUser = Omit<User, 'password' | 'securityQuestion' | 'securityAnswerHash' | 'role' | 'lemonSqueezyCustomerId' | 'lemonSqueezySubscriptionId' | 'linkedinSession'>;
+
 function blankExperience() {
   return { company: '', role: '', startDate: '', endDate: '', current: false, description: '', achievements: [] as string[] };
 }
@@ -18,7 +22,7 @@ const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'preferencias', label: 'Preferencias' },
 ];
 
-export default function ProfileClient({ user, profile, resumes }: { user: User; profile: ProfessionalProfile; resumes: Resume[] }) {
+export default function ProfileClient({ user, profile, resumes }: { user: SafeUser; profile: ProfessionalProfile; resumes: Resume[] }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>('perfil');
   const [items, setItems] = useState(resumes);
@@ -26,6 +30,22 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [hasAvatar, setHasAvatar] = useState(!!user.avatarPath);
+  const [avatarNonce, setAvatarNonce] = useState(0);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
+
+  async function handleAvatarUpload(file?: File) {
+    if (!file) return;
+    setUploadingAvatar(true);
+    const fd = new FormData(); fd.append('file', file);
+    const res = await fetch('/api/profile/avatar', { method: 'POST', body: fd });
+    const data = await res.json().catch(() => ({}));
+    if (res.ok) { setHasAvatar(true); setAvatarNonce(Date.now()); }
+    else alert(data.error || 'No se pudo subir la foto');
+    setUploadingAvatar(false);
+    if (avatarInputRef.current) avatarInputRef.current.value = '';
+  }
   const [form, setForm] = useState({
     name: user.name ?? '',
     email: user.email ?? '',
@@ -46,6 +66,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
     salaryMin: user.salaryMin ?? '',
     salaryCurrency: user.salaryCurrency ?? 'USD',
     targetRoles: profile.targetRoles ?? [],
+    targetCountries: profile.targetCountries ?? [],
     experience: profile.experience ?? [],
     education: profile.education ?? [],
     certifications: profile.certifications ?? [],
@@ -194,14 +215,29 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
 
       {/* Identidad resumida - persiste al cambiar de pestaña */}
       <div className="card" style={{ flexDirection: 'row', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem', padding: '1.1rem 1.5rem' }}>
-        <div style={{
-          width: 52, height: 52, borderRadius: '50%', flexShrink: 0,
-          background: 'linear-gradient(135deg, var(--petrol), var(--petrol-light))',
-          border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          color: '#fff', fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-display)',
-        }}>
-          {(form.name || 'U').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()}
+        <div
+          onClick={() => avatarInputRef.current?.click()}
+          title="Cambiar foto de perfil"
+          style={{
+            position: 'relative', width: 52, height: 52, borderRadius: '50%', flexShrink: 0, cursor: 'pointer',
+            background: hasAvatar ? undefined : 'linear-gradient(135deg, var(--petrol), var(--petrol-light))',
+            border: '2px solid var(--gold)', display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#fff', fontSize: '1.1rem', fontWeight: 800, fontFamily: 'var(--font-display)', overflow: 'hidden',
+          }}>
+          {hasAvatar ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={`/api/profile/avatar?v=${avatarNonce}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+          ) : (
+            (form.name || 'U').trim().split(/\s+/).map((p) => p[0]).slice(0, 2).join('').toUpperCase()
+          )}
+          {uploadingAvatar && (
+            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span className="spinner" style={{ width: 16, height: 16, borderColor: '#fff' }} />
+            </div>
+          )}
         </div>
+        <input ref={avatarInputRef} type="file" accept="image/jpeg,image/png,image/webp" style={{ display: 'none' }} disabled={uploadingAvatar}
+          onChange={(e) => handleAvatarUpload(e.target.files?.[0])} />
         <div style={{ minWidth: 0 }}>
           <div style={{ fontSize: '1rem', fontWeight: 800, color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{form.name || 'Tu nombre'}</div>
           <div style={{ fontSize: '.78rem', color: 'var(--text-3)', fontWeight: 600 }}>{form.targetRoles?.[0] ?? 'Rol objetivo pendiente'}</div>
@@ -514,6 +550,35 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
             </div>
 
             <div className="card">
+              <div className="card-label">Habilidades</div>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                {form.skills.map((s: { skill: string; level?: string }, i: number) => (
+                  <span key={i} className="tag">
+                    {s.skill}{s.level ? ` · ${s.level}` : ''}
+                    <button type="button" onClick={() => {
+                      const skills = form.skills.filter((_: any, idx: number) => idx !== i);
+                      setForm({ ...form, skills });
+                    }}></button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input className="input" style={{ maxWidth: 220, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                  placeholder="Añadir habilidad y presionar Enter..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val) {
+                        setForm({ ...form, skills: [...form.skills, { skill: val, level: 'Intermediate' }] });
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }
+                  }} />
+              </div>
+            </div>
+
+            <div className="card">
               <div className="card-label">Logros</div>
               <textarea className="textarea" value={form.achievements} onChange={(e) => setForm({ ...form, achievements: e.target.value })} placeholder="Logros que Applica debería recordar al preparar aplicaciones" />
             </div>
@@ -575,6 +640,35 @@ export default function ProfileClient({ user, profile, resumes }: { user: User; 
                   }} />
                 </div>
               ))}
+            </div>
+            <div className="field-group" style={{ marginTop: '1rem' }}>
+              <label className="field-label">Países objetivo (mercados en los que te interesa trabajar)</label>
+              <p style={{ fontSize: '.75rem', color: 'var(--text-3)', margin: '0 0 0.5rem' }}>
+                Applica no descarta vacantes presenciales/híbridas en estos países aunque sean extranjeros - úsalo si buscas activamente reubicarte a un mercado específico.
+              </p>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                {form.targetCountries.map((c: string, i: number) => (
+                  <span key={i} className="tag">
+                    {c}
+                    <button type="button" onClick={() => {
+                      const targetCountries = form.targetCountries.filter((_: string, idx: number) => idx !== i);
+                      setForm({ ...form, targetCountries });
+                    }}></button>
+                  </span>
+                ))}
+                <input className="input" style={{ maxWidth: 220, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                  placeholder="Añadir país y presionar Enter..."
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const val = (e.target as HTMLInputElement).value.trim();
+                      if (val && !form.targetCountries.includes(val)) {
+                        setForm({ ...form, targetCountries: [...form.targetCountries, val] });
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }
+                  }} />
+              </div>
             </div>
             <div className="grid-2" style={{ gap: '1rem', marginTop: '1rem' }}>
               <div className="field-group">

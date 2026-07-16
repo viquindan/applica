@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
 import { professionalProfiles, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -22,9 +22,8 @@ function deriveWorkModality(prefs: ModalityPrefs): 'remote' | 'hybrid' | 'onsite
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = session.user.id;
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const body = await req.json();
   await Promise.all([
     db.update(users).set({
@@ -52,6 +51,7 @@ export async function PUT(req: NextRequest) {
       skills: body.skills ?? [],
       achievements: body.achievements ?? null,
       targetRoles: body.targetRoles ?? [],
+      targetCountries: body.targetCountries ?? [],
       updatedAt: new Date(),
     }).where(eq(professionalProfiles.userId, userId)),
   ]);

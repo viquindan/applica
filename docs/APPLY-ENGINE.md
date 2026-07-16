@@ -13,6 +13,16 @@ para que el usuario intervenga son: (1) un CAPTCHA (jamás lo resolvemos nosotro
 por diseño) y (2) un dato que Applica genuinamente no conoce (se pide una sola
 vez y se aprende). Todo lo demás es un bug.
 
+**Ese "un clic" es el swipe positivo en el Feed, siempre (D13 en DECISIONS.md).**
+No existe ningún camino en el que una vacante se envíe sin que el usuario la
+haya visto y aprobado con swipe primero - el motor de reglas (`submissionDecision.ts`)
+nunca resuelve a un envío directo, solo a `queue_for_review`/`skip`/`pause`. El
+swipe es una decisión de producto, no una limitación técnica: es el mínimo de
+responsabilidad/control que el usuario debe tener sobre a dónde se postula.
+Después del swipe, todo lo de abajo (arquitectura híbrida, llenado universal,
+assisted handoff) sigue aplicando tal cual - el swipe reemplaza al viejo modo
+"Totalmente Autónomo", no cambia nada de cómo se llena o envía un formulario.
+
 ## 2. Arquitectura híbrida (decisión D9 en DECISIONS.md)
 
 Tres vías de envío, según el ATS:
@@ -117,6 +127,16 @@ perfil + banco de respuestas. Reglas ganadas con sangre:
     Node, solo dentro del browser.
 
 ## 4. Flujo asistido con navegador real (`assistedApply.ts` + `browserManager.ts`)
+
+> **Nunca importar `browserManager.ts` (ni nada que lo importe transitivamente:
+> `linkedinSessionValidate.ts`, `linkedinLoginCapture.ts`, cualquier adapter de
+> `core/platforms`) de forma ESTÁTICA en una API route.** `browserManager.ts`
+> ejecuta `chromium.use(stealth())` a nivel de módulo - un import estático en
+> una ruta rompe la recolección de datos de página de Next en `npm run build`
+> (`TypeError: n.typeOf is not a function`, encontrado real en 3 rutas de
+> LinkedIn el 2026-07-16, build de producción totalmente roto hasta arreglarlo).
+> Usar `require('@/core/automation/...')` DENTRO del handler en vez de
+> `import` arriba del archivo - mismo patrón que ya usa `worker.ts`.
 
 `runRealBrowserApply`: lanza el Brave/Chrome real del usuario con un perfil
 dedicado persistente (`%TEMP%/applica-apply-profile`), el adapter llena, y un
@@ -434,6 +454,22 @@ sitio real). Decisión consciente documentada en el comentario de
   documentados por sitio): si el llenado genérico no encuentra ni un campo o
   falla el CV, el usuario igual tiene la ventana abierta con sus materiales
   listos para completar a mano - nunca peor que el comportamiento anterior.
+- **Verificado contra un sitio real no-ATS (2026-07-09, Workable/ENFOS)**,
+  autorizado explícitamente por el usuario. Encontró 2 causas raíz invisibles
+  en la regresión sintética (que usa fixtures locales, no una página real):
+  1. **Overlay de cookies**: a diferencia de las ATS, una careers page propia
+     casi siempre muestra un banner de consentimiento a pantalla completa en
+     la primera carga, que bloquea cualquier locator (Apply trigger, campos)
+     aunque "existan" en el DOM. Se agregó un intento de cierre (`Accept
+     all`/`Aceptar todo`/`I agree`/OneTrust) antes de cualquier otra cosa.
+  2. **SPA sin renderizar**: las ATS conocidas son mayormente server-rendered;
+     una página vainilla de empresa suele ser un SPA client-side que sigue en
+     blanco justo después de `domcontentloaded` - los locators corrían contra
+     un DOM vacío. Se agregó `waitForLoadState('networkidle', {timeout:8000})`
+     + 1s extra antes de buscar cookie banner/Apply/campos.
+  Con ambos fixes: banner cerrado, tab de aplicación revelado, CV real
+  adjuntado, nombre/apellido/email autollenados correctamente, botón Enviar
+  nunca tocado (confirmado visualmente inactivo en la captura).
 
 ## 9. UI (dashboard)
 

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
 import { applications, applicationSubmissions, vacancies } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
@@ -11,9 +11,8 @@ import { unresolvedBlockers } from '@/core/automation/blockers';
 const VALID_ACTIONS = ['approve', 'assisted', 'cancel_assisted', 'mark_applied', 'skip', 'archive', 'regenerate_cv', 'regenerate_letter'];
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  const userId = (session.user as any).id as string;
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   const { id } = await params;
   const { action } = await req.json();
 

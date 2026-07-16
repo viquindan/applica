@@ -1,14 +1,13 @@
-import { NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
+import { NextRequest, NextResponse } from 'next/server';
+import { getAuthUserId } from '@/lib/mobileAuth';
 import { db } from '@/db/client';
 import { userSettings } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 
-export async function GET() {
-  const session = await auth();
-  if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET(req: NextRequest) {
+  const userId = await getAuthUserId(req);
+  if (!userId) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const userId = session.user.id;
   const [settings] = await db.select({
     searchInProgress: userSettings.searchInProgress,
     lastSearchStatus: userSettings.lastSearchStatus,

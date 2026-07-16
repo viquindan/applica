@@ -177,11 +177,10 @@ export default function AppsClient({
                 </select>
               </div>
               <div className="field-group">
-                <label className="field-label">Nivel de Automatización</label>
-                <select className="select" value={settingsForm.applicationMode} onChange={(e) => updateSettings('applicationMode', e.target.value)}>
-                  <option value="manual">Revisión Manual (Recomendado)</option>
-                  <option value="auto">Totalmente Autónomo</option>
-                </select>
+                <label className="field-label">Envío</label>
+                <div style={{ padding: '.6rem .85rem', borderRadius: 'var(--radius-sm)', background: 'var(--bg)', fontSize: '.78rem', color: 'var(--text-2)' }}>
+                  Solo tras tu swipe en el Feed
+                </div>
               </div>
             </div>
 
@@ -313,7 +312,7 @@ export default function AppsClient({
       {showUpgradeModal && (
         <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(255, 255, 255, 0.4)', backdropFilter: 'blur(8px)' }}>
           <div className="bento-card" style={{ width: '100%', maxWidth: '400px', position: 'relative' }}>
-            <button onClick={() => setShowUpgradeModal(false)} style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', color: 'var(--text-3)' }}>
+            <button onClick={() => setShowUpgradeModal(false)} aria-label="Cerrar" style={{ position: 'absolute', top: '1.5rem', right: '1.5rem', color: 'var(--text-3)' }}>
               <IconX size={20} />
             </button>
             <div style={{ textAlign: 'center', marginBottom: '2rem' }}>

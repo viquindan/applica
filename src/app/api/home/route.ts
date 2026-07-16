@@ -14,8 +14,6 @@ export async function PUT(req: NextRequest) {
 
   await Promise.all([
     db.update(userSettings).set({
-      globalAutomationMode: body.applicationMode === 'auto' ? 'full' : 'semi',
-      requireReviewBeforeSubmit: body.applicationMode !== 'auto',
       maxVacancyAgeDays: body.maxVacancyAgeDays ? Number(body.maxVacancyAgeDays) : 14,
       searchCadenceHours: body.searchCadenceHours ? Number(body.searchCadenceHours) : 24,
       updatedAt: new Date(),

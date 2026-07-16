@@ -26,7 +26,6 @@ export function useSearchEngine(settings: Settings) {
   const [settingsForm, setSettingsForm] = useState({
     maxVacancyAgeDays: settings.maxVacancyAgeDays ?? 14,
     searchCadenceHours: settings.searchCadenceHours ?? 24,
-    applicationMode: settings.globalAutomationMode === 'full' && !settings.requireReviewBeforeSubmit ? 'auto' : 'manual',
   });
   const [savingSettings, setSavingSettings] = useState(false);
   const [savedSettings, setSavedSettings] = useState(false);

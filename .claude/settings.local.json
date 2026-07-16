@@ -7,7 +7,8 @@
       "Bash(npx tsx *)",
       "Bash(grep -vE \"SECURITY WARNING|sslmode|libpq|next major|current behavior|libpq compatibility|postgresql.org|trace-warnings|^$\")",
       "Bash(grep -q \"Job cache refreshed\" \"C:\\\\Users\\\\lidic\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-lidic-OneDrive-1DANIEL-0-Alma-Partners-Antigravity-Applica\\\\013ab462-5bbf-460f-bf37-ec5487bef1fa\\\\tasks\\\\bkb1xespj.output\")",
-      "Bash(break)"
+      "Bash(break)",
+      "WebFetch(domain:docs.expo.dev)"
     ]
   }
 }

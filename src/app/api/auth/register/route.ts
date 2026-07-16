@@ -6,11 +6,16 @@ import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { ensureUserMemory } from '@/core/memory/memoryStore';
 import { queueSearch } from '@/core/jobs/boss';
+import { signExtensionToken } from '@/lib/extensionToken';
 
 const schema = z.object({
   name: z.string().min(2),
   email: z.string().email(),
   password: z.string().min(8),
+  // Optional so the existing web registration form (not touched by this
+  // change) keeps working unchanged; mobile always sends these.
+  securityQuestion: z.string().min(3).optional(),
+  securityAnswer: z.string().min(2).optional(),
 });
 
 const DEFAULT_PLATFORMS = ['greenhouse', 'lever', 'ashby', 'manual_url'];
@@ -18,7 +23,7 @@ const DEFAULT_PLATFORMS = ['greenhouse', 'lever', 'ashby', 'manual_url'];
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { name, email, password } = schema.parse(body);
+    const { name, email, password, securityQuestion, securityAnswer } = schema.parse(body);
 
     const existing = await db.select().from(users).where(eq(users.email, email.toLowerCase())).limit(1);
     if (existing.length > 0) {
@@ -26,10 +31,13 @@ export async function POST(req: NextRequest) {
     }
 
     const hashed = await bcrypt.hash(password, 12);
+    const securityAnswerHash = securityAnswer ? await bcrypt.hash(securityAnswer.trim().toLowerCase(), 12) : undefined;
     const [user] = await db.insert(users).values({
       name,
       email: email.toLowerCase(),
       password: hashed,
+      securityQuestion,
+      securityAnswerHash,
     }).returning();
 
     // Seed default settings
@@ -48,7 +56,9 @@ export async function POST(req: NextRequest) {
     await ensureUserMemory(user.id);
     await queueSearch(user.id, nextSearchAt);
 
-    return NextResponse.json({ success: true, userId: user.id }, { status: 201 });
+    // token: lets a mobile client (no cookie jar) log straight in after
+    // registering, same scheme as POST /api/mobile/login - web ignores it.
+    return NextResponse.json({ success: true, userId: user.id, token: signExtensionToken(user.id) }, { status: 201 });
   } catch (err: any) {
     if (err.name === 'ZodError') return NextResponse.json({ error: 'Invalid input', details: err.errors }, { status: 400 });
     console.error('Register error:', err);

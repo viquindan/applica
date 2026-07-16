@@ -103,6 +103,14 @@ export function buildExpertiseProfile(profile: Partial<ProfessionalProfile>): Ex
     addTerms(weightedTerms, tokenize(edu.field ?? ''), 1);
   }
 
+  // Free-text "Logros" (profile.achievements, distinct from each experience
+  // entry's own achievements[] above) was collected but never fed into
+  // matching - only used for cover-letter prompts. Whatever the user chose to
+  // highlight there is a real competency signal too.
+  if (profile.achievements) {
+    addTerms(weightedTerms, tokenize(profile.achievements), 1);
+  }
+
   let totalWeight = 0;
   for (const weight of weightedTerms.values()) totalWeight += weight;
 
@@ -157,6 +165,8 @@ export function buildProfileText(profile: Partial<ProfessionalProfile>): string 
   for (const cert of (profile.certifications ?? []).slice(0, 5)) {
     if (cert.name) parts.push(`Certification: ${cert.name}.`);
   }
+
+  if (profile.achievements) parts.push(`Achievements: ${profile.achievements}`);
 
   return parts.join('\n').slice(0, 4000);
 }

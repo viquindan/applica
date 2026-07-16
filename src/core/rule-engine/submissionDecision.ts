@@ -6,7 +6,7 @@ export interface SubmissionDecision {
   requiresReview: boolean;
   blockingReasons: string[];
   warnings: string[];
-  nextAction: 'auto_submit' | 'queue_for_review' | 'skip' | 'pause';
+  nextAction: 'queue_for_review' | 'skip' | 'pause';
 }
 
 export interface SubmissionContext {
@@ -33,14 +33,9 @@ export function evaluateSubmission(ctx: SubmissionContext): SubmissionDecision {
   const s = ctx.globalSettings;
   const ps = ctx.platformSettings;
 
-  // Rule 1: Global mode off
+  // Rule 1: Global mode off - automation disabled entirely
   if (s.globalAutomationMode === 'off') {
     return { applicationId: ctx.applicationId, canAutoSubmit: false, requiresReview: false, blockingReasons: ['Modo de automatización global desactivado'], warnings, nextAction: 'skip' };
-  }
-
-  // Rule 2: Global mode semi
-  if (s.globalAutomationMode === 'semi') {
-    return { applicationId: ctx.applicationId, canAutoSubmit: false, requiresReview: true, blockingReasons: [], warnings, nextAction: 'queue_for_review' };
   }
 
   // Rule 3: Platform auto_apply disabled
@@ -110,11 +105,8 @@ export function evaluateSubmission(ctx: SubmissionContext): SubmissionDecision {
     return { applicationId: ctx.applicationId, canAutoSubmit: false, requiresReview: false, blockingReasons: blocking, warnings, nextAction: 'skip' };
   }
 
-  // Rule 13: Global require_review override
-  if (s.requireReviewBeforeSubmit) {
-    return { applicationId: ctx.applicationId, canAutoSubmit: false, requiresReview: true, blockingReasons: [], warnings, nextAction: 'queue_for_review' };
-  }
-
-  // All clear - auto submit
-  return { applicationId: ctx.applicationId, canAutoSubmit: true, requiresReview: false, blockingReasons: [], warnings, nextAction: 'auto_submit' };
+  // All clear - queued for the user's swipe. Nothing skips pending_review:
+  // the swipe IS the submit authorization, there is no auto-submit path
+  // before it (see docs/DECISIONS.md).
+  return { applicationId: ctx.applicationId, canAutoSubmit: false, requiresReview: true, blockingReasons: [], warnings, nextAction: 'queue_for_review' };
 }

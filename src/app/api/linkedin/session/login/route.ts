@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
-import { captureLinkedInLogin } from '@/core/automation/linkedinLoginCapture';
 import { captureLinkedInCookiesSilently } from '@/core/automation/browserCookies';
 import { setLinkedInSession } from '@/core/automation/linkedinSession';
 
@@ -24,6 +23,10 @@ export async function POST() {
   // 2) One-time login: open LinkedIn in the user's OWN browser (Brave/Chrome/Edge)
   // and capture once they sign in. Like connecting any account - no closing or
   // switching browsers. The session then persists (refreshed on each use).
+  // Dynamic require: linkedinLoginCapture.ts imports `playwright` directly,
+  // which breaks Next's build-time page-data collection if imported
+  // statically (same fix as the other LinkedIn automation routes).
+  const { captureLinkedInLogin } = require('@/core/automation/linkedinLoginCapture');
   const result = await captureLinkedInLogin(userId);
   return NextResponse.json({ ...result, via: 'assisted' });
 }

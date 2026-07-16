@@ -1,6 +1,6 @@
 import { loadEnvLocal } from '@/lib/loadEnvLocal';
 loadEnvLocal();
-import { getBoss, queueSearch, queueRegistryRefresh, queueBoardDiscovery, queueProcessApplication, queueJobCacheRefresh, queueReEvaluate } from './boss';
+import { getBoss, queueSearch, queueRegistryRefresh, queueBoardDiscovery, queueProcessApplication, queueJobCacheRefresh, queueReEvaluate, queueAssistedApply } from './boss';
 import { reEvaluateVacancies } from '../pipeline/reEvaluate';
 import { db } from '@/db/client';
 import {
@@ -23,6 +23,7 @@ import { SmartRecruitersAdapter } from '../platforms/smartrecruiters';
 import { RecruiteeAdapter } from '../platforms/recruitee';
 import { GenericAdapter } from '../platforms/genericAdapter';
 import { processVacancyForUser } from '../pipeline/processVacancy';
+import { sendPushToUser } from '../notifications/pushSender';
 import { generateCoverLetter, tailorCV } from '../tailoring/cvTailor';
 import { getInternalAiConfig } from '../ai/config';
 import { getRelevantMemoryContext } from '../memory/memoryStore';
@@ -56,6 +57,29 @@ const adapters = {
   smartrecruiters: new SmartRecruitersAdapter(),
   recruitee: new RecruiteeAdapter(),
 };
+
+const VACANCY_TIMEOUT_MS = Number(process.env.VACANCY_PROCESS_TIMEOUT_MS ?? 90_000);
+
+// Per-item hard cap around processVacancyForUser during a search run. The AI
+// limiter's own timeout only guards its own calls - a hang anywhere else in
+// this path (Playwright form inspection past its internal timeout, a stuck
+// PDF render, a library retry loop that doesn't honor abortSignal) would
+// otherwise stall the whole batch forever, and the search never reaches its
+// final "success" update - which is exactly what kept showing 0 new vacancies
+// after a search that looked "done" in the logs. One slow vacancy degrades to
+// "counted as filtered", it doesn't block every vacancy behind it.
+function withVacancyTimeout<T>(promise: Promise<T>, label: string): Promise<T | { timedOut: true }> {
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => {
+      console.warn(`[Worker] Vacancy processing timed out after ${VACANCY_TIMEOUT_MS / 1000}s: ${label}`);
+      resolve({ timedOut: true });
+    }, VACANCY_TIMEOUT_MS);
+    promise.then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); console.warn(`[Worker] Vacancy processing failed: ${label}:`, (e as Error)?.message ?? e); resolve({ timedOut: true }); },
+    );
+  });
+}
 // Fallback used ONLY by the assisted_apply handler below, for platforms with
 // no dedicated adapter. Never added to `adapters` itself - every other lookup
 // against that map (search, process_application, formPreview) must keep
@@ -178,8 +202,8 @@ export async function startWorkers() {
 
       let processedInLoop = 0;
       for (const vacancy of vacancies) {
-        const result = await processVacancyForUser(userId, vacancy, context);
-        if (result.applicationId) preparedCount += 1;
+        const result = await withVacancyTimeout(processVacancyForUser(userId, vacancy, context), `${vacancy.platform}:${vacancy.title}`);
+        if ('applicationId' in result && result.applicationId) preparedCount += 1;
         else filteredCount += 1;
 
         processedInLoop++;
@@ -228,8 +252,8 @@ export async function startWorkers() {
       console.log(`[Worker] Processing ${linkedinJobs.length} LinkedIn jobs with concurrency limit 5`);
 
       await pMap(linkedinJobs, async (job) => {
-        const result = await processVacancyForUser(userId, job, context);
-        if (result.applicationId) preparedCount += 1;
+        const result = await withVacancyTimeout(processVacancyForUser(userId, job, context), `linkedin:${job.title}`);
+        if ('applicationId' in result && result.applicationId) preparedCount += 1;
         else filteredCount += 1;
       }, { concurrency: 5 });
 
@@ -385,6 +409,7 @@ export async function startWorkers() {
         await db.insert(applicationSubmissions).values({ ...baseSub, status: 'submitted', submissionStatus: 'success', submittedAutomatically: true, submissionTimestamp: new Date() } as any);
         await db.update(applications).set({ status: 'submitted', updatedAt: new Date() }).where(eq(applications.id, applicationId));
         await db.update(vacancies).set({ status: 'applied', updatedAt: new Date() }).where(eq(vacancies.id, vacancy.id));
+        sendPushToUser(application.userId, 'Aplicación enviada', `${vacancy.title} en ${vacancy.company} fue enviada.`, { applicationId });
         return { success: true, result };
       }
       if (result.status === 'dry_run') {
@@ -527,19 +552,23 @@ export async function startWorkers() {
       }
       const isSubmitted = result.status === 'submitted';
       const isDryRun = result.submissionStatus === 'dry_run';
-      // Captcha-gated boards: the form is fully prepared but the site requires a
-      // human verification (reCAPTCHA) we don't bypass. Route to assisted-manual
-      // (pending_review + a clear note) instead of marking it a failure.
+      // Captcha-gated boards: the silent headless attempt got blocked by a
+      // human-verification challenge we don't bypass. Keep the application
+      // 'approved' (so it surfaces in Pendientes exactly like an assisted
+      // flow, never back in the swipe Feed) and open the real, visible
+      // browser automatically - the user only has to click once they see it,
+      // no extra tap to "start" the assisted step.
       const isAssistedCaptcha = result.submissionStatus === 'failed_captcha';
       if (isAssistedCaptcha) {
         await Promise.all([
-          db.update(applications).set({ status: 'pending_review', updatedAt: new Date() }).where(eq(applications.id, applicationId)),
+          db.update(applications).set({ status: 'approved', updatedAt: new Date() }).where(eq(applications.id, applicationId)),
           db.update(vacancies).set({
-            status: 'pending_review',
-            warnings: [...(vacancy.warnings ?? []), result.failureReason ?? 'Listo para aplicar: esta empresa exige verificación humana (reCAPTCHA). Abre la oferta y da el último clic - Applica ya preparó todo.'],
+            status: 'applying',
+            warnings: [...(vacancy.warnings ?? []), result.failureReason ?? 'Esta empresa exige verificación humana (reCAPTCHA). Abrimos una ventana con todo listo - da el último clic.'],
             updatedAt: new Date(),
           }).where(eq(vacancies.id, vacancy.id)),
         ]);
+        await queueAssistedApply(applicationId);
       } else {
         await Promise.all([
           db.update(applications).set({
@@ -698,6 +727,7 @@ export async function startWorkers() {
         else await db.insert(applicationSubmissions).values({ applicationId, ...subValues } as any);
         await db.update(applications).set({ status: 'submitted', updatedAt: new Date() }).where(eq(applications.id, applicationId));
         await db.update(vacancies).set({ status: 'applied', updatedAt: new Date() }).where(eq(vacancies.id, vacancy.id));
+        sendPushToUser(application.userId, 'Aplicación enviada', `${vacancy.title} en ${vacancy.company} fue enviada.`, { applicationId });
         return { success: true, outcome: outcome.status };
       }
 
@@ -759,6 +789,43 @@ export async function startWorkers() {
       postedAt: vacancy.postedAt ?? undefined,
     };
 
+    const adapter = adapters[vacancy.platform as keyof typeof adapters];
+    // Form inspection launches a real browser and parses a third-party form; on
+    // JS-heavy ATSs (Ashby) it can throw or time out. A failure here must NOT
+    // abort the whole prep (which leaves the app stuck in 'draft' and makes
+    // pg-boss retry forever) - degrade to no preview so the app still completes
+    // to pending_review with default prepared answers and the user can apply.
+    // Runs BEFORE CV/cover-letter generation on purpose: whether to generate a
+    // cover letter at all depends on what this specific form actually asks for.
+    let formPreview: Awaited<ReturnType<typeof inspectApplicationForm>> | null = null;
+    if (adapter) {
+      try {
+        formPreview = await inspectApplicationForm(adapter, vacancy.url, {
+          profileData: {
+            firstName: user.name.split(' ')[0],
+            lastName: user.name.split(' ').slice(1).join(' '),
+            email: user.email,
+            phone: user.phone,
+            linkedin: user.linkedin,
+          },
+          formAnswers: application.formAnswers ?? {},
+          hasResume: !!baseResume?.filePath,
+        });
+      } catch (error: any) {
+        console.warn(`[Worker] Form inspection failed for ${vacancy.platform} application ${applicationId}: ${error?.message ?? error}`);
+      }
+    }
+
+    // Cover letters are the exception, not the rule: almost no ATS form
+    // requires one. Only generate one when the actual form has a required
+    // field for it (real DOM `required`, not a guess) - when we can't inspect
+    // the form at all (LinkedIn, generic sites, inspection failure), default
+    // to NOT generating one. The user can always regenerate it manually later
+    // ("regenerate_letter") if a specific application turns out to need it.
+    const coverLetterRequired = (formPreview?.fields ?? []).some(
+      (field) => field.required && /cover\s*letter|carta\s*de\s*presentaci[oó]n/i.test(field.label),
+    );
+
     let adaptedResumeId: string | null = null;
     let coverLetterId: string | null = null;
     let resumeChanges: unknown[] = [];
@@ -796,20 +863,22 @@ export async function startWorkers() {
           console.warn('[Worker] Adapted CV PDF render failed; will fall back to base CV file:', (e as Error)?.message ?? e);
         }
 
-        const letter = await generateCoverLetter(
-          tailored.tailoredCV,
-          normalizedVacancy,
-          profile.coverLetterTone ?? 'professional',
-          profile.achievements ?? '',
-          ai,
-          memoryContext,
-        );
-        const [coverLetter] = await db.insert(coverLetters).values({
-          userId: application.userId,
-          content: letter,
-          version: 1,
-        }).returning();
-        coverLetterId = coverLetter.id;
+        if (coverLetterRequired) {
+          const letter = await generateCoverLetter(
+            tailored.tailoredCV,
+            normalizedVacancy,
+            profile.coverLetterTone ?? 'professional',
+            profile.achievements ?? '',
+            ai,
+            memoryContext,
+          );
+          const [coverLetter] = await db.insert(coverLetters).values({
+            userId: application.userId,
+            content: letter,
+            version: 1,
+          }).returning();
+          coverLetterId = coverLetter.id;
+        }
       }
     } catch (error: any) {
       console.warn(`[Worker] Material preparation failed for application ${applicationId}: ${error?.message ?? error}`);
@@ -818,31 +887,6 @@ export async function startWorkers() {
         warnings: [...(vacancy.warnings ?? []), 'No pudimos preparar el CV/carta a medida en este intento. Puedes regenerarlos o aplicar con tu CV base.'],
         updatedAt: new Date(),
       }).where(eq(vacancies.id, vacancy.id));
-    }
-
-    const adapter = adapters[vacancy.platform as keyof typeof adapters];
-    // Form inspection launches a real browser and parses a third-party form; on
-    // JS-heavy ATSs (Ashby) it can throw or time out. A failure here must NOT
-    // abort the whole prep (which leaves the app stuck in 'draft' and makes
-    // pg-boss retry forever) - degrade to no preview so the app still completes
-    // to pending_review with default prepared answers and the user can apply.
-    let formPreview: Awaited<ReturnType<typeof inspectApplicationForm>> | null = null;
-    if (adapter) {
-      try {
-        formPreview = await inspectApplicationForm(adapter, vacancy.url, {
-          profileData: {
-            firstName: user.name.split(' ')[0],
-            lastName: user.name.split(' ').slice(1).join(' '),
-            email: user.email,
-            phone: user.phone,
-            linkedin: user.linkedin,
-          },
-          formAnswers: application.formAnswers ?? {},
-          hasResume: !!baseResume?.filePath,
-        });
-      } catch (error: any) {
-        console.warn(`[Worker] Form inspection failed for ${vacancy.platform} application ${applicationId}: ${error?.message ?? error}`);
-      }
     }
 
     // Auto-answer common factual questions (relocation, notice period, years of
@@ -943,15 +987,11 @@ export async function startWorkers() {
       redFlags: vacancy.redFlags ?? [],
     });
 
-    const isAutoSubmit = decision.nextAction === 'auto_submit';
-    const nextVacancyStatus =
-      decision.nextAction === 'skip'
-        ? 'filtered'
-        : isAutoSubmit
-          ? 'applying'
-          : 'pending_review';
-    const nextApplicationStatus =
-      decision.nextAction === 'skip' ? 'skipped' : isAutoSubmit ? 'approved' : 'pending_review';
+    // No auto-submit path exists before the user's swipe: 'skip' means the
+    // vacancy never becomes a swipeable application, anything else lands in
+    // pending_review and waits for the Feed swipe (see docs/DECISIONS.md).
+    const nextVacancyStatus = decision.nextAction === 'skip' ? 'filtered' : 'pending_review';
+    const nextApplicationStatus = decision.nextAction === 'skip' ? 'skipped' : 'pending_review';
 
     await Promise.all([
       db.update(applications).set({
@@ -967,27 +1007,6 @@ export async function startWorkers() {
         updatedAt: new Date(),
       }).where(eq(vacancies.id, vacancy.id)),
     ]);
-
-    // Full-automation path: the rule engine cleared every gating rule, so enqueue
-    // the real submission exactly like the manual "approve" route does. The
-    // process_application worker requires a submission row to record its result.
-    if (isAutoSubmit) {
-      const [existingSubmission] = await db.select().from(applicationSubmissions)
-        .where(eq(applicationSubmissions.applicationId, application.id)).limit(1);
-      if (!existingSubmission) {
-        await db.insert(applicationSubmissions).values({
-          applicationId: application.id,
-          platform: 'pending',
-          platformName: 'pending',
-          status: 'pending',
-          mode: 'auto',
-          submittedAutomatically: true,
-          approvedByUser: false,
-          logs: [{ level: 'info', message: 'Auto-aprobado por el motor de reglas (modo automático)', timestamp: new Date().toISOString() }],
-        });
-      }
-      await queueProcessApplication(application.id);
-    }
 
     return { success: true, applicationId };
   });
@@ -1120,7 +1139,7 @@ export async function startWorkers() {
     if (!userId) return { skipped: true };
     console.log(`[Worker] Re-evaluating stored vacancies for ${userId} against current rules...`);
     const r = await reEvaluateVacancies(userId);
-    console.log(`[Worker] Re-evaluation: checked ${r.checked}, hidden ${r.hidden}, rescored ${r.rescored}`);
+    console.log(`[Worker] Re-evaluation: checked ${r.checked}, hidden ${r.hidden}, rescored ${r.rescored}, promoted ${r.promoted}`);
     // Run again in 6h so rule changes keep applying to history.
     await queueReEvaluate(userId, new Date(Date.now() + 6 * 60 * 60 * 1000));
     return { success: true, ...r };
@@ -1167,6 +1186,22 @@ export async function startWorkers() {
   await queueRegistryRefresh().catch(() => console.log('[Worker] Registry refresh already scheduled.'));
   await queueBoardDiscovery().catch(() => console.log('[Worker] Board discovery already scheduled.'));
   await queueJobCacheRefresh().catch(() => console.log('[Worker] Job cache refresh already scheduled.'));
+
+  // The job cache lives in this process's memory (jobCache.ts), not the DB -
+  // it's always empty on a fresh boot. queueJobCacheRefresh() above is a
+  // pg-boss job deduped by a 5h DB-backed singletonKey, so after ANY worker
+  // restart within that window it silently no-ops (pg-boss thinks a refresh
+  // already ran, even though the process that ran it - and its cache - is
+  // gone). Net effect: every restart left searches on the slow, thin
+  // "cache cold -> live per-platform fetch" path for up to 5h, which is most
+  // of why a search could turn up almost nothing. Fill the in-memory cache
+  // directly here, unconditionally, bypassing that singleton entirely -
+  // fire-and-forget so it doesn't delay the worker's readiness for other queues.
+  if (!isJobCacheFresh()) {
+    refreshJobCache()
+      .then((r) => console.log(`[Worker] Startup job cache fill: ${r.total} jobs`, r.byPlatform))
+      .catch((e) => console.warn('[Worker] Startup job cache fill failed:', (e as Error)?.message ?? e));
+  }
 
   // Re-evaluate each user's stored vacancies against the current rules on startup
   // (so rule changes apply to history) and then on a 6h cadence.

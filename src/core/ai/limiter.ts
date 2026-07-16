@@ -8,12 +8,14 @@
  * the API's own "retry in Ns" hint - so the worker degrades to "slower" instead
  * of "failed" while on the free tier.
  *
- * Tunables (env): AI_MIN_INTERVAL_MS (default 3500 ≈ 17/min), AI_MAX_RETRIES (4).
+ * Tunables (env): AI_MIN_INTERVAL_MS (default 3500 ≈ 17/min), AI_MAX_RETRIES (4),
+ * AI_CALL_TIMEOUT_MS (default 120000).
  */
 
 const MIN_INTERVAL_MS = Number(process.env.AI_MIN_INTERVAL_MS ?? 3500);
 const MAX_RETRIES = Number(process.env.AI_MAX_RETRIES ?? 2);
 const MAX_BACKOFF_MS = 20_000;
+const CALL_TIMEOUT_MS = Number(process.env.AI_CALL_TIMEOUT_MS ?? 120_000);
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -34,10 +36,32 @@ function backoffMs(err: unknown, attempt: number): number {
   return Math.min(5000 * 2 ** attempt, MAX_BACKOFF_MS);
 }
 
+class AiCallTimeoutError extends Error {
+  constructor(ms: number) {
+    super(`AI call timed out after ${Math.round(ms / 1000)}s`);
+    this.name = 'AiCallTimeoutError';
+  }
+}
+
+// A hung HTTP request (socket open, provider never responds) would otherwise
+// freeze `chain` forever and deadlock every AI consumer in the process - the
+// worker then sits at 0% CPU with no logs until manually restarted. The
+// underlying request may linger after the race, but the chain stays live.
+function withTimeout<T>(fn: () => Promise<T>): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new AiCallTimeoutError(CALL_TIMEOUT_MS)), CALL_TIMEOUT_MS);
+    fn().then(
+      (v) => { clearTimeout(timer); resolve(v); },
+      (e) => { clearTimeout(timer); reject(e); },
+    );
+  });
+}
+
 /**
  * Run an AI call through the global limiter: serialized, spaced to stay under the
- * per-minute cap, and retried on quota/429 errors. Non-rate-limit errors bubble
- * up immediately. Resolves/rejects exactly like `fn`.
+ * per-minute cap, retried on quota/429 errors, and hard-capped in duration so a
+ * hung request can never deadlock the chain. Non-rate-limit errors bubble up
+ * immediately. Resolves/rejects exactly like `fn`.
  */
 export function withAiRateLimit<T>(fn: () => Promise<T>): Promise<T> {
   const run = async (): Promise<T> => {
@@ -46,11 +70,16 @@ export function withAiRateLimit<T>(fn: () => Promise<T>): Promise<T> {
       if (wait > 0) await sleep(wait);
       lastStart = Date.now();
       try {
-        return await fn();
+        return await withTimeout(fn);
       } catch (err) {
-        if (!isRateLimitError(err) || attempt >= MAX_RETRIES) throw err;
-        const delay = backoffMs(err, attempt);
-        console.warn(`[AI limiter] rate limited; retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES}).`);
+        const timedOut = err instanceof AiCallTimeoutError;
+        if ((!timedOut && !isRateLimitError(err)) || attempt >= MAX_RETRIES) throw err;
+        const delay = timedOut ? 1000 : backoffMs(err, attempt);
+        console.warn(
+          timedOut
+            ? `[AI limiter] call hung >${Math.round(CALL_TIMEOUT_MS / 1000)}s; retrying (attempt ${attempt + 1}/${MAX_RETRIES}).`
+            : `[AI limiter] rate limited; retrying in ${Math.round(delay / 1000)}s (attempt ${attempt + 1}/${MAX_RETRIES}).`,
+        );
         await sleep(delay);
       }
     }
