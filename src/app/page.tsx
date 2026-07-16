@@ -5,7 +5,11 @@ import LandingClient from './LandingClient';
 export default async function Home() {
   const session = await auth();
 
-  if (session) {
+  // Only bounce fully onboarded users straight into the app. A session mid-
+  // onboarding must be able to land on "/" normally (e.g. clicking the logo)
+  // without looping back into /onboarding - that redirect belongs to the
+  // login flow / dashboard gate, not to every visit to the landing page.
+  if (session && (session.user as any)?.onboardingCompleted) {
     redirect('/applications');
   }
 
