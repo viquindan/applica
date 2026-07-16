@@ -4,8 +4,8 @@ module.exports = {
       name: 'applica-web',
       script: 'npm',
       args: 'run start',
-      instances: 'max',
-      exec_mode: 'cluster',
+      instances: 1,
+      exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
         PORT: 3000,
