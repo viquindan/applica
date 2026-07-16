@@ -19,7 +19,7 @@ const PROFICIENCY_LEVELS = ['Native', 'C2', 'C1', 'B2', 'B1', 'A2', 'A1'];
 const NOTICE_OPTIONS = ['Inmediato', '2 semanas', '1 mes', '2 meses', '3 meses', 'Por definir'];
 const REGIONS = ['Norteamérica', 'LATAM', 'Europa', 'Asia', 'África', 'Oceanía', 'Remoto Global'];
 
-export default function Step1Personal({ data, onNext, onBack, saving }: { data: any; onNext: (d: any) => void; onBack: () => void; saving: boolean }) {
+export default function Step1Personal({ data, onNext, onBack, saving, isLastStep }: { data: any; onNext: (d: any) => void; onBack: () => void; saving: boolean; isLastStep?: boolean }) {
   const { t } = useI18n();
   const [form, setForm] = useState({
     name: data.name || '', email: data.email || '', phone: data.phone || '',
@@ -199,7 +199,9 @@ export default function Step1Personal({ data, onNext, onBack, saving }: { data: 
       <div className="flex justify-between" style={{ marginTop: '2rem' }}>
         <button type="button" className="btn btn-secondary" onClick={onBack}> {t.onboarding.back}</button>
         <button type="button" className="btn btn-primary btn-lg" onClick={() => onNext(form)} disabled={saving}>
-          {saving ? <><span className="spinner" style={{ width: 16, height: 16 }} /> {t.onboarding.saving}</> : t.onboarding.next + ' '}
+          {saving
+            ? <><span className="spinner" style={{ width: 16, height: 16 }} /> {t.onboarding.saving}</>
+            : isLastStep ? 'Finalizar y Activar ' : t.onboarding.next + ' '}
         </button>
       </div>
     </div>

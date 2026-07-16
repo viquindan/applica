@@ -4,15 +4,13 @@ import { useRouter } from 'next/navigation';
 import { useI18n } from '@/i18n/context';
 import Step1Personal from './steps/Step1Personal';
 import Step2Profile from './steps/Step2Profile';
-import Step3Preferences from './steps/Step3Preferences';
 
 export type OnboardingData = {
   personal: any;
   profile: any;
-  preferences: any;
 };
 
-const TOTAL_STEPS = 3;
+const TOTAL_STEPS = 2;
 
 export default function OnboardingPage() {
   const { t } = useI18n();
@@ -20,7 +18,7 @@ export default function OnboardingPage() {
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<OnboardingData>({
-    personal: {}, profile: {}, preferences: {}
+    personal: {}, profile: {}
   });
 
   const progress = ((step - 1) / (TOTAL_STEPS - 1)) * 100;
@@ -68,7 +66,7 @@ export default function OnboardingPage() {
     router.push('/applications');
   }
 
-  const stepTitles = [t.onboarding.step2, t.onboarding.step1, t.onboarding.step3];
+  const stepTitles = [t.onboarding.step2, t.onboarding.step1];
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-start', padding: '3rem 1rem' }}>
@@ -113,8 +111,7 @@ export default function OnboardingPage() {
       <div style={{ width: '100%', maxWidth: 760 }} className="animate-fadein">
         <div className="bento-card" style={{ padding: '2.5rem' }}>
           {step === 1 && <Step2Profile data={data.profile} onNext={(d, extracted) => handleProfileNext(d, extracted)} onBack={() => {}} saving={saving} />}
-          {step === 2 && <Step1Personal data={data.personal} onNext={d => handleNext('personal', d)} onBack={() => setStep(1)} saving={saving} />}
-          {step === 3 && <Step3Preferences data={data.preferences} onNext={d => handleNext('preferences', d)} onBack={() => setStep(2)} saving={saving} />}
+          {step === 2 && <Step1Personal data={data.personal} onNext={d => handleNext('personal', d)} onBack={() => setStep(1)} saving={saving} isLastStep />}
         </div>
       </div>
     </div>

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/lib/auth';
 import { db } from '@/db/client';
-import { users, professionalProfiles, userSettings, platformSettings, resumes } from '@/db/schema';
+import { users, professionalProfiles, platformSettings, resumes } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 
 export async function POST(req: NextRequest) {
@@ -72,23 +72,6 @@ export async function POST(req: NextRequest) {
         updatedAt: new Date(),
       }).where(eq(professionalProfiles.userId, userId));
       await db.update(users).set({ onboardingStep: 3, updatedAt: new Date() }).where(eq(users.id, userId));
-    }
-
-    if (stepKey === 'preferences') {
-      await db.update(userSettings).set({
-        minScoreToGenerateMaterials: data.minScoreToGenerate,
-        minScoreToApply: data.minScoreToApply,
-        maxApplicationsPerDay: data.maxPerDay, maxApplicationsPerWeek: data.maxPerWeek,
-        defaultTailoringLevel: data.tailoringLevel,
-        requireReviewBeforeSubmit: data.requireReview,
-        pauseOnSalaryQuestions: data.pauseOnSalary,
-        pauseOnImmigrationQuestions: data.pauseOnImmigration,
-        pauseOnCustomQuestions: data.pauseOnCustom,
-        pauseOnCaptcha: data.pauseOnCaptcha, pauseOnLogin: data.pauseOnLogin,
-        pauseOnMissingInformation: data.pauseOnMissing,
-        updatedAt: new Date(),
-      }).where(eq(userSettings.userId, userId));
-      await db.update(users).set({ onboardingStep: 4, updatedAt: new Date() }).where(eq(users.id, userId));
     }
 
     if (step === 4) {
