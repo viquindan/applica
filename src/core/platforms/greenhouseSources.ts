@@ -37,6 +37,30 @@ export const DEFAULT_GREENHOUSE_BOARD_TOKENS = [
   'calm',
   'flexport',
   'gemini',
+  // Verified additions - non-tech industries (health, retail/consumer, food
+  // logistics, education), so the registry isn't biased toward tech/fintech.
+  'komodohealth',
+  'flatironhealth',
+  'classpass',
+  'peloton',
+  'squarespace',
+  'lattice',
+  'remotecom',
+  'hellofresh',
+  'glossier',
+  'bombas',
+  'everlane',
+  'reformation',
+  'stitchfix',
+  'stockx',
+  'khanacademy',
+  'coursera',
+  'udemy',
+  'udacity',
+  '2u',
+  'outschool',
+  'masterclass',
+  'guild',
 ];
 
 export const DEFAULT_GREENHOUSE_BOARDS = DEFAULT_GREENHOUSE_BOARD_TOKENS.map((token) => ({

@@ -18,4 +18,7 @@ export const seedAshbyBoards = [
   { token: 'posthog', companyName: 'PostHog', source: 'seed' },
   { token: 'cohere', companyName: 'Cohere', source: 'seed' },
   { token: 'middesk', companyName: 'Middesk', source: 'seed' },
+  { token: 'vanta', companyName: 'Vanta', source: 'seed' },
+  { token: 'openai', companyName: 'OpenAI', source: 'seed' },
+  { token: 'substack', companyName: 'Substack', source: 'seed' },
 ];

@@ -19,4 +19,6 @@ export const seedLeverBoards = [
   { token: 'spotify', companyName: 'Spotify', source: 'seed' },
   { token: 'mistral', companyName: 'Mistral AI', source: 'seed' },
   { token: 'gopuff', companyName: 'Gopuff', source: 'seed' },
+  // Healthcare (Lever is otherwise almost entirely tech/fintech-only clients).
+  { token: 'ro', companyName: 'Ro', source: 'seed' },
 ];

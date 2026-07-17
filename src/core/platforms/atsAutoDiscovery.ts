@@ -21,7 +21,7 @@ const DEFAULT_TERMS = [
 
 // More queries per run = wider coverage. The ATS APIs aren't rate-limited; only
 // the search engines are, which we mitigate via throttling + two engines.
-const QUERIES_PER_RUN = 12;
+const QUERIES_PER_RUN = 20;
 
 function dedupe(values: string[]): string[] {
   return [...new Set(values.map((v) => v.trim()).filter(Boolean))];
@@ -58,7 +58,7 @@ export async function buildDiscoveryQueries(): Promise<string[]> {
     console.warn('[ATS AutoDiscovery] Could not load profiles for query personalization:', error);
   }
 
-  const terms = dedupe([...countries, ...roles.slice(0, 10), ...DEFAULT_TERMS]);
+  const terms = dedupe([...countries, ...roles.slice(0, 20), ...DEFAULT_TERMS]);
 
   const queries: string[] = [];
   for (const domain of ATS_DOMAINS) {

@@ -1,6 +1,6 @@
 import { loadEnvLocal } from '@/lib/loadEnvLocal';
 loadEnvLocal();
-import { getBoss, queueSearch, queueRegistryRefresh, queueBoardDiscovery, queueProcessApplication, queueJobCacheRefresh, queueReEvaluate, queueAssistedApply } from './boss';
+import { getBoss, queueSearch, queueProcessApplication, queueReEvaluate, queueAssistedApply } from './boss';
 import { reEvaluateVacancies } from '../pipeline/reEvaluate';
 import { db } from '@/db/client';
 import {
@@ -38,6 +38,7 @@ import { seedAshbyBoards } from '../platforms/ashbySources';
 import { seedSmartRecruitersBoards } from '../platforms/smartRecruitersSources';
 import { seedRecruiteeBoards } from '../platforms/recruiteeSources';
 import { getActiveAtsBoardTokensBatch, getActiveBoardCount, refreshAtsBoardRegistry, getAtsRegistryMetrics, seedAtsBoards, growRegistryFromCompanies } from '../platforms/atsRegistry';
+import { discoverCompaniesFromDirectories } from '../platforms/companyDirectoryDiscovery';
 import { refreshJobCache, isJobCacheFresh, gatherSearchCandidates, jobCacheSize } from '../platforms/jobCache';
 import { inspectApplicationForm, mergeDecisionWithPreview } from '../automation/formPreview';
 import { autoAnswerFields } from '../automation/standardAnswers';
@@ -231,31 +232,37 @@ export async function startWorkers() {
         updatedAt: new Date(),
       }).where(eq(systemSettings.id, 1));
 
-      // Run LinkedIn Stealth Scraper
-      console.log('[Worker] Launching LinkedIn Stealth Scraper...');
-      // Search the candidate's own location FIRST (local roles hire local people),
-      // then their broader target regions.
-      const linkedinLocations = [...new Set([...homeCountries, ...locations])];
-      const linkedinJobs = await scrapeLinkedInRemoteLatAm({
-        roles: profile?.targetRoles ?? [],
-        locations: linkedinLocations,
-      });
+      // Run LinkedIn Stealth Scraper - Pro-only. Gating here (not just inside
+      // processVacancyForUser) avoids scraping a real headless browser for free
+      // users whose results would be discarded as 'linkedin_pro_only' anyway.
+      if (planLimits.canUseLinkedInScraper) {
+        console.log('[Worker] Launching LinkedIn Stealth Scraper...');
+        // Search the candidate's own location FIRST (local roles hire local people),
+        // then their broader target regions.
+        const linkedinLocations = [...new Set([...homeCountries, ...locations])];
+        const linkedinJobs = await scrapeLinkedInRemoteLatAm({
+          roles: profile?.targetRoles ?? [],
+          locations: linkedinLocations,
+        });
 
-      // Self-growing catalog: turn the companies LinkedIn surfaced into permanent
-      // ATS sources (probe their boards across platforms). Fire-and-forget.
-      growRegistryFromCompanies(linkedinJobs.map((j) => j.company).filter(Boolean))
-        .then((r) => r.added > 0 && console.log(`[Worker] Registry grew from LinkedIn companies: +${r.added} new ATS board(s)`))
-        .catch((e) => console.warn('[Worker] growRegistryFromCompanies failed:', (e as Error)?.message ?? e));
+        // Self-growing catalog: turn the companies LinkedIn surfaced into permanent
+        // ATS sources (probe their boards across platforms). Fire-and-forget.
+        growRegistryFromCompanies(linkedinJobs.map((j) => j.company).filter(Boolean))
+          .then((r) => r.added > 0 && console.log(`[Worker] Registry grew from LinkedIn companies: +${r.added} new ATS board(s)`))
+          .catch((e) => console.warn('[Worker] growRegistryFromCompanies failed:', (e as Error)?.message ?? e));
 
-      // CONCURRENT WORKER CLUSTER (Limit: 5 workers)
-      const pMap = (await import('p-map')).default;
-      console.log(`[Worker] Processing ${linkedinJobs.length} LinkedIn jobs with concurrency limit 5`);
+        // CONCURRENT WORKER CLUSTER (Limit: 5 workers)
+        const pMap = (await import('p-map')).default;
+        console.log(`[Worker] Processing ${linkedinJobs.length} LinkedIn jobs with concurrency limit 5`);
 
-      await pMap(linkedinJobs, async (job) => {
-        const result = await withVacancyTimeout(processVacancyForUser(userId, job, context), `linkedin:${job.title}`);
-        if ('applicationId' in result && result.applicationId) preparedCount += 1;
-        else filteredCount += 1;
-      }, { concurrency: 5 });
+        await pMap(linkedinJobs, async (job) => {
+          const result = await withVacancyTimeout(processVacancyForUser(userId, job, context), `linkedin:${job.title}`);
+          if ('applicationId' in result && result.applicationId) preparedCount += 1;
+          else filteredCount += 1;
+        }, { concurrency: 5 });
+      } else {
+        console.log(`[Worker] Skipping LinkedIn scraper for user ${userId} - not on Pro plan.`);
+      }
 
       const now = new Date();
       const nextSearchAt = new Date(now.getTime() + (settings?.searchCadenceHours ?? 24) * 60 * 60 * 1000);
@@ -1100,8 +1107,30 @@ export async function startWorkers() {
   });
 
   // ─── Supply workers ───────────────────────────────────────────────────────
+  //
+  // refresh_ats_registry / refresh_job_cache / discover_ats_boards /
+  // discover_companies_directory used to reschedule themselves by sending a
+  // new pg-boss job with `startAfter: +Nh` under the SAME singletonKey. That
+  // is fragile across restarts: if this process dies and restarts before that
+  // future job fires, pg-boss still has a "pending" job under that singleton
+  // key, so this process's own boot-time `queueXxx()` call silently no-ops
+  // (thinks a refresh is already scheduled) - and if THAT pending job also
+  // never gets to run (e.g. another restart happens near its fire time), the
+  // whole chain quietly dies forever with no further refreshes, no error, no
+  // log. This is exactly what happened in production (2026-07-17): after a
+  // string of restarts, the shared job cache got stuck for 15h+ on stale data
+  // from before a 71->1012 board registry expansion, so every user's search
+  // fell back to the thin "cache cold" live-fetch path and matched almost
+  // nothing - looked like a matching/scoring bug but was actually this.
+  //
+  // Fix: these four are now driven by an in-process setInterval (below, after
+  // the boss.work registrations) that calls the underlying function directly,
+  // independent of any pg-boss-persisted schedule. As long as the worker
+  // process is alive, they run on a fixed cadence no matter what the DB
+  // singleton state remembers from a previous process. boss.work stays wired
+  // so `boss.send(...)` can still trigger one manually/externally if needed.
 
-  await boss.work('refresh_ats_registry', async () => {
+  async function runRegistryRefresh() {
     console.log('[Worker] Refreshing ATS board registry (Greenhouse)...');
     const resultsGreenhouse = await refreshAtsBoardRegistry('greenhouse', 250);
     console.log('[Worker] Refreshing ATS board registry (Lever)...');
@@ -1116,23 +1145,20 @@ export async function startWorkers() {
     const valid = results.filter((r) => r.ok).length;
     const invalid = results.filter((r) => !r.ok).length;
     console.log(`[Worker] Registry refresh done: ${valid} valid, ${invalid} invalid out of ${results.length} checked.`);
-
     const metrics = await getAtsRegistryMetrics();
     console.log(`[Worker] Registry metrics: ${JSON.stringify(metrics)}`);
+    return { success: true, checked: results.length, valid, invalid, metrics };
+  }
 
-    // Schedule next refresh in 12h
-    await queueRegistryRefresh(new Date(Date.now() + 12 * 60 * 60 * 1000));
-    return { success: true, checked: results.length, valid, invalid };
-  });
-
-  await boss.work('refresh_job_cache', async () => {
+  async function runJobCacheRefresh() {
     console.log('[Worker] Refreshing shared job cache (one central fetch for all users)...');
     const result = await refreshJobCache();
     console.log(`[Worker] Job cache refreshed: ${result.total} jobs cached`, result.byPlatform);
-    // Refresh every 5h so it stays ahead of the 6h TTL.
-    await queueJobCacheRefresh(new Date(Date.now() + 5 * 60 * 60 * 1000));
     return { success: true, ...result };
-  });
+  }
+
+  await boss.work('refresh_ats_registry', async () => runRegistryRefresh());
+  await boss.work('refresh_job_cache', async () => runJobCacheRefresh());
 
   await boss.work('re_evaluate_vacancies', async (jobs: any) => {
     const userId = jobs?.[0]?.data?.userId ?? jobs?.data?.userId;
@@ -1145,7 +1171,7 @@ export async function startWorkers() {
     return { success: true, ...r };
   });
 
-  await boss.work('discover_ats_boards', async () => {
+  async function runBoardDiscovery() {
     console.log('[Worker] Running ATS board discovery...');
     // Ensure seed boards are in the registry
     await seedAtsBoards(DEFAULT_GREENHOUSE_BOARDS, 'greenhouse');
@@ -1160,11 +1186,25 @@ export async function startWorkers() {
 
     const metrics = await getAtsRegistryMetrics();
     console.log(`[Worker] Post-discovery metrics: ${JSON.stringify(metrics)}`);
-
-    // Schedule next discovery in 6h to keep growing the registry continuously.
-    await queueBoardDiscovery(new Date(Date.now() + 6 * 60 * 60 * 1000));
     return { success: true, metrics };
-  });
+  }
+
+  // High-yield complement to the SERP-based discovery above: probes real
+  // company names pulled from public Wikipedia directories (rotating batch of
+  // categories, see companyDirectoryDiscovery.ts) against every ATS platform.
+  // This is the same technique that grew the registry from 71 to 1,012 active
+  // boards in one session (2026-07-17), now automated so it keeps compounding.
+  async function runCompanyDirectoryDiscovery() {
+    console.log('[Worker] Running Wikipedia company directory discovery...');
+    const result = await discoverCompaniesFromDirectories();
+    console.log(`[Worker] Directory discovery: categories=${result.categoriesUsed.join(', ')} names=${result.namesCollected} probed=${result.probed} added=${result.added}`);
+    const metrics = await getAtsRegistryMetrics();
+    console.log(`[Worker] Post-directory-discovery metrics: ${JSON.stringify(metrics)}`);
+    return { success: true, ...result, metrics };
+  }
+
+  await boss.work('discover_ats_boards', async () => runBoardDiscovery());
+  await boss.work('discover_companies_directory', async () => runCompanyDirectoryDiscovery());
 
   // Rescue orphaned assisted applications. 'approved' means "assisted window open,
   // worker watching". A freshly booted worker has ZERO active watchers, so any app
@@ -1181,27 +1221,24 @@ export async function startWorkers() {
     console.warn('[Worker] Orphan rescue failed:', (e as Error)?.message ?? e);
   }
 
-  // Schedule initial supply jobs
-  console.log('[Worker] Scheduling initial supply jobs...');
-  await queueRegistryRefresh().catch(() => console.log('[Worker] Registry refresh already scheduled.'));
-  await queueBoardDiscovery().catch(() => console.log('[Worker] Board discovery already scheduled.'));
-  await queueJobCacheRefresh().catch(() => console.log('[Worker] Job cache refresh already scheduled.'));
+  // Supply-job cadence: run each once now (fire-and-forget, doesn't delay the
+  // worker's readiness for other queues) and then on a fixed in-process
+  // interval - see the long comment above runRegistryRefresh() for why this
+  // replaced pg-boss's self-rescheduling singleton pattern. Job cache first
+  // and un-awaited since it's the most user-visible (a stale/empty cache means
+  // every search falls back to a thin live-fetch and matches almost nothing).
+  console.log('[Worker] Starting supply-job schedules (job cache, registry refresh, board discovery, company directory discovery)...');
+  runJobCacheRefresh().catch((e) => console.warn('[Worker] Initial job cache refresh failed:', (e as Error)?.message ?? e));
+  setInterval(() => runJobCacheRefresh().catch((e) => console.warn('[Worker] Job cache refresh failed:', (e as Error)?.message ?? e)), 5 * 60 * 60 * 1000);
 
-  // The job cache lives in this process's memory (jobCache.ts), not the DB -
-  // it's always empty on a fresh boot. queueJobCacheRefresh() above is a
-  // pg-boss job deduped by a 5h DB-backed singletonKey, so after ANY worker
-  // restart within that window it silently no-ops (pg-boss thinks a refresh
-  // already ran, even though the process that ran it - and its cache - is
-  // gone). Net effect: every restart left searches on the slow, thin
-  // "cache cold -> live per-platform fetch" path for up to 5h, which is most
-  // of why a search could turn up almost nothing. Fill the in-memory cache
-  // directly here, unconditionally, bypassing that singleton entirely -
-  // fire-and-forget so it doesn't delay the worker's readiness for other queues.
-  if (!isJobCacheFresh()) {
-    refreshJobCache()
-      .then((r) => console.log(`[Worker] Startup job cache fill: ${r.total} jobs`, r.byPlatform))
-      .catch((e) => console.warn('[Worker] Startup job cache fill failed:', (e as Error)?.message ?? e));
-  }
+  runRegistryRefresh().catch((e) => console.warn('[Worker] Initial registry refresh failed:', (e as Error)?.message ?? e));
+  setInterval(() => runRegistryRefresh().catch((e) => console.warn('[Worker] Registry refresh failed:', (e as Error)?.message ?? e)), 12 * 60 * 60 * 1000);
+
+  runBoardDiscovery().catch((e) => console.warn('[Worker] Initial board discovery failed:', (e as Error)?.message ?? e));
+  setInterval(() => runBoardDiscovery().catch((e) => console.warn('[Worker] Board discovery failed:', (e as Error)?.message ?? e)), 4 * 60 * 60 * 1000);
+
+  runCompanyDirectoryDiscovery().catch((e) => console.warn('[Worker] Initial company directory discovery failed:', (e as Error)?.message ?? e));
+  setInterval(() => runCompanyDirectoryDiscovery().catch((e) => console.warn('[Worker] Company directory discovery failed:', (e as Error)?.message ?? e)), 24 * 60 * 60 * 1000);
 
   // Re-evaluate each user's stored vacancies against the current rules on startup
   // (so rule changes apply to history) and then on a 6h cadence.
@@ -1212,7 +1249,7 @@ export async function startWorkers() {
     console.warn('[Worker] could not schedule re-evaluation:', (e as Error)?.message ?? e);
   }
 
-  console.log('[Worker] Listening for jobs (search_vacancies, prepare_application_materials, process_application, assisted_apply, regenerate_materials, refresh_ats_registry, discover_ats_boards)...');
+  console.log('[Worker] Listening for jobs (search_vacancies, prepare_application_materials, process_application, assisted_apply, regenerate_materials, refresh_ats_registry, discover_ats_boards, discover_companies_directory)...');
 }
 
 /**

@@ -33,6 +33,7 @@ export async function getBoss(): Promise<PgBossType> {
         boss.createQueue('regenerate_materials'),
         boss.createQueue('refresh_ats_registry'),
         boss.createQueue('discover_ats_boards'),
+        boss.createQueue('discover_companies_directory'),
         boss.createQueue('refresh_job_cache'),
         boss.createQueue('re_evaluate_vacancies'),
       ]);
@@ -137,7 +138,18 @@ export async function queueBoardDiscovery(startAfter?: Date) {
     retryLimit: 2,
     expireInSeconds: 60 * 60,
     singletonKey: 'board_discovery',
-    singletonSeconds: 60 * 60 * 6, // at most once every 6h
+    singletonSeconds: 60 * 60 * 4, // at most once every 4h
+    ...(startAfter ? { startAfter } : {}),
+  });
+}
+
+export async function queueCompanyDirectoryDiscovery(startAfter?: Date) {
+  const b = await getBoss();
+  await b.send('discover_companies_directory', {}, {
+    retryLimit: 2,
+    expireInSeconds: 60 * 60,
+    singletonKey: 'company_directory_discovery',
+    singletonSeconds: 60 * 60 * 24, // at most once every 24h
     ...(startAfter ? { startAfter } : {}),
   });
 }
