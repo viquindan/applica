@@ -50,12 +50,13 @@ function RingSpinner() {
 export function FeedHud({ queueCount, submittedCount, todayCount, dailyGoal, streak, searching, statusText, onRefresh }: Props) {
   return (
     <View style={styles.wrap}>
-      <View style={styles.topRow}>
-        <ThemedText type="title" style={styles.title}>Feed</ThemedText>
-        <StreakBadge streak={streak} />
-      </View>
-
+      {/* No page title here on purpose - the tab bar below already reads
+          "Feed", and every pixel of vertical space here is one less pixel
+          to show the vacancy itself (TikTok-style: chrome stays minimal so
+          the content fills the screen). Streak now rides inline with the
+          stat chips instead of its own title row. */}
       <View style={styles.hudRow}>
+        <StreakBadge streak={streak} />
         <StatChip value={queueCount} label="en cola" />
         <StatChip value={todayCount} label="hoy" />
         <StatChip value={submittedCount} label="enviadas" />
@@ -79,9 +80,11 @@ export function FeedHud({ queueCount, submittedCount, todayCount, dailyGoal, str
 }
 
 const styles = StyleSheet.create({
-  wrap: { alignSelf: 'stretch', paddingHorizontal: Spacing.four, paddingTop: Spacing.two, gap: Spacing.two },
-  topRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  title: { fontSize: 22, color: Petrol },
+  // Tighter than before on purpose - no title row above this anymore, and
+  // every bit of vertical space saved here is handed straight to the
+  // vacancy card below (see index.tsx: the deck is flex:1, so shrinking the
+  // HUD directly grows the card).
+  wrap: { alignSelf: 'stretch', paddingHorizontal: Spacing.four, paddingTop: Spacing.one, gap: Spacing.one },
   hudRow: { flexDirection: 'row', alignItems: 'stretch', gap: Spacing.two },
   chip: {
     flex: 1,

@@ -180,7 +180,11 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
         </View>
       </View>
       {app.vacancy?.location ? <ThemedText style={styles.meta}>{app.vacancy.location}</ThemedText> : null}
-      <ThemedText style={styles.description} numberOfLines={12}>
+      {/* Shrinking the HUD above (feed-hud.tsx) frees real vertical room here -
+          the whole point is showing more of the vacancy itself, so this grew
+          from 12 to 16 lines to actually use that space instead of leaving it
+          blank under a truncated description. */}
+      <ThemedText style={styles.description} numberOfLines={16}>
         {app.vacancy?.description ?? ''}
       </ThemedText>
       <View style={styles.footer}>
