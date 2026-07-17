@@ -89,12 +89,25 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
     if (isAtsApp(app)) sendApprove(app); else sendAssisted(app);
   }
 
+  // Both actions used to fire-and-forget: on a 409 (unresolved blockers,
+  // already-approved race, etc.) the server never queued anything, but the
+  // card had already swiped away client-side with zero indication anything
+  // went wrong - the user was left believing they'd applied when they hadn't.
+  // Surface failures for real; router.refresh() then brings the still-
+  // pending_review card back into the deck so it isn't silently lost.
+  async function reportActionFailure(res: Response, verb: string) {
+    const body = await res.json().catch(() => ({}));
+    const detail = body?.blockers?.length ? `${body.error}\n- ${body.blockers.join('\n- ')}` : (body?.error ?? `Error ${res.status}`);
+    alert(`No pudimos ${verb} esta aplicación.\n\n${detail}`);
+  }
+
   async function sendApprove(app: AppRow) {
     setActioningId(app.id);
     try {
-      await fetch(`/api/applications/${app.id}/action`, {
+      const res = await fetch(`/api/applications/${app.id}/action`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'approve' }),
       });
+      if (!res.ok) await reportActionFailure(res, 'aprobar');
     } finally {
       setActioningId(null);
       router.refresh();
@@ -104,9 +117,10 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   async function sendAssisted(app: AppRow) {
     setActioningId(app.id);
     try {
-      await fetch(`/api/applications/${app.id}/action`, {
+      const res = await fetch(`/api/applications/${app.id}/action`, {
         method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'assisted' }),
       });
+      if (!res.ok) await reportActionFailure(res, 'abrir');
     } finally {
       setActioningId(null);
       router.refresh();

@@ -6,7 +6,7 @@ export type FormFieldPreview = {
   label: string;
   kind: string;
   required: boolean;
-  source: 'profile' | 'resume' | 'saved_answer' | 'unknown';
+  source: 'profile' | 'resume' | 'saved_answer' | 'auto_decline' | 'unknown';
   plannedValue?: string;
   status: 'ready' | 'missing' | 'needs_review';
 };

@@ -4,7 +4,7 @@ import { ApplicationSubmission } from '@/db/schema';
 import { getRoleFamily, roleMatches } from '../scoring/roleTaxonomy';
 import { createIncognitoContext } from '../automation/browserManager';
 import { detectRemoteScope, inferModality, matchesCountry } from '../scoring/geography';
-import { fillEverythingKnown, DECLINE_ANSWER, DECLINE_OPTION_RX } from './universalFill';
+import { fillEverythingKnown, DECLINE_ANSWER, DECLINE_OPTION_RX, DEMOGRAPHIC_RX } from './universalFill';
 import { extractSalaryRange, toMonthlyAmount } from '../scoring/salary';
 import { isLikelyFalsePositiveRole } from '../scoring/semanticRole';
 
@@ -437,6 +437,15 @@ export class GreenhouseAdapter implements PlatformAdapter {
     if (normalizedKey.includes('linkedin')) return this.makeField(field, 'profile', context.profileData.linkedin);
     if (normalizedKey.includes('resume')) return this.makeField(field, 'resume', context.hasResume ? 'CV cargado' : undefined);
     if (savedAnswerEntry) return this.makeField(field, 'saved_answer', savedAnswerEntry[1]);
+    // Voluntary EEOC self-identification questions (gender, race, veteran,
+    // disability...) are never actually blockers: applyPlaywright always
+    // declines them by default (see the DECLINE_ANSWER calls above and
+    // universalFill.ts). The preview used to not know that and flagged them
+    // as unresolved required fields, which made `approve` 409 on almost every
+    // US-based posting (EEOC fields are near-universal there) - the swipe
+    // silently failed for the user with no error surfaced (see
+    // useApplicationActions.ts fix in the same pass).
+    if (DEMOGRAPHIC_RX.test(field.label)) return this.makeField(field, 'auto_decline', 'Prefiero no responder');
 
     return {
       key: field.id || field.name || field.label,

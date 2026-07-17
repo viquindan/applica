@@ -4,7 +4,7 @@ import { ApplicationSubmission } from '@/db/schema';
 import { getRoleFamily, roleMatches } from '../scoring/roleTaxonomy';
 import { createIncognitoContext } from '../automation/browserManager';
 import { detectRemoteScope, inferModality, matchesCountry } from '../scoring/geography';
-import { fillEverythingKnown } from './universalFill';
+import { fillEverythingKnown, DEMOGRAPHIC_RX } from './universalFill';
 import { isLikelyFalsePositiveRole } from '../scoring/semanticRole';
 
 export class AshbyAdapter implements PlatformAdapter {
@@ -570,6 +570,10 @@ export class AshbyAdapter implements PlatformAdapter {
     if (normalizedKey.includes('linkedin')) return this.makeField(field, 'profile', context.profileData.linkedin);
     if (normalizedKey.includes('resume')) return this.makeField(field, 'resume', context.hasResume ? 'CV cargado' : undefined);
     if (savedAnswerEntry) return this.makeField(field, 'saved_answer', savedAnswerEntry[1]);
+    // Voluntary EEOC self-identification fields are declined by default at
+    // real submit time - never treat them as a blocker (see greenhouse.ts for
+    // the full explanation).
+    if (DEMOGRAPHIC_RX.test(field.label)) return this.makeField(field, 'auto_decline', 'Prefiero no responder');
 
     return {
       key: field.id || field.name || field.label,

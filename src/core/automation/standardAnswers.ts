@@ -50,8 +50,19 @@ export function answerForLabel(
   if (/fluent in english|english (fluency|proficiency|skills)|do you speak english|proficient in english|comfortable.*english/.test(l)) return 'Yes';
   // Acknowledgements / consent checkboxes
   if (/acknowledge|i confirm|i agree|consent|i certify|i understand|terms and conditions/.test(l)) return 'Yes';
+  // Willing/able to work ONSITE (as opposed to relocating permanently) - answer
+  // from the candidate's actual onsite preference, not relocationAvailable
+  // (a "yes, remote-only" candidate answering an onsite question from
+  // relocationAvailable alone, or worse falling through to the AI open-ended
+  // answerer with no signal at all, previously produced a fabricated
+  // "yes I'll relocate" - dishonest and contradicts what they declared).
+  // Matched BEFORE the broader relocation pattern below since "able to
+  // relocate" would otherwise also match here.
+  if (/(willing|able) to (come|work|be)?\s*(on[- ]?site|in[- ]?(the\s+)?office)|onsite as required|work from (the |our )?office/.test(l)) {
+    return (user.workModalityPrefs?.acceptsOnsite ?? user.relocationAvailable) ? 'Yes' : 'No';
+  }
   // Willingness to travel / relocate / commute
-  if (/willing to (travel|relocate|commute|work onsite|work on-site)|able to (travel|relocate|commute)|open to relocation/.test(l)) {
+  if (/willing to (travel|relocate|commute)|able to (travel|relocate|commute)|open to relocation/.test(l)) {
     return user.relocationAvailable ? 'Yes' : 'No';
   }
 
