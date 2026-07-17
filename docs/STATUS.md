@@ -3,7 +3,17 @@
 > Vivo y BREVE (se auto-carga en cada sesión: cada línea aquí cuesta tokens siempre).
 > Historial detallado de iteraciones: `docs/CHANGELOG-2026-07.md` (no auto-cargado).
 > El motor de aplicación a fondo: `docs/APPLY-ENGINE.md` (lectura obligatoria antes de tocarlo).
-> Última actualización: 2026-07-16.
+> Última actualización: 2026-07-17.
+
+## Producción: primer despliegue real (2026-07-16/17)
+**Applica está en vivo en `https://applicaswipe.com`** (VPS Hostinger compartido con otros proyectos, Nginx+SSL, Postgres dedicado, PM2, GitHub Actions con push-to-deploy en `master`). Detalle completo de la infraestructura y los bugs reales encontrados en el propio despliegue (no visibles en local) queda en `docs/CHANGELOG-2026-07.md` - los más importantes:
+- **Bug crítico real: el worker corría con `DATABASE_URL` indefinido** desde el primer deploy (`ecosystem.config.js` no usaba `scripts/startWorker.ts`, que es el que carga `.env.local` antes de importar el worker) - ninguna búsqueda pudo guardar nada en la BD hasta que se corrigió. Arreglado y verificado con una búsqueda real de punta a punta.
+- **Bug crítico real: webhook de LemonSqueezy sin verificar firma** - cualquiera podía subir cualquier cuenta a Pro gratis vía POST falso. Arreglado (falla cerrado sin secret configurado).
+- Auditoría de seguridad completa (acceso SSH, firewall, fail2ban, MySQL de otros proyectos restringido a localhost con autorización explícita, backups diarios de la BD, headers HTTP de seguridad).
+- Motor de búsqueda: confirmado por código que usa las 5 plataformas ATS por defecto (sin platform-skip bug); el registro de empresas (`ats_boards`) parte chico (~86 sembradas) y crece solo cada 6h vía discovery - ya no bloqueado por el bug del worker.
+- Landing page reescrita de punta a punta (propuesta de valor honesta, cómo funciona, precios reales, FAQ, señales de confianza) + Terms/Privacy con el sistema de diseño real y contenido preciso (antes decían "OpenAI/Anthropic" cuando el producto usa Gemini). Bug preexistente corregido: `/terms` y `/privacy` redirigían a login para visitantes no autenticados.
+- Feed: el panel "Motor de búsqueda" se movió de Apps al Feed; nuevo `SearchingPanel` con frases rotativas reemplaza el estado vacío mientras hay una búsqueda en curso o para un usuario que nunca ha buscado (auto-dispara la primera búsqueda al entrar en vez de esperar el job de 24h).
+- APK de Android de producción compilado y distribuido (apunta a `https://applicaswipe.com`, ya no al IP de LAN de desarrollo).
 
 ## Hecho (estado actual, estable)
 - **Los 4 ATS (Ashby, Greenhouse, Lever, SmartRecruiters) con el mismo flujo asistido**, verificado por el usuario en su Brave real: CV adjunto con verificación en página, llenado completo (shadow DOM incluido), multi-página (SR), banner de estado, aprendizaje silencioso.
