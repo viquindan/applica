@@ -58,7 +58,8 @@ export default function AppsScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.headerTitle}>Apps</ThemedText>
+        {/* No page title - the tab bar already reads "Apps" (see Feed for the
+            same change and why). The stats line below still earns its space. */}
         {stats ? (
           <ThemedText style={styles.stats}>
             {stats.total} aplicaciones · {stats.submitted} enviadas · {stats.pendingReview} por revisar
@@ -127,9 +128,8 @@ function Row({ app, index, onPress }: { app: AppRow; index: number; onPress: () 
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four },
-  headerTitle: { fontSize: 22 },
-  stats: { color: '#5c6366', fontSize: 12, marginTop: 2, marginBottom: Spacing.three },
+  safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.two },
+  stats: { color: '#5c6366', fontSize: 12, marginBottom: Spacing.three },
   tabBar: { flexDirection: 'row', gap: 6, marginBottom: Spacing.three },
   tabButton: { flex: 1, minHeight: 44, justifyContent: 'center', paddingVertical: 9, borderRadius: Radius.full, alignItems: 'center', backgroundColor: '#f4f3f3' },
   tabButtonActive: { backgroundColor: Petrol },

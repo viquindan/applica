@@ -22,7 +22,8 @@ export default function PendingScreen() {
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
-        <ThemedText type="title" style={styles.headerTitle}>Pendientes</ThemedText>
+        {/* No page title - the tab bar already reads "Pendientes" (see Feed
+            for the same change and why). */}
         <FlatList
           data={pendingApps}
           keyExtractor={(a) => a.id}
@@ -97,8 +98,7 @@ function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo }: {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  safeArea: { flex: 1, paddingHorizontal: Spacing.four },
-  headerTitle: { fontSize: 22, marginBottom: Spacing.three },
+  safeArea: { flex: 1, paddingHorizontal: Spacing.four, paddingTop: Spacing.two },
   list: { gap: Spacing.three, paddingBottom: Spacing.six },
   listEmpty: { flexGrow: 1 },
   row: { backgroundColor: '#FFFFFF', borderRadius: Radius.lg, padding: Spacing.three, gap: 4, ...Shadows.sm },
