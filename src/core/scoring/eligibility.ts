@@ -52,6 +52,13 @@ const REQUIRE_NEAR = /\b(fluent|fluency|fluently|native|proficien\w*|bilingual|m
 // Words that downgrade it to optional - if present near the language, don't exclude.
 const OPTIONAL_NEAR = /\b(a plus|nice to have|preferred|bonus|advantage|desirable|is a plus|would be)\b/i;
 
+// "This role is based in our Raleigh office" / "is based out of our NYC HQ" -
+// a common phrasing that plain "on-site"/"in-office" word matching missed
+// entirely (real case: Pendo's Director, People Partner GTM said exactly
+// this while also boasting a "globally distributed team", which wrongly won
+// out and scored the onsite-only role 82% for a remote-only candidate).
+const EXPLICIT_OFFICE_BASED_RX = /\bis\s+based\s+(in|at|out of)\s+(our|the|a)\b/i;
+
 // Market-leadership roles that are inherently local (you must know the market).
 const LOCAL_LEADERSHIP_RX = /\b(country manager|general manager|regional (director|manager|lead|vp|vice president)|market (lead|manager|director)|managing director|head of (sales|growth|operations|country|region|market))\b/i;
 
@@ -70,7 +77,13 @@ const GLOBAL_FRIENDLY_RX: RegExp[] = [
   /\b(deel|remote\.com|oyster|globalization partners|g-?p|multiplier|rippling eor)\b/i,
   /\bopen to (candidates|applicants)[^.\n]{0,50}\b(anywhere in the world|any country|multiple countries)\b/i,
   /\bno (location|geographic|geographical|country)\s+(restriction|requirement|limitation)/i,
-  /\b(globally distributed|fully distributed)\s+(team|company|workforce)\b/i,
+  // "team" deliberately excluded here: "you'll lead a globally distributed
+  // team" describes the reports, not where THIS role can be performed - a
+  // real posting (Pendo, Director People Partner GTM) said exactly that while
+  // also saying "this role is based in our Raleigh office" a few lines above,
+  // and the "team" match wrongly overrode the onsite signal, scoring an
+  // onsite-only US role 82% for a Peru-based candidate seeking remote-global.
+  /\b(globally distributed|fully distributed)\s+(company|workforce)\b/i,
   /\b(any|all)\s+time\s*zones?\b/i,
   /\bwe (hire|employ)\s+(people\s+)?(from|in)\s+(over|more than|\d+\+?)\s+countries\b/i,
   /\bregardless of (where|your) (you('?re| are)? )?(located|location)\b/i,
@@ -137,6 +150,7 @@ export function detectHiringSignals(vacancy: NormalizedVacancy): HireabilitySign
     /\bremote\s*[---(,]?\s*(us|usa|u\.s\.?|united states|canada)\b/i.test(text)
     || /\b(us|usa|u\.s\.?|united states)[\s-]*(only|based)\b/i.test(text)
     || /\bmust\s+(be\s+)?(located|reside|residing|based)\s+in\b/i.test(text)
+    || EXPLICIT_OFFICE_BASED_RX.test(text)
     || HARD_FOREIGN_AUTH_RX.some((r) => r.test(text));
   const globalFriendly = !restrictionOverride && GLOBAL_FRIENDLY_RX.some((r) => r.test(text));
   if (globalFriendly) signals.push('Contrata internacionalmente / desde cualquier país');
@@ -221,7 +235,8 @@ export function evaluateEligibility(vacancy: NormalizedVacancy, profile: Eligibi
   // with a city in the location is often a remote role that just named a city,
   // so we don't hide those (avoids over-filtering).
   const explicitOnsite = modality === 'onsite' || modality === 'hybrid'
-    || /\b(on-?site|in-?office|in[-\s]person|presencial|h[íi]brid[oa]|days?\s+(a|per)\s+week\s+in|d[íi]as?\s+(a la semana|por semana)\s+en|relocat)\b/i.test(text);
+    || /\b(on-?site|in-?office|in[-\s]person|presencial|h[íi]brid[oa]|days?\s+(a|per)\s+week\s+in|d[íi]as?\s+(a la semana|por semana)\s+en|relocat)\b/i.test(text)
+    || EXPLICIT_OFFICE_BASED_RX.test(text);
   const mentionsRemote = /\bremot[eo]\b|\bwork from home\b|\bteletrabajo\b/i.test(`${text}\n${loc}`);
   const onsiteForeign = explicitOnsite || (scope === 'not_remote' && !mentionsRemote);
   const { globalFriendly, hardForeignBlock } = detectHiringSignals(vacancy);

@@ -48,8 +48,12 @@ const COUNTRY_SIGNALS: Array<{ pattern: RegExp; country: string }> = [
   { pattern: /\b(netherlands|holanda)\b/i, country: 'netherlands' },
   { pattern: /\b(portugal)\b/i, country: 'portugal' },
   { pattern: /\b(italy|italia)\b/i, country: 'italy' },
-  // US state abbreviations - strong signal the job is US-only
-  { pattern: /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY),?\s/i, country: 'united states' },
+  // US state abbreviations - strong signal the job is US-only. Requires a
+  // trailing separator OR end-of-string - a location that's simply "City, ST"
+  // with nothing after the state code (very common on Greenhouse/Lever, e.g.
+  // the real "Raleigh, NC" that started this fix) previously needed a comma
+  // AND whitespace after the code, so it silently never matched.
+  { pattern: /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)(?:,?\s|$)/i, country: 'united states' },
 ];
 
 export function normalizeGeo(value?: string | null) {

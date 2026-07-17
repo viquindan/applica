@@ -61,6 +61,15 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
       // paged list that owns this card. 1.4x bias keeps diagonal scrolls scrolling.
       onMoveShouldSetPanResponder: (_evt, gesture) =>
         Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4,
+      // Android-only and easy to miss: PanResponder defaults to BLOCKING the
+      // native responder (the FlatList's own ScrollView) even on gestures this
+      // component never actually claims, which is exactly the "scroll feels
+      // stuck, can't page up/down easily" bug reported on a real Android
+      // device. Must be explicit false so a vertical drag can still reach the
+      // paged Feed list. onPanResponderTerminationRequest complements it: if
+      // the list ever does claim the gesture mid-drag, let it.
+      onShouldBlockNativeResponder: () => false,
+      onPanResponderTerminationRequest: () => true,
       onPanResponderGrant: () => {
         startedAsTap.current = true;
         crossedThreshold.current = 'none';
