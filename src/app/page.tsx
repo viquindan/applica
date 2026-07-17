@@ -1,5 +1,8 @@
 import { auth } from '@/lib/auth';
 import { redirect } from 'next/navigation';
+import { db } from '@/db/client';
+import { atsBoards } from '@/db/schema';
+import { count, eq } from 'drizzle-orm';
 import LandingClient from './LandingClient';
 
 export default async function Home() {
@@ -13,5 +16,11 @@ export default async function Home() {
     redirect('/applications');
   }
 
-  return <LandingClient />;
+  // Real count, not a made-up number - the registry keeps growing on its own
+  // via the discover_ats_boards job (see docs/APPLY-ENGINE.md).
+  const trackedBoards = await db.select({ n: count() }).from(atsBoards).where(eq(atsBoards.status, 'active'))
+    .then((r) => r[0]?.n ?? 0)
+    .catch(() => 0);
+
+  return <LandingClient trackedBoards={trackedBoards} />;
 }

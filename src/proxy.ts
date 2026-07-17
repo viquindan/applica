@@ -57,7 +57,7 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/b2b-hq', req.url));
   }
 
-  const isPublicRoute = pathname === '/' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || isAdminLoginPage;
+  const isPublicRoute = pathname === '/' || pathname === '/terms' || pathname === '/privacy' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || isAdminLoginPage;
 
   if (isApi) return NextResponse.next();
   if (pathname === '/home') return NextResponse.redirect(new URL('/applications', req.url));
