@@ -19,6 +19,16 @@ jobs:
       with:
         node-version: '20'
 
+    # Regression gate for the scoring/matching engine (fitScorer/eligibility/
+    # geography) - see CLAUDE.md rule 6. Runs on the runner (no DB/network
+    # needed) BEFORE the SSH deploy step, so a broken change never reaches
+    # the schema push / build / pm2 restart on the actual VPS at all.
+    - name: Install dependencies
+      run: npm ci
+
+    - name: Run tests
+      run: npm test
+
     - name: Deploy via SSH
       uses: appleboy/ssh-action@v1.0.3
       with:
