@@ -998,7 +998,7 @@ h3 {
   }
 
   .header-brand {
-    display: flex !important
+    visibility: visible !important
   }
 
   .app-header {

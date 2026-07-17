@@ -64,6 +64,8 @@ export async function POST(req: NextRequest) {
         experience: data.experience, education: data.education,
         certifications: data.certifications, skills: data.skills,
         achievements: data.achievements,
+        targetRoles: data.targetRoles,
+        targetIndustries: data.targetIndustries,
         targetSeniority: data.targetSeniority,
         targetCompanies: data.targetCompanies,
         excludedCompanies: data.excludedCompanies, excludedIndustries: data.excludedIndustries,

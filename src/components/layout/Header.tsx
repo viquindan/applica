@@ -33,7 +33,15 @@ export default function Header({ userName }: { userName: string }) {
       padding: '.85rem 2rem', borderBottom: '1px solid var(--border)',
       background: 'var(--bg)', position: 'sticky', top: 0, zIndex: 50
     }}>
-      <Link href="/applications" className="header-brand" style={{ display: 'none', alignItems: 'center', gap: '.5rem', textDecoration: 'none' }}>
+      {/* Hidden on desktop (the sidebar already shows the logo), shown on
+          mobile via the .header-brand media query override in globals.css.
+          Must stay `visibility: hidden` (not display: none): with only one
+          flex child, `justify-content: space-between` collapses it to
+          flex-start (left) instead of the far end - which pinned the account
+          avatar/dropdown to the left, overlapping the sidebar nav. Keeping
+          this in the flex flow (invisible but still taking space) is what
+          pushes the avatar to the right on desktop. */}
+      <Link href="/applications" className="header-brand" style={{ visibility: 'hidden', display: 'flex', alignItems: 'center', gap: '.5rem', textDecoration: 'none' }}>
         <LogoBadge size={30} radius="var(--radius-sm)" />
         <span style={{ fontFamily: 'var(--font-display)', fontSize: '1.1rem', fontWeight: 800, color: 'var(--text)', letterSpacing: '-0.01em' }}>Applica</span>
       </Link>

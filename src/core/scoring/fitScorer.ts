@@ -75,6 +75,31 @@ function overlap(a: string[], b: string[]): number {
   return Math.min(matches / Math.min(a.length, b.length), 1);
 }
 
+/**
+ * Role match is the heaviest-weighted signal (30pts) and, without it, every
+ * vacancy scores near zero on that component - a user who never explicitly
+ * picked target roles (onboarding skipped/abandoned, or a past bug that
+ * dropped the field on save) gets 100% of vacancies filtered out regardless
+ * of how good a fit they'd actually be. We must not depend on the user
+ * completing that step: fall back to inferring likely target roles from
+ * their most recent job titles (they're presumably still looking for
+ * similar work) so scoring degrades gracefully instead of collapsing.
+ * Explicit targetRoles from the user always take priority when present.
+ */
+function inferImplicitTargetRoles(profile: ScoringProfile): string[] {
+  const experience = (profile.experience ?? []) as Array<{ role?: string | null; current?: boolean | null; endDate?: string | null; startDate?: string | null }>;
+  if (!experience.length) return [];
+  const sorted = [...experience].sort((a, b) => {
+    if (a.current && !b.current) return -1;
+    if (b.current && !a.current) return 1;
+    return (b.endDate || b.startDate || '').localeCompare(a.endDate || a.startDate || '');
+  });
+  const roles = sorted
+    .map((e) => e.role?.trim())
+    .filter((r): r is string => Boolean(r));
+  return [...new Set(roles)].slice(0, 2);
+}
+
 function includesNormalizedPhrase(haystack: string, needle: string): boolean {
   const normalizedHaystack = normalizePhrase(haystack);
   const normalizedNeedle = normalizePhrase(needle);
@@ -103,8 +128,15 @@ export function scoreVacancy(
   const redFlags: string[] = [];
   const warnings: string[] = [];
 
-  // Role match (30pts)
-  const targetRoles = profile.targetRoles || [];
+  // Role match (30pts) - explicit targetRoles win; otherwise infer from the
+  // candidate's own recent job titles so an incomplete profile doesn't zero
+  // out every vacancy (see inferImplicitTargetRoles above).
+  const explicitTargetRoles = profile.targetRoles || [];
+  const usingInferredRoles = explicitTargetRoles.length === 0;
+  const targetRoles = usingInferredRoles ? inferImplicitTargetRoles(profile) : explicitTargetRoles;
+  if (usingInferredRoles && targetRoles.length > 0) {
+    warnings.push(`Sin roles objetivo definidos en tu perfil - usando tu experiencia reciente (${targetRoles.join(', ')}) como referencia.`);
+  }
   const roleTargets = targetRoles.flatMap(r => normalizeText(r));
   const exactTitleRoleMatch = targetRoles.some((role) => roleMatches(vacancy.title, role));
   const familyRoleMatch = targetRoles.some((role) =>
