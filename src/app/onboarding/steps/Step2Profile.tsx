@@ -35,6 +35,7 @@ export default function Step2Profile({ data, onNext, onBack, saving }: { data: a
   const [form, setForm] = useState({
     cvFileName: data.cvFileName || '',
     cvFilePath: data.cvFilePath || '',
+    cvText: data.cvText || '',
     experience: data.experience || [],
     education: data.education || [],
     certifications: data.certifications || [],
@@ -67,6 +68,12 @@ export default function Step2Profile({ data, onNext, onBack, saving }: { data: a
     if (d.text) {
       set('cvFileName', file.name);
       set('cvFilePath', d.filePath || '');
+      // The parsed text was only ever used to populate experience/skills below -
+      // never actually saved onto the form, so /api/onboarding/save's
+      // `if (data.cvText?.trim())` check was always false and no resume row
+      // was ever created. Every application prep since then had no CV to
+      // attach or tailor, regardless of what the onboarding UI showed.
+      set('cvText', d.text);
 
       if (d.extracted) {
         setExtractedData(d.extracted);

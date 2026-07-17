@@ -40,9 +40,14 @@ export async function POST(req: NextRequest) {
       securityAnswerHash,
     }).returning();
 
-    // Seed default settings
+    // Seed default settings. globalAutomationMode must be explicit here - the
+    // schema column defaults to 'off', which makes submissionDecision.ts skip
+    // EVERY application regardless of score (see Rule 1), so a user who never
+    // touches Settings would get materials generated forever and never see a
+    // single one reach the Feed. 'semi' is the working default: search +
+    // prepare automatically, swipe still gates the actual submission.
     const nextSearchAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await db.insert(userSettings).values({ userId: user.id, nextSearchAt });
+    await db.insert(userSettings).values({ userId: user.id, nextSearchAt, globalAutomationMode: 'semi' });
     await db.insert(professionalProfiles).values({ userId: user.id });
     await db.insert(platformSettings).values(
       DEFAULT_PLATFORMS.map((platformName) => ({

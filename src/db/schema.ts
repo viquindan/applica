@@ -129,7 +129,12 @@ export const professionalProfiles = pgTable('professional_profiles', {
 export const userSettings = pgTable('user_settings', {
   id: uuid('id').primaryKey().defaultRandom(),
   userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
-  globalAutomationMode: automationModeEnum('global_automation_mode').default('off'),
+  // 'off' means the engine skips every application regardless of score (see
+  // submissionDecision.ts Rule 1) - defaulting to it silently stranded any
+  // user whose creation path forgot to set this explicitly. 'semi' is the
+  // real working default (search + prepare automatically; swipe still gates
+  // submission) - see docs/DECISIONS.md D13.
+  globalAutomationMode: automationModeEnum('global_automation_mode').default('semi'),
   requireReviewBeforeSubmit: boolean('require_review_before_submit').default(true),
   minScoreToGenerateMaterials: integer('min_score_to_generate_materials').default(60),
   minScoreToApply: integer('min_score_to_apply').default(70),
