@@ -36,6 +36,7 @@ export async function reEvaluateVacancies(userId: string): Promise<{ checked: nu
     salaryMax: user.salaryMax,
     workModality: user.workModality,
     workModalityPrefs: user.workModalityPrefs,
+    languages: user.languages,
   } as any;
 
   const rows = await db.select({

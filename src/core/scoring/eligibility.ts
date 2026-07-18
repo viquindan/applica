@@ -1,4 +1,4 @@
-import { detectCountryFromLocation, detectRegionFromLocation, detectRemoteScope, homeRegionOf, matchesCountry, normalizeGeo } from './geography';
+import { detectCountryFromLocation, detectGeoScopeFromText, detectRegionFromLocation, detectRemoteScope, geoScopeIncludesCountry, homeRegionOf, matchesCountry, normalizeGeo } from './geography';
 import type { NormalizedVacancy } from './fitScorer';
 
 /**
@@ -31,20 +31,27 @@ export type EligibilityResult = { eligible: boolean; reasons: string[] };
 
 // Foreign languages whose *required* (not "nice to have") presence makes a role
 // unviable for a candidate who doesn't speak them. English/Spanish are assumed.
-const FOREIGN_LANGUAGES: Array<{ key: string; rx: RegExp }> = [
-  { key: 'japanese', rx: /\b(japanese|nihongo)\b/i },
-  { key: 'mandarin', rx: /\b(mandarin|chinese|cantonese)\b/i },
-  { key: 'korean', rx: /\bkorean\b/i },
-  { key: 'german', rx: /\b(german|deutsch)\b/i },
-  { key: 'french', rx: /\b(french|français)\b/i },
-  { key: 'dutch', rx: /\bdutch\b/i },
-  { key: 'italian', rx: /\bitalian\b/i },
-  { key: 'arabic', rx: /\barabic\b/i },
-  { key: 'russian', rx: /\brussian\b/i },
-  { key: 'thai', rx: /\bthai\b/i },
-  { key: 'vietnamese', rx: /\bvietnamese\b/i },
-  { key: 'hebrew', rx: /\bhebrew\b/i },
-  { key: 'polish', rx: /\bpolish\b/i },
+// `aliases` are the normalized names a user may have DECLARED the language
+// under in their profile (often in Spanish: "Aleman", "Portugues") - without
+// them, a declared language never matched its English key and R2 kept
+// excluding roles the candidate is actually qualified for.
+const FOREIGN_LANGUAGES: Array<{ key: string; rx: RegExp; aliases: string[] }> = [
+  { key: 'japanese', rx: /\b(japanese|nihongo)\b/i, aliases: ['japanese', 'japones'] },
+  { key: 'mandarin', rx: /\b(mandarin|chinese|cantonese)\b/i, aliases: ['mandarin', 'mandarin chino', 'chino', 'chinese', 'cantonese', 'cantones'] },
+  { key: 'korean', rx: /\bkorean\b/i, aliases: ['korean', 'coreano'] },
+  { key: 'german', rx: /\b(german|deutsch)\b/i, aliases: ['german', 'aleman', 'deutsch'] },
+  { key: 'french', rx: /\b(french|français)\b/i, aliases: ['french', 'frances'] },
+  { key: 'dutch', rx: /\bdutch\b/i, aliases: ['dutch', 'holandes', 'neerlandes'] },
+  { key: 'italian', rx: /\bitalian\b/i, aliases: ['italian', 'italiano'] },
+  { key: 'arabic', rx: /\barabic\b/i, aliases: ['arabic', 'arabe'] },
+  { key: 'russian', rx: /\brussian\b/i, aliases: ['russian', 'ruso'] },
+  { key: 'thai', rx: /\bthai\b/i, aliases: ['thai', 'tailandes'] },
+  { key: 'vietnamese', rx: /\bvietnamese\b/i, aliases: ['vietnamese', 'vietnamita'] },
+  { key: 'hebrew', rx: /\bhebrew\b/i, aliases: ['hebrew', 'hebreo'] },
+  { key: 'polish', rx: /\bpolish\b/i, aliases: ['polish', 'polaco'] },
+  // Portuguese was missing entirely - Brazil postings requiring fluent
+  // Portuguese sailed through R2 for Spanish-speaking candidates.
+  { key: 'portuguese', rx: /\b(portuguese|português|portugues)\b/i, aliases: ['portuguese', 'portugues'] },
 ];
 
 // Words that, near a language mention, mean it's genuinely required.
@@ -71,7 +78,13 @@ const LOCAL_LEADERSHIP_RX = /\b(country manager|general manager|regional (direct
 const GLOBAL_FRIENDLY_RX: RegExp[] = [
   /\bwork from anywhere\b/i,
   /\bhir(e|ing)\s+(globally|internationally|worldwide|anywhere|across the (globe|world))/i,
-  /\b(fully|100%|globally)\s+remote\b/i,
+  // "fully remote" / "100% remote" deliberately NOT here: that phrasing only
+  // says the role has no office, not that the employer hires in any country -
+  // it's near-universal marketing in US-only and EMEA-only postings, and it
+  // used to mark them globalFriendly (eligibility exempt + score boost) for
+  // e.g. a Peru candidate who could never be hired. Only wording that actually
+  // talks about countries/the world counts as global.
+  /\bglobally\s+remote\b/i,
   /\bremote[^.\n]{0,30}\b(worldwide|globally|across the (globe|world))\b/i,
   /\bemployer of record\b|\beor\b/i,
   /\b(deel|remote\.com|oyster|globalization partners|g-?p|multiplier|rippling eor)\b/i,
@@ -171,7 +184,8 @@ function knownLanguages(profile: EligibilityProfile): Set<string> {
 }
 
 function requiresForeignLanguage(text: string, known: Set<string>): string | null {
-  for (const { key, rx } of FOREIGN_LANGUAGES) {
+  for (const { key, rx, aliases } of FOREIGN_LANGUAGES) {
+    if (aliases.some((a) => known.has(a))) continue;
     if (known.has(key)) continue;
     const m = rx.exec(text);
     if (!m) continue;
@@ -274,6 +288,25 @@ export function evaluateEligibility(vacancy: NormalizedVacancy, profile: Eligibi
   // (previously ignored - this always hard-excluded regardless of that field).
   if (hardForeignBlock && !isHome && !hasUsWorkAuth(profile)) {
     reasons.push('Exige autorización legal para trabajar en su país (no aceptan candidatos extranjeros).');
+  }
+
+  // R5 - The posting EXPLICITLY restricts hiring to a region/country set that
+  // doesn't include the candidate ("must be based in EMEA", "this role is only
+  // open to candidates in the US and Canada"). Read from location AND
+  // description via detectGeoScopeFromText - the restriction usually lives in
+  // the description, which nothing here used to look at. Only restrictive
+  // wording hard-excludes; an ambiguous scope is left to the scorer's cap so
+  // weak signals never over-filter.
+  const geoScope = detectGeoScopeFromText(loc, text);
+  const inHiringScope = geoScopeIncludesCountry(geoScope, profile.homeCountry);
+  if (inHiringScope === false && geoScope.restrictive && !globalFriendly) {
+    const canReachScope = (profile.relocationAvailable ?? false)
+      || geoScope.countries.some((c) => hasWorkAuthFor(c, profile))
+      || (profile.targetCountries ?? []).some((tc) => geoScopeIncludesCountry(geoScope, tc) === true);
+    if (!canReachScope) {
+      const where = [...geoScope.regions.map((r) => String(r).toUpperCase()), ...geoScope.countries].join(', ');
+      reasons.push(`La vacante contrata solo en ${where} y tu país no está incluido (restricción explícita).`);
+    }
   }
 
   return { eligible: reasons.length === 0, reasons };

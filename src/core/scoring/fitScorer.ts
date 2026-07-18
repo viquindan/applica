@@ -1,6 +1,6 @@
 import type { ProfessionalProfile } from '@/db/schema';
 import { getRoleFamily, roleMatches, seniorityMatches } from './roleTaxonomy';
-import { matchesCountry, normalizeGeo, hasExplicitGeoRestriction, geoPriority, isUsHome, detectRemoteScope } from './geography';
+import { matchesCountry, normalizeGeo, hasExplicitGeoRestriction, geoPriority, isUsHome, detectRemoteScope, detectGeoScopeFromText, geoScopeIncludesCountry } from './geography';
 import { detectHiringSignals } from './eligibility';
 import { getSemanticRoleWarnings, isLikelyFalsePositiveRole } from './semanticRole';
 import { toMonthlyAmount } from './salary';
@@ -21,6 +21,9 @@ export type ScoringProfile = ProfessionalProfile & {
     acceptsOnsite: boolean;
     onsiteLocations: string[];
   } | null;
+  // Lives on `users` (like homeCountry/salary) - passed in by the pipeline so
+  // the declared English level can be compared against the posting's demands.
+  languages?: Array<{ language: string; proficiency: string } | string> | null;
 };
 
 export interface NormalizedVacancy {
@@ -54,6 +57,7 @@ export interface ScoreBreakdown {
   learnedOutcomeAdjustment: number;
   learnedPreferenceAdjustment: number;
   alertPenalty: number;
+  languagePenalty: number;
   total: number;
 }
 
@@ -171,23 +175,37 @@ export function scoreVacancy(
   // globally is a GREAT fit; a local role that needs work authorization there is
   // useless. So we let these signals override the raw geographic priority.
   const hiring = detectHiringSignals(vacancy);
+  // Structured hiring footprint from location AND description ("open to
+  // candidates in the Americas", "must be based in EMEA", "Remote - LATAM").
+  // Cuts both ways: includes the candidate's country -> boost (don't punish
+  // "Remote - Americas" for a Peru candidate); excludes it -> cap below.
+  const geoScope = detectGeoScopeFromText(vacancy.location, `${vacancy.title}\n${vacancy.description ?? ''}\n${vacancy.requirements ?? ''}`);
+  const inHiringScope = geoScopeIncludesCountry(geoScope, profile.homeCountry);
 
   let locationScore = 10;
   let restrictedForeignRemote = false;
+  let geoTier: ReturnType<typeof geoPriority>['tier'] = 'none';
   if ((profile.targetCountries && profile.targetCountries.length > 0) || profile.homeCountry) {
     const geo = geoPriority(vacancy.location, profile.homeCountry, profile.targetCountries ?? []);
     locationScore = geo.score;
+    geoTier = geo.tier;
     // "Remote - <foreign country>" (e.g. Remote US / Remote Canada) means remote
     // but legally tied to that country - not reachable from home.
     const scope = detectRemoteScope(vacancy.location);
-    restrictedForeignRemote = !hiring.globalFriendly && scope === 'country_restricted'
+    restrictedForeignRemote = !hiring.globalFriendly && inHiringScope !== true && scope === 'country_restricted'
       && (geo.tier === 'foreign' || geo.tier === 'none');
+    if (inHiringScope === true && (geo.tier === 'foreign' || geo.tier === 'none')) {
+      // The posting's own hiring scope covers the candidate's country even
+      // though the raw location string didn't resolve to their region.
+      locationScore = Math.max(locationScore, 13);
+      warnings.push('La vacante declara contratación en tu región/país - elegible desde donde estás.');
+    }
     if (hiring.globalFriendly) {
       // Employer explicitly hires internationally - treat like global remote,
       // regardless of which country the listing is nominally in.
       locationScore = Math.max(locationScore, 13);
       warnings.push(' Contrata internacionalmente / desde cualquier país - elegible aunque sea fuera de tu región.');
-    } else if (geo.tier === 'foreign' || geo.tier === 'none') {
+    } else if ((geo.tier === 'foreign' || geo.tier === 'none') && inHiringScope !== true) {
       if (hiring.softForeignBlock || hiring.hardForeignBlock) {
         warnings.push('Fuera de tu región y con señales de empleo local - difícil que acepten un perfil extranjero.');
       } else {
@@ -245,8 +263,11 @@ export function scoreVacancy(
     locationScore = Math.min(locationScore, 5);
   }
 
-  // Check for explicit geographic restrictions in the description
-  if (hasExplicitGeoRestriction(desc)) {
+  // Check for explicit geographic restrictions in the description - unless the
+  // extracted hiring scope already confirmed it covers the candidate's country
+  // ("open to candidates in the Americas" IS a restriction phrase, but one that
+  // includes them).
+  if (hasExplicitGeoRestriction(desc) && inHiringScope !== true) {
     const countryMatch = profile.targetCountries?.some(c => matchesCountry(desc, c));
     if (!countryMatch) {
       warnings.push('La descripción menciona restricciones geográficas que podrían no incluir tus países objetivo');
@@ -327,6 +348,23 @@ export function scoreVacancy(
     }
   }
 
+  // English-level gap (-10): the posting demands native/fluent English but the
+  // candidate DECLARED a basic/intermediate level. English used to be assumed
+  // universally, so e.g. "native-level English required" never even warned a
+  // profile that says "ingles intermedio". Warning + penalty, never a hard
+  // exclude (self-reported levels and posting wording are both fuzzy). If the
+  // user didn't declare English at all we stay silent (nothing to judge).
+  let languagePenalty = 0;
+  const ENGLISH_DEMAND_RX = /\b(native|fluent|bilingual|c1|c2|full professional)[^.\n]{0,30}\benglish\b|\benglish\b[^.\n]{0,40}\b(native|fluent|fluency|bilingual|c1|c2|full professional)\b/i;
+  const declaredEnglish = (profile.languages ?? [])
+    .map((l) => (typeof l === 'string' ? { language: l, proficiency: '' } : l))
+    .find((l) => /\b(english|ingles|inglés)\b/i.test(l?.language ?? ''));
+  const lowEnglish = !!declaredEnglish && /(basic|básico|basico|beginner|elementary|intermediate|intermedio|a1|a2|b1)/i.test(declaredEnglish.proficiency ?? '');
+  if (lowEnglish && ENGLISH_DEMAND_RX.test(desc)) {
+    languagePenalty = 10;
+    warnings.push(`La vacante exige inglés fluido/nativo y tu perfil declara inglés ${declaredEnglish!.proficiency} - puede ser una barrera real.`);
+  }
+
   // Excluded checks
   const excludedRoles = (profile.excludedRoles || []).map(r => r.toLowerCase());
   if (excludedRoles.some(r => vacancy.title.toLowerCase().includes(r))) {
@@ -346,7 +384,7 @@ export function scoreVacancy(
   let total = hardExclude ? 0 : Math.max(0, Math.min(100,
     roleScore + industryScore + locationScore + seniorityScore + salaryScore + skillMatch
     + expertiseMatch + companyAdjustment + keywordBoost
-    + learnedOutcomeAdjustment + learnedPreferenceAdjustment - alertPenalty
+    + learnedOutcomeAdjustment + learnedPreferenceAdjustment - alertPenalty - languagePenalty
   ));
 
   // Local-employer cap: soft signals that the posting is really for local hires
@@ -354,7 +392,30 @@ export function scoreVacancy(
   // visible but ranks below genuinely-reachable roles. Global-friendly postings
   // are exempt (detectHiringSignals already cleared softForeignBlock for them).
   const LOCAL_ONLY_CAP = 50;
-  if (!hardExclude && profile.homeCountry && !isUsHome(profile.homeCountry) && total > LOCAL_ONLY_CAP && (hiring.softForeignBlock || restrictedForeignRemote)) {
+  // Scope-based cap: the posting's own hiring footprint (regions/countries,
+  // read from location AND description) excludes the candidate's country -
+  // e.g. "Remote - EMEA" or "hiring across Europe" for a LATAM candidate.
+  // Home-country agnostic on purpose (a US candidate is just as ineligible for
+  // an EMEA-only role). The restrictive-worded variant is hard-excluded in
+  // eligibility.ts R5; this cap covers the ambiguous rest.
+  // Never cap in-region matches (home/region/region_remote tiers): a
+  // "Remote - Argentina" posting for a Peru candidate is a legitimate
+  // regional match by design (LATAM employers hire across LATAM), even though
+  // its country set doesn't literally include Peru. Also never cap when the
+  // user's own declared targets/modality countries reach the posting's scope.
+  const userReachesScope = [
+    ...(profile.targetCountries ?? []),
+    ...(prefs?.remoteRegions ?? []),
+    ...(prefs?.hybridLocations ?? []),
+    ...(prefs?.onsiteLocations ?? []),
+  ].some((c) => geoScopeIncludesCountry(geoScope, c) === true);
+  const scopeExcludesHome = inHiringScope === false && !hiring.globalFriendly
+    && (geoTier === 'foreign' || geoTier === 'none') && !userReachesScope;
+  if (!hardExclude && profile.homeCountry && total > LOCAL_ONLY_CAP && scopeExcludesHome) {
+    total = LOCAL_ONLY_CAP;
+    const where = [...geoScope.regions.map((r) => String(r).toUpperCase()), ...geoScope.countries].join(', ');
+    warnings.push(`Contratan en ${where} y tu país no aparece incluido - desde tu país no es elegible. Si confirmas que contratan internacional, ignóralo.`);
+  } else if (!hardExclude && profile.homeCountry && !isUsHome(profile.homeCountry) && total > LOCAL_ONLY_CAP && inHiringScope !== true && (hiring.softForeignBlock || restrictedForeignRemote)) {
     total = LOCAL_ONLY_CAP;
     warnings.push('Remota pero atada a un país extranjero (ej. "Remote US/Canada") o con señales de empleo local - desde tu país no es elegible. Si confirmas que contratan internacional, ignóralo.');
   }
@@ -374,6 +435,7 @@ export function scoreVacancy(
       learnedOutcomeAdjustment,
       learnedPreferenceAdjustment,
       alertPenalty,
+      languagePenalty,
       total,
     },
     redFlags,

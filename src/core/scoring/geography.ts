@@ -27,8 +27,12 @@ const COUNTRY_ALIASES: Record<string, string[]> = {
   'italy': ['italy', 'italia'],
 };
 
-// Patterns that signal a specific country context in a location string
-const COUNTRY_SIGNALS: Array<{ pattern: RegExp; country: string }> = [
+// Patterns that signal a specific country context in a location string.
+// Split in two: full country names are safe to scan inside prose (description
+// windows), while the US state-abbreviation pattern is NOT (case-insensitive
+// "IN"/"OR"/"ME"/"HI" would match ordinary English words) and must only ever
+// run against short location strings.
+const COUNTRY_NAME_SIGNALS: Array<{ pattern: RegExp; country: string }> = [
   { pattern: /\b(united states|usa|\bus\b|u\.s\.?)\b/i, country: 'united states' },
   { pattern: /\b(canada|canadá)\b/i, country: 'canada' },
   { pattern: /\b(united kingdom|\buk\b|great britain)\b/i, country: 'united kingdom' },
@@ -48,12 +52,33 @@ const COUNTRY_SIGNALS: Array<{ pattern: RegExp; country: string }> = [
   { pattern: /\b(netherlands|holanda)\b/i, country: 'netherlands' },
   { pattern: /\b(portugal)\b/i, country: 'portugal' },
   { pattern: /\b(italy|italia)\b/i, country: 'italy' },
-  // US state abbreviations - strong signal the job is US-only. Requires a
-  // trailing separator OR end-of-string - a location that's simply "City, ST"
-  // with nothing after the state code (very common on Greenhouse/Lever, e.g.
-  // the real "Raleigh, NC" that started this fix) previously needed a comma
-  // AND whitespace after the code, so it silently never matched.
-  { pattern: /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)(?:,?\s|$)/i, country: 'united states' },
+];
+
+// US state abbreviations - strong signal the job is US-only. Requires a
+// trailing separator OR end-of-string - a location that's simply "City, ST"
+// with nothing after the state code (very common on Greenhouse/Lever, e.g.
+// the real "Raleigh, NC" that started this fix) previously needed a comma
+// AND whitespace after the code, so it silently never matched.
+const US_STATE_SIGNAL: { pattern: RegExp; country: string } = {
+  pattern: /\b(AL|AK|AZ|AR|CA|CO|CT|DE|FL|GA|HI|ID|IL|IN|IA|KS|KY|LA|ME|MD|MA|MI|MN|MS|MO|MT|NE|NV|NH|NJ|NM|NY|NC|ND|OH|OK|OR|PA|RI|SC|SD|TN|TX|UT|VT|VA|WA|WV|WI|WY)(?:,?\s|$)/i,
+  country: 'united states',
+};
+
+// Full US state names - the dominant ATS formatting is "San Jose, California"
+// / "Bellevue, Washington", which the abbreviation pattern never matched, so
+// detectCountryFromLocation returned undefined for most US onsite postings
+// (real prod rows from the dev.peru.qa account reached the feed at 61-71 that
+// way). Listed BEFORE the country names so "New Mexico" resolves to the US
+// instead of the "mexico" substring. Location strings only - not window-safe.
+const US_STATE_NAME_SIGNAL: { pattern: RegExp; country: string } = {
+  pattern: /\b(alabama|alaska|arizona|arkansas|california|colorado|connecticut|delaware|florida|georgia|hawaii|idaho|illinois|indiana|iowa|kansas|kentucky|louisiana|maine|maryland|massachusetts|michigan|minnesota|mississippi|missouri|montana|nebraska|nevada|new hampshire|new jersey|new mexico|new york|north carolina|north dakota|ohio|oklahoma|oregon|pennsylvania|rhode island|south carolina|south dakota|tennessee|texas|utah|vermont|virginia|washington|west virginia|wisconsin|wyoming)\b/i,
+  country: 'united states',
+};
+
+const COUNTRY_SIGNALS: Array<{ pattern: RegExp; country: string }> = [
+  US_STATE_NAME_SIGNAL,
+  ...COUNTRY_NAME_SIGNALS,
+  US_STATE_SIGNAL,
 ];
 
 export function normalizeGeo(value?: string | null) {
@@ -68,11 +93,15 @@ export function normalizeGeo(value?: string | null) {
 // their member countries + the textual signals that identify them in a location.
 const REGIONS: Record<string, { signals: RegExp; countries: string[] }> = {
   latam: {
-    signals: /(latam|latin america|america latina|sudamerica|south america|central america|caribbean)/,
+    // "americas" belongs to BOTH latam and norteamerica: "Remote - Americas"
+    // is a very common ATS wording that DOES include LATAM candidates, but it
+    // used to resolve to no region at all for a LATAM user (tier 'none',
+    // location score 2), silently filtering genuinely-eligible postings.
+    signals: /(latam|latin america|america latina|sudamerica|south america|central america|caribbean|americas)/,
     countries: ['mexico', 'brazil', 'argentina', 'colombia', 'chile', 'peru', 'panama', 'uruguay', 'ecuador', 'bolivia', 'paraguay', 'venezuela', 'guatemala', 'costa rica', 'dominican republic', 'honduras', 'nicaragua', 'el salvador'],
   },
   norteamerica: {
-    signals: /(north america|norteamerica)/,
+    signals: /(north america|norteamerica|americas)/,
     countries: ['united states', 'canada', 'mexico'],
   },
   europa: {
@@ -143,7 +172,9 @@ export function matchesCountry(location: string, requestedCountry: string) {
 export function detectRemoteScope(location?: string | null): RemoteScope {
   const normalized = normalizeGeo(location);
 
-  if (!normalized.includes('remote')) return 'not_remote';
+  // "Home Based - Americas" (real Recruitee/SmartRecruiters wording) means
+  // remote too - it used to fall through as not_remote and lose its region.
+  if (!normalized.includes('remote') && !/home[\s-]?based|work from home|teletrabajo/.test(normalized)) return 'not_remote';
 
   // Explicit global signals - only these qualify as truly global. Tolerant of any
   // separator between "remote" and the qualifier ("Remote - Worldwide", "Remote, Global").
@@ -235,6 +266,131 @@ export function detectRegionFromLocation(location?: string | null): keyof typeof
     if (countries.some((c) => loc.includes(c))) return region as keyof typeof REGIONS;
   }
   return undefined;
+}
+
+// ── Hiring-scope extraction (location + description) ────────────────────────
+// "Remote" almost never means "we hire in any country". Most remote postings
+// are remote-LOCAL (Remote US, Remote EMEA, "open to candidates in Europe") and
+// the restriction very often lives in the DESCRIPTION, not the short location
+// string. This extracts the employer's actual hiring footprint from both, as a
+// structured result the eligibility gate and the scorer can compare against the
+// candidate's own country - in BOTH directions (exclude a Peru candidate from
+// "Remote - EMEA", but also stop penalizing "Remote - Americas" for them).
+
+export type GeoScope = {
+  scope: 'global' | 'restricted' | 'unknown';
+  regions: Array<keyof typeof REGIONS>;
+  countries: string[];
+  /** Wording is explicit/mandatory ("must be based in", "only open to") - safe to hard-exclude on. */
+  restrictive: boolean;
+};
+
+// Phrases that introduce WHERE the employer hires for this role. The text
+// window right after each match is scanned for region/country names; a match
+// with no geography in its window is simply ignored (cheap and safe).
+// All patterns run against normalizeGeo()'d text (lowercase, accents stripped).
+const SCOPE_INTRO_RX: Array<{ rx: RegExp; restrictive: boolean; windowChars?: number }> = [
+  { rx: /\b(?:open|available)\s+(?:only\s+)?to\s+(?:candidates|applicants|those|people)\s*(?:based|located|residing|living)?\s*(?:in|from|within|across)\b/g, restrictive: false },
+  { rx: /\b(?:role|position|opportunity|job)\s+is\s+(?:only\s+)?(?:open|available)\s+(?:to|in|for|within)\b/g, restrictive: true },
+  { rx: /\bmust\s+(?:be\s+)?(?:based|located|reside|residing|live|living)\s+(?:in|within)\b/g, restrictive: true },
+  { rx: /\beligible\s+(?:locations?|countries|regions?)\b/g, restrictive: true },
+  { rx: /\bhir(?:e|ing)\s+(?:in|across|from|within)\b/g, restrictive: false },
+  // "Remote (EMEA)" / "Remote - LATAM" / "remote in Spain" inside prose. Needs
+  // an explicit separator or preposition and only a SHORT window, so ordinary
+  // sentences like "remote-first company with hubs in Spain" don't register.
+  { rx: /\bremote\b\s*(?:[(\-,:]|\b(?:in|within|across)\b)\s*/g, restrictive: false, windowChars: 20 },
+  { rx: /\b(?:work\s+from\s+|located\s+)?anywhere\s+(?:in|within)\b/g, restrictive: false },
+];
+
+// Inside a scope window, these mean "truly global" and win outright.
+const GLOBAL_WINDOW_RX = /(the\s+world|the\s+globe|worldwide|globally|any\s+country|any\s+location|internationally)/;
+
+// Window-safe country patterns: the bare "us" alias matches ordinary prose
+// ("join us", "about us") so it's excluded here - full names/"usa"/"u.s." only.
+const WINDOW_COUNTRY_SIGNALS: Array<{ pattern: RegExp; country: string }> = COUNTRY_NAME_SIGNALS.map((s) =>
+  s.country === 'united states'
+    ? { pattern: /\b(united states|usa|u\.s\.)/i, country: 'united states' }
+    : s,
+);
+
+const SCOPE_WINDOW_CHARS = 60;
+
+function normalizedAliasForms(country: string): string[] {
+  const c = normalizeGeo(country);
+  if (!c) return [];
+  return [c, ...(COUNTRY_ALIASES[c] ?? []).map(normalizeGeo)];
+}
+
+export function detectGeoScopeFromText(location?: string | null, text?: string | null): GeoScope {
+  const regions = new Set<keyof typeof REGIONS>();
+  const countries = new Set<string>();
+  let restrictive = false;
+  let global = false;
+
+  // 1. The location string. Regions and countries are read for EVERY non-global
+  // location, including plain city/country ones ("San Jose, California") - an
+  // onsite US posting is just as much a US-scoped role as "Remote - US" is,
+  // and it used to reach the feed at 60+ for candidates who could never take it.
+  const locScope = detectRemoteScope(location);
+  const normalizedLoc = normalizeGeo(location);
+  if (locScope === 'global') global = true;
+  else if (normalizedLoc) {
+    for (const [region, { signals }] of Object.entries(REGIONS)) {
+      if (signals.test(normalizedLoc)) regions.add(region as keyof typeof REGIONS);
+    }
+    const c = detectCountryFromLocation(location);
+    if (c) countries.add(c);
+  }
+
+  // 2. Description/requirements windows after each scope-introducing phrase.
+  const normalizedText = normalizeGeo(text);
+  if (normalizedText) {
+    for (const { rx, restrictive: strict, windowChars } of SCOPE_INTRO_RX) {
+      rx.lastIndex = 0;
+      let m: RegExpExecArray | null;
+      while ((m = rx.exec(normalizedText)) !== null) {
+        const window = normalizedText.slice(m.index + m[0].length, m.index + m[0].length + (windowChars ?? SCOPE_WINDOW_CHARS));
+        if (GLOBAL_WINDOW_RX.test(window)) { global = true; continue; }
+        let found = false;
+        for (const [region, { signals }] of Object.entries(REGIONS)) {
+          if (signals.test(window)) { regions.add(region as keyof typeof REGIONS); found = true; }
+        }
+        for (const { pattern, country } of WINDOW_COUNTRY_SIGNALS) {
+          if (pattern.test(window)) { countries.add(country); found = true; }
+        }
+        if (found && (strict || /\bonly\b/.test(window))) restrictive = true;
+        if (rx.lastIndex === m.index) rx.lastIndex++;
+      }
+    }
+  }
+
+  if (global) return { scope: 'global', regions: [], countries: [], restrictive: false };
+  if (regions.size || countries.size) return { scope: 'restricted', regions: [...regions], countries: [...countries], restrictive };
+  return { scope: 'unknown', regions: [], countries: [], restrictive: false };
+}
+
+/**
+ * Whether a detected hiring scope covers the candidate's country.
+ * Returns undefined when there's nothing to judge (unknown scope / no country) -
+ * callers must treat undefined as "no signal", never as exclusion.
+ */
+export function geoScopeIncludesCountry(geo: GeoScope, country?: string | null): boolean | undefined {
+  if (geo.scope === 'global') return true;
+  if (geo.scope === 'unknown') return undefined;
+  const forms = normalizedAliasForms(country ?? '');
+  if (!forms.length) return undefined;
+  // Short alias forms ("us", "uk") must match exactly - as substrings they hit
+  // inside unrelated country names ("us" is inside "austria").
+  const matchesForm = (candidate: string) => forms.some((f) =>
+    f.length <= 3 || candidate.length <= 3
+      ? f === candidate
+      : f.includes(candidate) || candidate.includes(f),
+  );
+  if (geo.countries.some(matchesForm)) return true;
+  for (const region of geo.regions) {
+    if (REGIONS[region].countries.some(matchesForm)) return true;
+  }
+  return false;
 }
 
 /**

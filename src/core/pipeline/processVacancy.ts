@@ -81,6 +81,7 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     salaryMax: user.salaryMax,
     workModality: user.workModality,
     workModalityPrefs: user.workModalityPrefs,
+    languages: user.languages,
   }, learnedSignals);
 
   const genThreshold = settings.minScoreToGenerateMaterials ?? 60;
@@ -94,8 +95,10 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     threshold: genThreshold,
   });
   let finalScore = Math.max(0, Math.min(100, score.score + semantic.adjustment));
-  // Don't let semantic re-ranking lift a US-only-capped vacancy back over 50.
-  if (score.warnings.some((w) => w.includes('EE. UU.'))) finalScore = Math.min(finalScore, 50);
+  // Don't let semantic re-ranking lift a locally-capped vacancy back over 50.
+  // The stable marker phrase is shared by every cap warning in fitScorer.ts
+  // (the old check looked for 'EE. UU.', a wording no cap warning uses anymore).
+  if (score.warnings.some((w) => w.includes('desde tu país no es elegible'))) finalScore = Math.min(finalScore, 50);
   const finalBreakdown = {
     ...score.breakdown,
     semanticAdjustment: semantic.adjustment,
