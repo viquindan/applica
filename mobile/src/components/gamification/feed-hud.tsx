@@ -6,7 +6,7 @@ import { AnimatedPressable } from '@/components/animated-pressable';
 import { GoalProgress } from '@/components/gamification/goal-progress';
 import { StreakBadge } from '@/components/gamification/streak-badge';
 import { ThemedText } from '@/components/themed-text';
-import { Gradients, GoldDim, Petrol, Radius, Shadows, Spacing, TextGold } from '@/constants/theme';
+import { Gradients, GoldDim, Radius, Shadows, Spacing, TextGold } from '@/constants/theme';
 
 type Props = {
   queueCount: number;
@@ -22,8 +22,11 @@ type Props = {
 function StatChip({ value, label }: { value: number; label: string }) {
   return (
     <View style={styles.chip}>
-      <ThemedText style={styles.chipValue}>{value}</ThemedText>
-      <ThemedText style={styles.chipLabel}>{label}</ThemedText>
+      {/* themeColor, not a hardcoded color: this chip sits on a dark surface
+          in dark mode, and a fixed light-mode color here is exactly what
+          made these unreadable (dark text on a dark chip). */}
+      <ThemedText themeColor="text" style={styles.chipValue}>{value}</ThemedText>
+      <ThemedText themeColor="textSecondary" style={styles.chipLabel}>{label}</ThemedText>
     </View>
   );
 }
@@ -44,8 +47,6 @@ function RingSpinner() {
 /**
  * Game-HUD header for the Feed: run stats up top like a score screen, plus the
  * refresh button that queues a REAL backend search (the core supply loop).
- * Petrol is used only as text/accent here - the screen's own background
- * matches the rest of the app (see index.tsx), not a full petrol wash.
  */
 export function FeedHud({ queueCount, submittedCount, todayCount, dailyGoal, streak, searching, statusText, onRefresh }: Props) {
   return (
@@ -60,6 +61,12 @@ export function FeedHud({ queueCount, submittedCount, todayCount, dailyGoal, str
         <StatChip value={queueCount} label="en cola" />
         <StatChip value={todayCount} label="hoy" />
         <StatChip value={submittedCount} label="enviadas" />
+        {/* Fixed-size circle, not a flex-stretched label button: with the
+            streak badge now riding inline too (5 items in this row), a
+            flex:1.2 button trying to fit an "Actualizar" label overflowed
+            its own rounded container on narrower screens. An icon-only
+            button can't overflow regardless of how many siblings share the
+            row; the label moves to accessibilityLabel instead. */}
         <AnimatedPressable
           haptic="medium"
           onPress={onRefresh}
@@ -68,7 +75,6 @@ export function FeedHud({ queueCount, submittedCount, todayCount, dailyGoal, str
           style={styles.refreshWrap}>
           <LinearGradient colors={Gradients.gold} style={styles.refreshButton}>
             {searching ? <RingSpinner /> : <ThemedText style={styles.refreshIcon}>{'↻'}</ThemedText>}
-            <ThemedText style={styles.refreshLabel}>{searching ? 'Buscando' : 'Actualizar'}</ThemedText>
           </LinearGradient>
         </AnimatedPressable>
       </View>
@@ -85,7 +91,7 @@ const styles = StyleSheet.create({
   // vacancy card below (see index.tsx: the deck is flex:1, so shrinking the
   // HUD directly grows the card).
   wrap: { alignSelf: 'stretch', paddingHorizontal: Spacing.four, paddingTop: Spacing.one, gap: Spacing.one },
-  hudRow: { flexDirection: 'row', alignItems: 'stretch', gap: Spacing.two },
+  hudRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two },
   chip: {
     flex: 1,
     backgroundColor: GoldDim,
@@ -93,23 +99,19 @@ const styles = StyleSheet.create({
     paddingVertical: 6,
     alignItems: 'center',
   },
-  chipValue: { color: Petrol, fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
-  chipLabel: { color: '#5c6366', fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
-  refreshWrap: { flex: 1.2, ...Shadows.gold },
+  chipValue: { fontSize: 18, fontWeight: '800', fontVariant: ['tabular-nums'] },
+  chipLabel: { fontSize: 10, textTransform: 'uppercase', letterSpacing: 0.6 },
+  refreshWrap: { width: 40, height: 40, ...Shadows.gold },
   refreshButton: {
     flex: 1,
-    flexDirection: 'row',
-    borderRadius: Radius.md,
+    borderRadius: Radius.full,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingVertical: 6,
   },
   spinnerRing: {
-    width: 12, height: 12, borderRadius: 6,
+    width: 16, height: 16, borderRadius: 8,
     borderWidth: 2, borderColor: 'rgba(115,92,0,0.3)', borderTopColor: TextGold,
   },
-  refreshIcon: { color: TextGold, fontSize: 15, fontWeight: '800', lineHeight: 16 },
-  refreshLabel: { color: TextGold, fontSize: 10, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.6 },
+  refreshIcon: { color: TextGold, fontSize: 20, fontWeight: '800', lineHeight: 22 },
   status: { color: '#5c6366', fontSize: 12, textAlign: 'center' },
 });

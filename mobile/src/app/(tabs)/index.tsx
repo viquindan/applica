@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useCallback, useRef, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { runSearch } from '@/api/applications';
@@ -23,8 +23,14 @@ export default function FeedScreen() {
   const streak = useStreak();
   const celebrationRef = useRef<CelebrationBurstHandle>(null);
   const [searchState, setSearchState] = useState<'idle' | 'queuing' | 'queued'>('idle');
-  // TikTok-style paging: one vacancy per page, page height measured at runtime.
-  const [pageHeight, setPageHeight] = useState(0);
+  // No vertical scroll/paging anymore (removed per user feedback: it fought
+  // the horizontal swipe gesture and made swiping feel sluggish). Only the
+  // top card renders; swiping it away reveals the next one directly. Hiding
+  // the just-swiped id locally makes that feel instant - the mutation itself
+  // (applyApp/discardApp) settles via a refetch that can take a moment, and
+  // without this the deck would show a blank gap or the same card again
+  // until that round-trip completes.
+  const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
 
   // Always polled (not just after our own trigger) so the button correctly
   // disables if a search is already running server-side - e.g. a scheduled
@@ -55,6 +61,7 @@ export default function FeedScreen() {
   // LinkedIn has no automated action route (no headless engine on mobile) -
   // it opens the dedicated WebView screen instead of the generic apply call.
   function applyOrOpenLinkedIn(app: AppRow) {
+    setHiddenIds((prev) => new Set(prev).add(app.id));
     if (isLinkedIn(app)) {
       router.push(`/linkedin-apply/${app.id}`);
       return;
@@ -63,36 +70,25 @@ export default function FeedScreen() {
     applyApp(app);
   }
 
-  const renderItem = useCallback(
-    ({ item }: { item: AppRow }) => (
-      <View style={[styles.page, { height: pageHeight }]}>
-        <SwipeCard
-          // Keyed per application: SwipeCard keeps its fling position in a
-          // ref, so a reused instance would render the NEXT card still
-          // translated off-screen (found live: queue said 2, deck empty).
-          key={item.id}
-          app={item}
-          onTap={() => router.push(`/application/${item.id}`)}
-          onSwipeRight={() => applyOrOpenLinkedIn(item)}
-          onSwipeLeft={() => discardApp(item)}
-        />
-      </View>
-    ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [pageHeight],
-  );
+  function handleDiscard(app: AppRow) {
+    setHiddenIds((prev) => new Set(prev).add(app.id));
+    discardApp(app);
+  }
+
+  const visibleQueue = queueApps.filter((a) => !hiddenIds.has(a.id));
+  const current = visibleQueue[0];
 
   // The "informing" search animation (radar + rotating phrases) fills the deck
   // whenever there's real backend work to show for - not just our own local
   // button state, so it also appears if a scheduled search is already running
   // when the user opens the app.
-  const showSearchingPanel = !queueApps.length && (searching || backendSearching);
+  const showSearchingPanel = !visibleQueue.length && (searching || backendSearching);
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         <FeedHud
-          queueCount={queueApps.length}
+          queueCount={visibleQueue.length}
           todayCount={stats?.today ?? 0}
           submittedCount={stats?.submitted ?? 0}
           dailyGoal={dailyGoal}
@@ -102,18 +98,19 @@ export default function FeedScreen() {
           onRefresh={onSearchNow}
         />
 
-        <View style={styles.deck} onLayout={(e) => setPageHeight(Math.round(e.nativeEvent.layout.height))}>
+        <View style={styles.deck}>
           {isLoading ? (
             <ActivityIndicator color={Gold} size="large" style={styles.centered} />
-          ) : queueApps.length && pageHeight > 0 ? (
-            <FlatList
-              data={queueApps}
-              keyExtractor={(item) => item.id}
-              renderItem={renderItem}
-              pagingEnabled
-              showsVerticalScrollIndicator={false}
-              getItemLayout={(_data, index) => ({ length: pageHeight, offset: pageHeight * index, index })}
-              decelerationRate="fast"
+          ) : current ? (
+            <SwipeCard
+              // Keyed per application: SwipeCard keeps its fling position in a
+              // ref, so a reused instance would render the NEXT card still
+              // translated off-screen (found live: queue said 2, deck empty).
+              key={current.id}
+              app={current}
+              onTap={() => router.push(`/application/${current.id}`)}
+              onSwipeRight={() => applyOrOpenLinkedIn(current)}
+              onSwipeLeft={() => handleDiscard(current)}
             />
           ) : showSearchingPanel ? (
             <SearchingPanel status={searchStatus} />
@@ -141,8 +138,7 @@ export default function FeedScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   safeArea: { flex: 1 },
-  deck: { flex: 1, marginTop: Spacing.two },
+  deck: { flex: 1, marginTop: Spacing.one, alignItems: 'center', justifyContent: 'center' },
   centered: { flex: 1, alignSelf: 'center' },
-  page: { alignItems: 'center', justifyContent: 'center' },
   streakRow: { marginTop: Spacing.one },
 });

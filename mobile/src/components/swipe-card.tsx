@@ -10,6 +10,26 @@ import type { AppRow } from '@/types';
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
 
+// Vacancy descriptions come from ATS postings as raw HTML (some adapters
+// don't strip it before storing) - rendered verbatim it shows literal
+// `<p>`/`<br>` tags and escaped entities instead of plain text. Same fix
+// pattern as src/core/platforms/atsSearchHelpers.ts's stripHtml, ported here
+// since mobile can't import server-side code.
+function stripHtml(input: string): string {
+  return input
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/(p|div|li)>/gi, '\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&nbsp;/g, ' ')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 type Props = {
   app: AppRow;
   onSwipeRight: () => void;
@@ -57,19 +77,11 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
-      // Horizontal-dominant only: vertical drags must stay with the TikTok-style
-      // paged list that owns this card. 1.4x bias keeps diagonal scrolls scrolling.
-      onMoveShouldSetPanResponder: (_evt, gesture) =>
-        Math.abs(gesture.dx) > 10 && Math.abs(gesture.dx) > Math.abs(gesture.dy) * 1.4,
-      // Android-only and easy to miss: PanResponder defaults to BLOCKING the
-      // native responder (the FlatList's own ScrollView) even on gestures this
-      // component never actually claims, which is exactly the "scroll feels
-      // stuck, can't page up/down easily" bug reported on a real Android
-      // device. Must be explicit false so a vertical drag can still reach the
-      // paged Feed list. onPanResponderTerminationRequest complements it: if
-      // the list ever does claim the gesture mid-drag, let it.
-      onShouldBlockNativeResponder: () => false,
-      onPanResponderTerminationRequest: () => true,
+      // The Feed no longer has a competing vertical scroll (removed per user
+      // feedback: it fought this gesture and made swiping feel sluggish) -
+      // only one card renders at a time, so any deliberate horizontal drag
+      // can claim the gesture immediately without a directional bias check.
+      onMoveShouldSetPanResponder: (_evt, gesture) => Math.abs(gesture.dx) > 8,
       onPanResponderGrant: () => {
         startedAsTap.current = true;
         crossedThreshold.current = 'none';
@@ -185,7 +197,7 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
           from 12 to 16 lines to actually use that space instead of leaving it
           blank under a truncated description. */}
       <ThemedText style={styles.description} numberOfLines={16}>
-        {app.vacancy?.description ?? ''}
+        {stripHtml(app.vacancy?.description ?? '')}
       </ThemedText>
       <View style={styles.footer}>
         <UrgencyPulse color={band.color} />
@@ -204,9 +216,10 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - Spacing.four * 2,
     // Fills the space the ✕/✓ row used to take (removed - swipe is the only
     // decision gesture now) instead of floating centered with dead space
-    // above/below. `page` (the FlatList item) sets an explicit height, so
-    // this percentage resolves against it.
-    height: '96%',
+    // above/below. Resolves against `deck` (index.tsx), which is flex:1
+    // between the HUD and the tab bar - near-100% so the card reaches down
+    // close to the nav bar instead of leaving a visible gap.
+    height: '99%',
   },
   badgeRow: { flexDirection: 'row', marginBottom: Spacing.two },
   scoreBadge: { borderRadius: Radius.sm, paddingHorizontal: Spacing.two, paddingVertical: 4 },
