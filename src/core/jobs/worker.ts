@@ -286,6 +286,18 @@ export async function startWorkers() {
             updatedAt: now,
           }).where(eq(platformSettings.id, platform.settingId as string)),
         ));
+      // "preparedCount" here means "cleared the score threshold and got queued
+      // for material prep", not yet visible in the Feed (prepare_application_materials
+      // still has to run for each one) - wording says "preparando", never "listas".
+      if (preparedCount > 0) {
+        sendPushToUser(
+          userId,
+          preparedCount === 1 ? '1 vacante nueva' : `${preparedCount} vacantes nuevas`,
+          preparedCount === 1
+            ? 'Encontramos una vacante para ti. Applica la está preparando - revisa el Feed en unos minutos.'
+            : `Encontramos ${preparedCount} vacantes para ti. Applica las está preparando - revisa el Feed en unos minutos.`,
+        );
+      }
       await queueSearch(userId, nextSearchAt);
       return { success: true, totalFound, nextSearchAt };
     } catch (error: any) {
@@ -576,6 +588,12 @@ export async function startWorkers() {
           }).where(eq(vacancies.id, vacancy.id)),
         ]);
         await queueAssistedApply(applicationId);
+        sendPushToUser(
+          application.userId,
+          'Tu turno',
+          `${vacancy.title} en ${vacancy.company}: Applica llenó todo, pero esta empresa exige verificación humana. Abre la app para dar el último clic.`,
+          { applicationId },
+        );
       } else {
         await Promise.all([
           db.update(applications).set({
@@ -999,6 +1017,21 @@ export async function startWorkers() {
     // pending_review and waits for the Feed swipe (see docs/DECISIONS.md).
     const nextVacancyStatus = decision.nextAction === 'skip' ? 'filtered' : 'pending_review';
     const nextApplicationStatus = decision.nextAction === 'skip' ? 'skipped' : 'pending_review';
+
+    // 'pause' means Applica genuinely can't decide for the user (missing
+    // resume, a salary/immigration question, a custom question with no bank
+    // answer...) - distinct from a normal "ready to swipe" match, so it earns
+    // its own notification instead of blending into the "N new vacancies"
+    // summary from search_vacancies (that one fires regardless of whether any
+    // of them need input).
+    if (decision.nextAction === 'pause') {
+      sendPushToUser(
+        application.userId,
+        'Necesita tu revisión',
+        `${vacancy.title} en ${vacancy.company}: falta un dato que Applica no puede completar solo. Revísala en Pendientes.`,
+        { applicationId: application.id },
+      );
+    }
 
     await Promise.all([
       db.update(applications).set({

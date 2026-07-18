@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "266168064947",
+    "project_id": "applica-b9d93",
+    "storage_bucket": "applica-b9d93.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:266168064947:android:c69772517943a97850c9c6",
+        "android_client_info": {
+          "package_name": "com.applica.mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCF1yClu67L5HH_SN22v9r4dQCYKsdV2sY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
