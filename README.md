@@ -133,6 +133,7 @@ Then open `http://localhost:3005`.
 
 ## Development notes
 
+- **Never use the em dash character (`—`) anywhere in app or web content** (copy, labels, error messages, generated text). Rewrite as two sentences or use a comma instead.
 - A development seed endpoint exists at `/api/dev/seed` for creating a test user.
 - The product direction is now to hide provider/API-key complexity from end users. User-facing AI configuration should not be reintroduced unless the product strategy changes.
 - This repository uses a newer Next.js version with behavior that may differ from older conventions. Check the local Next.js docs before changing framework-level code.

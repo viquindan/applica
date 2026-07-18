@@ -110,7 +110,7 @@ export default function LandingClient({ trackedBoards }: { trackedBoards: number
           {/* Stat strip - real numbers, no invented social proof */}
           <div style={{ display: 'flex', gap: '2.5rem', flexWrap: 'wrap', marginTop: '3.5rem', paddingTop: '2.5rem', borderTop: '1px solid rgba(255,255,255,.12)', width: '100%' }}>
             <div>
-              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{trackedBoards > 0 ? trackedBoards.toLocaleString(locale) : '—'}</div>
+              <div style={{ fontSize: '1.75rem', fontWeight: 800, color: '#fff', fontVariantNumeric: 'tabular-nums' }}>{trackedBoards.toLocaleString(locale)}</div>
               <div style={{ fontSize: '.72rem', color: 'rgba(241,240,240,.55)', textTransform: 'uppercase', letterSpacing: '.06em' }}>{t.landing.statBoards}</div>
             </div>
             <div>
