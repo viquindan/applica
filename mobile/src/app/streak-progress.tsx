@@ -1,12 +1,14 @@
+import { useEffect } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 
 import { Glyph } from '@/components/glyph';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Gold, GoldDim, Petrol, Radius, Spacing, TextGold } from '@/constants/theme';
+import { Gold, GoldDim, Motion, Petrol, Radius, Spacing, TextGold } from '@/constants/theme';
 import { useApplicationsData } from '@/hooks/use-applications';
 import { useStreak } from '@/hooks/use-streak';
+import { computeLevel, computeXp } from '@/utils/level';
 
 // Milestones the path renders, closest-to-today first (the path itself is
 // drawn furthest-away-first so the mascot ends up at the bottom, "today").
@@ -17,11 +19,46 @@ function milestoneLabel(days: number): string {
   return `${days} dias seguidos`;
 }
 
+function LevelCard({ xp }: { xp: number }) {
+  const level = computeLevel(xp);
+  const ratio = level.xpToNext ? Math.min(level.xpInLevel / level.xpToNext, 1) : 1;
+  const pct = useSharedValue(0);
+
+  useEffect(() => {
+    pct.value = withTiming(ratio, { duration: Motion.durationSlow });
+  }, [ratio]);
+
+  const barStyle = useAnimatedStyle(() => ({ width: `${pct.value * 100}%` }));
+
+  return (
+    <Animated.View entering={FadeInDown.duration(400).delay(180)} style={styles.levelCard}>
+      <View style={styles.levelHeaderRow}>
+        <View style={styles.levelChip}>
+          <Glyph name="check" size={13} color={TextGold} />
+          <ThemedText style={styles.levelChipText}>Nivel {level.level} · {level.title}</ThemedText>
+        </View>
+        <ThemedText themeColor="textSecondary" style={styles.xpCaption}>
+          {level.isMax ? `${level.xp} XP` : `${level.xpInLevel}/${level.xpToNext} XP`}
+        </ThemedText>
+      </View>
+      <View style={styles.xpTrack}>
+        <Animated.View style={[styles.xpFill, barStyle]} />
+      </View>
+      {!level.isMax ? (
+        <ThemedText themeColor="textSecondary" style={styles.xpNote}>
+          Sigue aplicando y mantén la racha para subir de nivel.
+        </ThemedText>
+      ) : null}
+    </Animated.View>
+  );
+}
+
 export default function StreakProgressScreen() {
   const streak = useStreak();
   const { stats } = useApplicationsData();
   const applications = stats?.submitted ?? 0;
   const days = streak ?? 0;
+  const xp = computeXp(days, applications);
 
   const nextMilestone = MILESTONES.find((m) => m > days) ?? null;
   const reversed = [...MILESTONES].reverse();
@@ -48,6 +85,8 @@ export default function StreakProgressScreen() {
             <ThemedText themeColor="textSecondary" style={styles.statLabel}>aplicaciones</ThemedText>
           </View>
         </Animated.View>
+
+        <LevelCard xp={xp} />
 
         <View style={styles.path}>
           {reversed.map((milestone, i) => {
@@ -123,6 +162,18 @@ const styles = StyleSheet.create({
   },
   statValue: { fontSize: 24, fontWeight: '800' },
   statLabel: { fontSize: 12 },
+  levelCard: { marginTop: Spacing.four, gap: 8 },
+  levelHeaderRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  levelChip: {
+    flexDirection: 'row', alignItems: 'center', gap: 5,
+    backgroundColor: 'rgba(254,214,91,0.18)', borderRadius: Radius.full,
+    paddingHorizontal: Spacing.three, paddingVertical: 5,
+  },
+  levelChipText: { color: TextGold, fontWeight: '800', fontSize: 12.5 },
+  xpCaption: { fontSize: 11, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  xpTrack: { height: 8, borderRadius: Radius.full, backgroundColor: GoldDim, overflow: 'hidden' },
+  xpFill: { height: '100%', borderRadius: Radius.full, backgroundColor: Gold },
+  xpNote: { fontSize: 11.5 },
   path: { marginTop: Spacing.five },
   pathRow: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.three },
   dotColumn: { alignItems: 'center', width: 32 },

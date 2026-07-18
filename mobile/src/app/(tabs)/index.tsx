@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -7,6 +7,7 @@ import { runSearch } from '@/api/applications';
 import { EmptyState, StatPill } from '@/components/empty-state';
 import { CelebrationBurst, type CelebrationBurstHandle } from '@/components/gamification/celebration-burst';
 import { FeedHud } from '@/components/gamification/feed-hud';
+import { MilestoneCelebration } from '@/components/gamification/milestone-celebration';
 import { SearchingPanel } from '@/components/gamification/searching-panel';
 import { SwipeCard } from '@/components/swipe-card';
 import { ThemedView } from '@/components/themed-view';
@@ -15,6 +16,10 @@ import { isLinkedIn, useApplicationActions, useApplicationsData } from '@/hooks/
 import { useSearchStatus } from '@/hooks/use-search-status';
 import { useStreak } from '@/hooks/use-streak';
 import type { AppRow } from '@/types';
+
+// Same milestones as the streak-progress path screen - kept in lockstep by
+// hand since they express the same idea (racha) in two different places.
+const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
 export default function FeedScreen() {
   const router = useRouter();
@@ -31,6 +36,9 @@ export default function FeedScreen() {
   // without this the deck would show a blank gap or the same card again
   // until that round-trip completes.
   const [hiddenIds, setHiddenIds] = useState<Set<string>>(new Set());
+  const [celebration, setCelebration] = useState<{ title: string; subtitle: string } | null>(null);
+  const prevAppliedToday = useRef<number | null>(null);
+  const prevStreak = useRef<number | null>(null);
 
   // Always polled (not just after our own trigger) so the button correctly
   // disables if a search is already running server-side - e.g. a scheduled
@@ -42,6 +50,28 @@ export default function FeedScreen() {
   const searching = searchState === 'queuing' || isRefetching || backendSearching;
 
   const dailyGoal = settings?.maxApplicationsPerDay ?? 10;
+  const appliedToday = stats?.appliedToday ?? 0;
+
+  // Full-screen celebration reserved for two REAL milestones - closing
+  // today's goal, hitting a streak milestone - never per-swipe (that's what
+  // CelebrationBurst, the small corner burst, already covers). Refs (not
+  // state) track "already celebrated" so a refetch that returns the SAME
+  // numbers never re-fires it, only an actual crossing does.
+  useEffect(() => {
+    if (prevAppliedToday.current !== null && dailyGoal > 0
+      && prevAppliedToday.current < dailyGoal && appliedToday >= dailyGoal) {
+      setCelebration({ title: 'Meta de hoy cerrada', subtitle: `${appliedToday} de ${dailyGoal} aplicaciones. Sigue asi.` });
+    }
+    prevAppliedToday.current = appliedToday;
+  }, [appliedToday, dailyGoal]);
+
+  useEffect(() => {
+    if (streak != null && prevStreak.current != null && streak !== prevStreak.current
+      && STREAK_MILESTONES.includes(streak)) {
+      setCelebration({ title: `Racha de ${streak} dias`, subtitle: 'Cada dia te acerca mas a tu proximo trabajo.' });
+    }
+    prevStreak.current = streak;
+  }, [streak]);
 
   // Queues a REAL backend search job (the worker scrapes ATS/LinkedIn), then
   // refetches. A bare refetch() would only re-read what the last search found.
@@ -89,8 +119,9 @@ export default function FeedScreen() {
       <SafeAreaView style={styles.safeArea}>
         <FeedHud
           queueCount={visibleQueue.length}
-          todayCount={stats?.today ?? 0}
-          submittedCount={stats?.submitted ?? 0}
+          foundTodayCount={stats?.today ?? 0}
+          submittedTotal={stats?.submitted ?? 0}
+          appliedTodayCount={appliedToday}
           dailyGoal={dailyGoal}
           streak={streak}
           searching={searching}
@@ -130,6 +161,12 @@ export default function FeedScreen() {
           )}
           <CelebrationBurst ref={celebrationRef} />
         </View>
+        <MilestoneCelebration
+          visible={!!celebration}
+          title={celebration?.title ?? ''}
+          subtitle={celebration?.subtitle ?? ''}
+          onDone={() => setCelebration(null)}
+        />
       </SafeAreaView>
     </ThemedView>
   );

@@ -45,7 +45,7 @@ export type ApplicationsData = {
   user: Record<string, unknown> | null;
   profile: Record<string, unknown> | null;
   settings: { maxApplicationsPerDay?: number; maxApplicationsPerWeek?: number } | null;
-  stats: { total: number; today: number; pendingReview: number; submitted: number };
+  stats: { total: number; today: number; pendingReview: number; submitted: number; appliedToday: number };
   outcomes: { contacted: number; rejected: number; resolved: number; contactRate: number; rolePerformance: unknown[] };
   supply: { activeBoards: number; jobsSeen: number };
   billing: { tier?: string; limits: unknown; currentCount: number };

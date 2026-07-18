@@ -1,6 +1,6 @@
 import { db } from '@/db/client';
-import { applications, professionalProfiles, userSettings, users, vacancies } from '@/db/schema';
-import { and, count, eq, gte, sql } from 'drizzle-orm';
+import { applications, applicationSubmissions, professionalProfiles, userSettings, users, vacancies } from '@/db/schema';
+import { and, count, countDistinct, eq, gte, sql } from 'drizzle-orm';
 import { ensureUserMemory } from '@/core/memory/memoryStore';
 import { getOutcomeMetrics } from '@/core/outcomes/outcomeMetrics';
 import { getAtsRegistryMetrics } from '@/core/platforms/atsRegistry';
@@ -31,6 +31,7 @@ export async function loadApplicationsData(userId: string) {
     [todayApps],
     [pendingReview],
     [submitted],
+    [appliedToday],
     outcomes,
     supplyMetrics,
     usageLimits,
@@ -75,6 +76,16 @@ export async function loadApplicationsData(userId: string) {
     db.select({ count: count() }).from(applications).where(and(eq(applications.userId, userId), gte(applications.createdAt, todayStart))),
     db.select({ count: count() }).from(applications).where(and(eq(applications.userId, userId), eq(applications.status, 'pending_review'))),
     db.select({ count: count() }).from(applications).where(and(eq(applications.userId, userId), eq(applications.status, 'submitted'))),
+    // "Aplicadas hoy": distinct applications this user actually swiped on
+    // today, not vacancies the engine merely prepared today (that confusion
+    // is exactly why the daily-goal bar read "83/10" with zero real swipes -
+    // see docs/STATUS.md 2026-07-18). approvalTimestamp is set at the exact
+    // swipe moment by the approve/assisted/mark_applied actions - no new
+    // column needed, it already existed unused for this purpose.
+    db.select({ count: countDistinct(applicationSubmissions.applicationId) })
+      .from(applicationSubmissions)
+      .innerJoin(applications, eq(applications.id, applicationSubmissions.applicationId))
+      .where(and(eq(applications.userId, userId), gte(applicationSubmissions.approvalTimestamp, todayStart))),
     getOutcomeMetrics(userId),
     getAtsRegistryMetrics(),
     getUserPlanLimits(userId),
@@ -91,6 +102,7 @@ export async function loadApplicationsData(userId: string) {
       today: todayApps.count,
       pendingReview: pendingReview.count,
       submitted: submitted.count,
+      appliedToday: appliedToday.count,
     },
     outcomes,
     supply: { activeBoards: supplyMetrics.activeBoards, jobsSeen: supplyMetrics.jobsSeen },
