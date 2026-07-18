@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 
 import { applicationAction, applyToVacancy, discardVacancy, getApplicationsData, saveAnswers } from '@/api/applications';
+import { ApiError } from '@/api/client';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
 import type { AppRow } from '@/types';
 
@@ -95,14 +96,25 @@ export function useApplicationsData() {
 export function useApplicationActions() {
   const qc = useQueryClient();
   const invalidate = () => qc.invalidateQueries({ queryKey: ['applications'] });
+  // Surfaces the real backend reason instead of failing silently - found via
+  // a real report: the "Aplicar" button in application/[id].tsx did nothing
+  // visible on failure (no onError anywhere caught the ApiError the client
+  // already throws on non-2xx, e.g. unresolved blockers or already-approved).
+  const [actionError, setActionError] = useState<string | null>(null);
+  const onActionError = (err: unknown) =>
+    setActionError(err instanceof ApiError ? err.message : 'No se pudo completar la accion. Intenta de nuevo.');
 
   const sendApprove = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'approve'),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const sendAssisted = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'assisted'),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const markApplied = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'mark_applied'),
@@ -129,13 +141,21 @@ export function useApplicationActions() {
     onSettled: invalidate,
   });
 
-  function applyApp(app: AppRow) {
-    if (!autoCapable(app)) return;
+  // Returns a human-readable reason when it can NOT even attempt to apply,
+  // instead of silently no-op'ing (the exact bug reported: tapping "Aplicar"
+  // did nothing, with zero feedback either way).
+  function applyApp(app: AppRow): string | null {
+    if (app.status !== 'pending_review') return 'Esta oferta ya no esta pendiente de revision.';
+    if (isLinkedIn(app)) return null; // caller routes to the WebView screen instead
+    if (isRegistrationGated(app)) return 'Este sitio exige crear una cuenta propia - aplica directamente desde la oferta.';
+    if (!isAtsApp(app) && needsInfoFor(app)) return 'Faltan datos para completar el formulario. Resuelvelos en Pendientes primero.';
+    setActionError(null);
     // Known ATS: silent headless attempt first, only escalates to the
     // visible/assisted browser when the ATS actually shows a captcha - the
     // worker does that automatically. Generic sites go straight to assisted
     // (see the web port of this hook for the full rationale).
     if (isAtsApp(app)) sendApprove.mutate(app); else sendAssisted.mutate(app);
+    return null;
   }
 
   function discardApp(app: AppRow) {
@@ -143,5 +163,14 @@ export function useApplicationActions() {
     else discard.mutate(app.vacancyId);
   }
 
-  return { applyApp, discardApp, markApplied, cancelAssisted, applyAnyway, answerBlockers };
+  return {
+    applyApp,
+    discardApp,
+    markApplied,
+    cancelAssisted,
+    applyAnyway,
+    answerBlockers,
+    actionError,
+    isApplying: sendApprove.isPending || sendAssisted.isPending,
+  };
 }

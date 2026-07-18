@@ -1,20 +1,41 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useState } from 'react';
-import { Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Gold, Petrol, Radius, Spacing, TextGold } from '@/constants/theme';
+import { Gold, Radius, Spacing, TextGold } from '@/constants/theme';
 import { isLinkedIn, useApplicationActions, useApplicationsData } from '@/hooks/use-applications';
+import { useTheme } from '@/hooks/use-theme';
+import { stripHtml } from '@/utils/html';
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { apps } = useApplicationsData();
-  const { applyApp, applyAnyway } = useApplicationActions();
+  const { applyApp, applyAnyway, actionError, isApplying } = useApplicationActions();
   const [preparing, setPreparing] = useState(false);
+  const theme = useTheme();
   const app = apps.find((a) => a.id === id);
+
+  // The mutation itself already surfaces the real backend error (unresolved
+  // blockers, already approved, etc.) via actionError - this is what was
+  // missing: nothing displayed it, so a failed "Aplicar" looked identical to
+  // a successful one (both did nothing visible).
+  useEffect(() => {
+    if (actionError) Alert.alert('No se pudo aplicar', actionError);
+  }, [actionError]);
+
+  function onApplyPress() {
+    if (!app) return;
+    if (isLinkedIn(app)) {
+      router.push(`/linkedin-apply/${app.id}`);
+      return;
+    }
+    const reason = applyApp(app);
+    if (reason) Alert.alert('Todavia no se puede aplicar', reason);
+  }
 
   if (!app) {
     return (
@@ -51,26 +72,26 @@ export default function ApplicationDetailScreen() {
             </View>
           )}
           <ThemedText type="title" style={styles.title}>{app.vacancy?.title}</ThemedText>
-          <ThemedText style={styles.company}>{app.vacancy?.company}</ThemedText>
-          {app.vacancy?.location ? <ThemedText style={styles.meta}>{app.vacancy.location}</ThemedText> : null}
-          <ThemedText style={styles.meta}>Plataforma: {app.vacancy?.platform}</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.company}>{app.vacancy?.company}</ThemedText>
+          {app.vacancy?.location ? <ThemedText themeColor="textSecondary" style={styles.meta}>{app.vacancy.location}</ThemedText> : null}
+          <ThemedText themeColor="textSecondary" style={styles.meta}>Plataforma: {app.vacancy?.platform}</ThemedText>
 
           {app.vacancy?.description ? (
-            <ThemedText style={styles.description}>{app.vacancy.description}</ThemedText>
+            <ThemedText themeColor="textSecondary" style={styles.description}>{stripHtml(app.vacancy.description)}</ThemedText>
           ) : null}
 
           {app.status === 'pending_review' && (
             <ThemedText
-              onPress={() => (isLinkedIn(app) ? router.push(`/linkedin-apply/${app.id}`) : applyApp(app))}
-              style={styles.applyButton}>
-              Aplicar
+              onPress={isApplying ? undefined : onApplyPress}
+              style={[styles.applyButton, isApplying && styles.applyButtonDisabled]}>
+              {isApplying ? 'Enviando...' : 'Aplicar'}
             </ThemedText>
           )}
 
           {vacancyOnly ? (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText style={styles.cardTitle}>Esta vacante quedó por debajo del umbral recomendado</ThemedText>
-              <ThemedText style={styles.cardBody}>
+              <ThemedText themeColor="textSecondary" style={styles.cardBody}>
                 No preparamos CV ni carta automáticamente para vacantes de bajo puntaje. Si te interesa igual,
                 aplica de todos modos y preparamos todo para que la envíes como cualquier otra.
               </ThemedText>
@@ -84,9 +105,9 @@ export default function ApplicationDetailScreen() {
               ) : null}
             </View>
           ) : isDiscarded && app.vacancy?.url ? (
-            <View style={styles.card}>
+            <View style={[styles.card, { backgroundColor: theme.backgroundElement }]}>
               <ThemedText style={styles.cardTitle}>Aplica manualmente</ThemedText>
-              <ThemedText style={styles.cardBody}>
+              <ThemedText themeColor="textSecondary" style={styles.cardBody}>
                 Esta aplicación no sigue en el flujo automático. Puedes abrir la oferta y postularte tú mismo en el sitio.
               </ThemedText>
               <ThemedText onPress={() => Linking.openURL(app.vacancy!.url)} style={styles.linkButton}>
@@ -106,10 +127,10 @@ const styles = StyleSheet.create({
   scroll: { padding: Spacing.four, gap: Spacing.two },
   scoreBadge: { alignSelf: 'flex-start', backgroundColor: 'rgba(254,214,91,0.2)', borderRadius: Radius.sm, paddingHorizontal: Spacing.two, paddingVertical: 4, marginBottom: Spacing.two },
   scoreBadgeText: { color: '#735c00', fontWeight: '700', fontSize: 12 },
-  title: { fontSize: 24, color: Petrol },
-  company: { fontSize: 16, color: '#414849', fontWeight: '600' },
-  meta: { fontSize: 13, color: '#5c6366' },
-  description: { fontSize: 14, color: '#414849', lineHeight: 21, marginTop: Spacing.three },
+  title: { fontSize: 24 },
+  company: { fontSize: 16, fontWeight: '600' },
+  meta: { fontSize: 13 },
+  description: { fontSize: 14, lineHeight: 21, marginTop: Spacing.three },
   applyButton: {
     marginTop: Spacing.five,
     backgroundColor: Gold,
@@ -121,18 +142,21 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   applyButtonDisabled: { opacity: 0.6 },
-  card: { marginTop: Spacing.five, backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.four, gap: Spacing.two },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: Petrol },
-  cardBody: { fontSize: 13, color: '#5c6366', lineHeight: 19 },
+  card: { marginTop: Spacing.five, borderRadius: Radius.md, padding: Spacing.four, gap: Spacing.two },
+  cardTitle: { fontSize: 15, fontWeight: '700' },
+  cardBody: { fontSize: 13, lineHeight: 19 },
+  // Gold, not Petrol: an outlined petrol border/text on a dark-themed card
+  // was nearly invisible (petrol is close to the dark background color
+  // itself). Gold is the app's theme-neutral accent everywhere else.
   linkButton: {
     marginTop: Spacing.two,
-    color: Petrol,
+    color: TextGold,
     fontWeight: '700',
     textAlign: 'center',
     paddingVertical: Spacing.three,
     borderRadius: Radius.full,
     borderWidth: 1,
-    borderColor: Petrol,
+    borderColor: Gold,
     overflow: 'hidden',
   },
 });

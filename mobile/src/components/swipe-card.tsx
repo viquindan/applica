@@ -4,31 +4,13 @@ import { Animated, Dimensions, Easing, PanResponder, StyleSheet, View } from 're
 
 import { CompanyLogo } from '@/components/company-logo';
 import { ThemedText } from '@/components/themed-text';
-import { Gold, Petrol, Radius, scoreBand, Spacing, TextGold } from '@/constants/theme';
+import { Gold, Radius, scoreBand, Spacing, TextGold } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 import type { AppRow } from '@/types';
+import { stripHtml } from '@/utils/html';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const SWIPE_THRESHOLD = SCREEN_WIDTH * 0.28;
-
-// Vacancy descriptions come from ATS postings as raw HTML (some adapters
-// don't strip it before storing) - rendered verbatim it shows literal
-// `<p>`/`<br>` tags and escaped entities instead of plain text. Same fix
-// pattern as src/core/platforms/atsSearchHelpers.ts's stripHtml, ported here
-// since mobile can't import server-side code.
-function stripHtml(input: string): string {
-  return input
-    .replace(/<br\s*\/?>/gi, '\n')
-    .replace(/<\/(p|div|li)>/gi, '\n')
-    .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\n{3,}/g, '\n\n')
-    .trim();
-}
 
 type Props = {
   app: AppRow;
@@ -63,7 +45,7 @@ function UrgencyPulse({ color }: { color: string }) {
         <Animated.View style={[styles.pulseHalo, { backgroundColor: color, transform: [{ scale: haloScale }], opacity: haloOpacity }]} />
         <Animated.View style={[styles.pulseDot, { backgroundColor: color, transform: [{ scale: dotScale }] }]} />
       </View>
-      <ThemedText style={styles.pulseText}>Vacante activa - decide ahora: desliza o sigue</ThemedText>
+      <ThemedText themeColor="text" style={styles.pulseText}>Vacante activa - decide ahora: desliza o sigue</ThemedText>
     </View>
   );
 }
@@ -139,6 +121,7 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
   const scale = lift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] });
 
   const band = scoreBand(app.vacancy?.score);
+  const theme = useTheme();
 
   return (
     <Animated.View
@@ -163,6 +146,12 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
       }}
       style={[
         styles.card,
+        // Themed, not hardcoded white: on a dark-themed device this used to
+        // stay a stark white card with dark ink text (unreadable seam
+        // against the rest of a dark-themed app). backgroundElement is the
+        // same "elevated surface" token every other themed card in the app
+        // already uses.
+        { backgroundColor: theme.backgroundElement },
         // Score halo: green >=70, amber 50-69, red <50 (boxShadow needs the
         // new architecture, which this Expo SDK uses on both platforms).
         { borderColor: band.color, boxShadow: `0 10px 30px ${band.glow}` },
@@ -188,20 +177,20 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
         <CompanyLogo companyName={app.vacancy?.company} />
         <View style={styles.headerText}>
           <ThemedText type="subtitle" style={styles.title}>{app.vacancy?.title ?? 'Vacante'}</ThemedText>
-          <ThemedText style={styles.company}>{app.vacancy?.company}</ThemedText>
+          <ThemedText themeColor="textSecondary" style={styles.company}>{app.vacancy?.company}</ThemedText>
         </View>
       </View>
-      {app.vacancy?.location ? <ThemedText style={styles.meta}>{app.vacancy.location}</ThemedText> : null}
+      {app.vacancy?.location ? <ThemedText themeColor="textSecondary" style={styles.meta}>{app.vacancy.location}</ThemedText> : null}
       {/* Shrinking the HUD above (feed-hud.tsx) frees real vertical room here -
           the whole point is showing more of the vacancy itself, so this grew
           from 12 to 16 lines to actually use that space instead of leaving it
           blank under a truncated description. */}
-      <ThemedText style={styles.description} numberOfLines={16}>
+      <ThemedText themeColor="textSecondary" style={styles.description} numberOfLines={16}>
         {stripHtml(app.vacancy?.description ?? '')}
       </ThemedText>
       <View style={styles.footer}>
         <UrgencyPulse color={band.color} />
-        <ThemedText style={styles.hint}>Toca para ver el detalle</ThemedText>
+        <ThemedText themeColor="textSecondary" style={styles.hint}>Toca para ver el detalle</ThemedText>
       </View>
     </Animated.View>
   );
@@ -209,7 +198,6 @@ export function SwipeCard({ app, onSwipeRight, onSwipeLeft, onTap }: Props) {
 
 const styles = StyleSheet.create({
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: Radius.xl,
     borderWidth: 2,
     padding: Spacing.four,
@@ -226,17 +214,17 @@ const styles = StyleSheet.create({
   scoreBadgeText: { fontWeight: '700', fontSize: 12 },
   headerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   headerText: { flex: 1, minWidth: 0 },
-  title: { color: Petrol, fontSize: 22, marginBottom: 2 },
-  company: { color: '#414849', fontSize: 16, fontWeight: '600' },
-  meta: { color: '#5c6366', fontSize: 13, marginTop: 2 },
-  description: { color: '#414849', marginTop: Spacing.three, fontSize: 14, lineHeight: 20 },
+  title: { fontSize: 22, marginBottom: 2 },
+  company: { fontSize: 16, fontWeight: '600' },
+  meta: { fontSize: 13, marginTop: 2 },
+  description: { marginTop: Spacing.three, fontSize: 14, lineHeight: 20 },
   footer: { marginTop: 'auto', paddingTop: Spacing.three, gap: 6 },
   pulseRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   pulseDotWrap: { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
   pulseHalo: { position: 'absolute', width: 14, height: 14, borderRadius: 7 },
   pulseDot: { width: 8, height: 8, borderRadius: 4 },
-  pulseText: { fontSize: 12, color: '#414849', fontWeight: '600', flexShrink: 1 },
-  hint: { color: '#5c6366', fontSize: 11, textAlign: 'center' },
+  pulseText: { fontSize: 12, fontWeight: '600', flexShrink: 1 },
+  hint: { fontSize: 11, textAlign: 'center' },
   stamp: {
     position: 'absolute',
     top: 24,

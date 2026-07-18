@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
-import { Petrol } from '@/constants/theme';
+import { GoldDim } from '@/constants/theme';
 
 // Same "guess the domain" trick as the web CompanyLogo (JobCardUI.tsx) - no
 // logo API key needed. Clearbit's Logo API is dead (confirmed: connection
@@ -18,7 +18,10 @@ export function CompanyLogo({ companyName, size = 44 }: { companyName?: string |
   if (error || !name || name === 'N/A') {
     return (
       <View style={[styles.fallback, { width: size, height: size, borderRadius: size / 4 }]}>
-        <ThemedText style={[styles.fallbackText, { fontSize: size * 0.4 }]}>{initial}</ThemedText>
+        {/* themeColor, not a hardcoded ink color: fixed dark-petrol text on
+            this translucent-petrol tint disappeared entirely on a dark
+            themed card. */}
+        <ThemedText themeColor="text" style={[styles.fallbackText, { fontSize: size * 0.4 }]}>{initial}</ThemedText>
       </View>
     );
   }
@@ -37,6 +40,6 @@ export function CompanyLogo({ companyName, size = 44 }: { companyName?: string |
 
 const styles = StyleSheet.create({
   image: { backgroundColor: '#FFFFFF', borderWidth: 1, borderColor: '#eeeeed' },
-  fallback: { backgroundColor: 'rgba(18,51,56,0.06)', alignItems: 'center', justifyContent: 'center' },
-  fallbackText: { color: Petrol, fontWeight: '800' },
+  fallback: { backgroundColor: GoldDim, alignItems: 'center', justifyContent: 'center' },
+  fallbackText: { fontWeight: '800' },
 });
