@@ -65,8 +65,13 @@
   // bank answer, default to the "decline to answer" option (same rule as the
   // worker's universalFill). If the user changes it by hand, capture learns theirs.
   const DECLINE_ANSWER = '__applica_decline__';
-  const DECLINE_OPTION_RX = /decline to (self[- ]?identify|answer|state|disclose)|prefer not to|do ?n[o']?t wish to (answer|self)|don'?t want to answer|i do not (wish|want) to answer|rather not say|prefiero no|no deseo (responder|contestar|decir)/i;
-  const DEMOGRAPHIC_RX = /gender identity|\bgender\b|transgender|sexual orientation|pronouns?|racial|ethnic|\brace\b|hispanic|latino|veteran|disabilit|self[- ]identif|demographic/i;
+  const DECLINE_OPTION_RX = /decline to (self[- ]?identify|answer|state|disclose)|prefer not to|do ?n[o']?t wish to (answer|self)|don'?t want to answer|i do not (wish|want) to answer|rather not say|prefiero no|no deseo (responder|contestar|decir)|prefiro n[aã]o (responder|informar|declarar)|n[aã]o desejo (responder|informar)/i;
+  // pt-BR terms (LGBTQIAPN+, "pessoa com deficiência", "pretas e pardas"...)
+  // kept in lockstep with universalFill.ts's DEMOGRAPHIC_RX - a real Brazilian
+  // Greenhouse posting's diversity checkboxes rendered in Portuguese and went
+  // unrecognized, blocking the application instead of auto-declining like
+  // every other ATS's demographic block.
+  const DEMOGRAPHIC_RX = /gender identity|\bgender\b|transgender|sexual orientation|pronouns?|racial|ethnic|\brace\b|hispanic|latino|veteran|disabilit|self[- ]identif|demographic|lgbtqia?p?n?\+?|defici[eê]nc|pretas? e pardas?|pessoas? negras?|ra[cç]a\b|identidade de g[eê]nero|orienta[cç][aã]o sexual|autodeclara[cç][aã]o/i;
 
   function resolveKnown(label, name, data) {
     const hay = `${label} ${name}`.toLowerCase();

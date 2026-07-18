@@ -9,9 +9,16 @@ import type { Page } from 'playwright';
  */
 export const DECLINE_ANSWER = '__applica_decline__';
 /** Texts that mean "prefer not to answer" across ATS wordings and languages. */
-export const DECLINE_OPTION_RX = /decline to (self[- ]?identify|answer|state|disclose)|prefer not to|do ?n[o']?t wish to (answer|self)|don'?t want to answer|i do not (wish|want) to answer|rather not say|prefiero no|no deseo (responder|contestar|decir)/i;
-/** Questions that belong to a voluntary demographic / self-identification block. */
-export const DEMOGRAPHIC_RX = /gender identity|\bgender\b|transgender|sexual orientation|pronouns?|racial|ethnic|\brace\b|hispanic|latino|veteran|disabilit|self[- ]identif|demographic/i;
+export const DECLINE_OPTION_RX = /decline to (self[- ]?identify|answer|state|disclose)|prefer not to|do ?n[o']?t wish to (answer|self)|don'?t want to answer|i do not (wish|want) to answer|rather not say|prefiero no|no deseo (responder|contestar|decir)|prefiro n[aã]o (responder|informar|declarar)|n[aã]o desejo (responder|informar)/i;
+/**
+ * Questions that belong to a voluntary demographic / self-identification block.
+ * Includes pt-BR equivalents (LGBTQIAPN+, "pessoa com deficiência", "pretas e
+ * pardas"...) - found real in a Brazilian Greenhouse posting (Capco) whose
+ * diversity checkboxes render in Portuguese, not English, and went unmatched
+ * (blocked the application forever with "missing required field" instead of
+ * being auto-declined like every other ATS's demographic block).
+ */
+export const DEMOGRAPHIC_RX = /gender identity|\bgender\b|transgender|sexual orientation|pronouns?|racial|ethnic|\brace\b|hispanic|latino|veteran|disabilit|self[- ]identif|demographic|lgbtqia?p?n?\+?|defici[eê]nc|pretas? e pardas?|pessoas? negras?|ra[cç]a\b|identidade de g[eê]nero|orienta[cç][aã]o sexual|autodeclara[cç][aã]o/i;
 
 /**
  * Generic, label-driven form filler. Instead of hardcoding per-ATS selectors, it

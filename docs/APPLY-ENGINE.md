@@ -121,6 +121,17 @@ perfil + banco de respuestas. Reglas ganadas con sangre:
     default (el viejo default de veteran afirmaba "I am not a protected
     veteran"). Si el usuario cambia la opción a mano, el aprendizaje captura SU
     elección como siempre. Texto libre demográfico se deja vacío.
+    **`DEMOGRAPHIC_RX`/`DECLINE_OPTION_RX` no son solo-inglés**: un Greenhouse
+    real de Capco (Brasil) renderiza su bloque de diversidad en portugués
+    (LGBTQIAPN+, "Pessoa com deficiência", "Pretas e Pardas") - encontrado real
+    vía QA end-to-end (2026-07-18), bloqueaba la postulación para siempre en
+    vez de auto-declinar. Agregados términos pt-BR a ambos regex (en
+    universalFill.ts Y su réplica en extension/content.js, en lockstep). Una
+    opción tipo "Nenhuma das anteriores" (ninguna de las anteriores) queda
+    FUERA de este match a propósito: sin contexto de la pregunta padre no hay
+    forma de distinguirla de un checkbox cualquiera, y afirmarla a ciegas
+    violaría la regla de arriba (nunca afirmar un hecho demográfico como
+    default) - queda como blocker real para que el usuario decida.
 11. **`page.evaluate` con tsx/esbuild:** NUNCA asignar funciones flecha a
     `const` nombrados dentro del evaluate (esbuild inyecta `__name` ->
     ReferenceError en el browser). Inline los bucles. `CSS.escape` no existe en

@@ -99,7 +99,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
 
     const formPreview = (app.submissionDecision as Record<string, any> | null)?.formPreview;
-    const pending = unresolvedBlockers(formPreview?.blockers, app.formAnswers as Record<string, string>);
+    let pending = unresolvedBlockers(formPreview?.blockers, app.formAnswers as Record<string, string>);
+    // The "no resume" blocker is a snapshot fact from whenever the form was
+    // last inspected (prepare_application_materials), not a question the user
+    // answers - unresolvedBlockers can never clear it via formAnswers. A CV
+    // uploaded/regenerated AFTER that snapshot (real case: base resume added
+    // post-onboarding, or "regenerate_cv") left it stuck forever even once
+    // application.adaptedResumeId pointed at a real, attachable resume.
+    if (app.adaptedResumeId) {
+      pending = pending.filter((b) => !/no hay un cv cargable/i.test(b));
+    }
     if (pending.length > 0) {
       return NextResponse.json({
         error: 'La aplicación todavía tiene datos obligatorios pendientes.',

@@ -1,5 +1,11 @@
 # Applica - Estado
 
+## QA end-to-end real #2 en producción (persona dev Peru/remoto global) + 2 bugs reales del motor de aplicación (2026-07-18)
+Pedido explícito del usuario, re-ejecutado tras la ronda de fixes de UI mobile: cuenta nueva (`dev.peru.qa+...@applicatest.dev`) vía API real contra `applicaswipe.com` (registro -> perfil dev de software Peru/remoto global -> búsqueda -> swipe). Búsqueda real: 28 candidatos evaluados, 3 preparados, 25 filtrados correctamente por score/geografía - confirma el pipeline de matching funcionando. Swipe izquierdo (descartar) funcionó limpio. Swipe derecho (aplicar) expuso 2 bugs reales:
+- **El blocker "No hay CV cargable" nunca se limpiaba tras `regenerate_cv`**: es un hecho de snapshot tomado en `prepare_application_materials` (no una pregunta respondible vía `formAnswers`), así que un CV agregado/regenerado DESPUÉS de esa foto dejaba la aplicación bloqueada para siempre aunque `adaptedResumeId` ya apuntara a un CV real. Fix en `src/app/api/applications/[id]/action/route.ts`: el blocker se descarta si `app.adaptedResumeId` ya existe.
+- **`DEMOGRAPHIC_RX`/`DECLINE_OPTION_RX` (universalFill.ts + su réplica en extension/content.js) eran solo-inglés**: un Greenhouse real de Capco (Brasil) renderiza su bloque de diversidad en portugués (LGBTQIAPN+, "Pessoa com deficiência", "Pretas e Pardas") y no se reconocía como demográfico, bloqueando la postulación en vez de auto-declinar como cualquier otro ATS. Agregados términos pt-BR a ambos regex, en lockstep. "Nenhuma das anteriores" queda fuera del match a propósito (sin contexto de la pregunta padre, afirmarla sería un hecho demográfico no verificado - ver detalle en `APPLY-ENGINE.md` regla 10).
+- Verificado: `npx tsc --noEmit` limpio, `npm test` 27/27 verde, regex confirmado contra las etiquetas reales de Capco vía script directo. Cuenta QA queda en producción (no se borró, mismo criterio que QA anteriores).
+
 > Vivo y BREVE (se auto-carga en cada sesión: cada línea aquí cuesta tokens siempre).
 > Historial detallado de iteraciones: `docs/CHANGELOG-2026-07.md` (no auto-cargado).
 > El motor de aplicación a fondo: `docs/APPLY-ENGINE.md` (lectura obligatoria antes de tocarlo).
