@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { Dimensions, ScrollView, StyleSheet, View, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 import Animated, { FadeInDown, useAnimatedStyle, useSharedValue, withTiming } from 'react-native-reanimated';
 import { useRef } from 'react';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OnboardingIllustration } from '@/components/auth/onboarding-illustration';
 import { GradientButton } from '@/components/gradient-button';
@@ -36,6 +37,7 @@ type Props = { onDone: () => void };
 export function OnboardingScreen({ onDone }: Props) {
   const [index, setIndex] = useState(0);
   const scrollRef = useRef<ScrollView>(null);
+  const insets = useSafeAreaInsets();
 
   function onScroll(e: NativeSyntheticEvent<NativeScrollEvent>) {
     const i = Math.round(e.nativeEvent.contentOffset.x / SCREEN_WIDTH);
@@ -70,7 +72,12 @@ export function OnboardingScreen({ onDone }: Props) {
         ))}
       </ScrollView>
 
-      <View style={styles.footer}>
+      {/* No SafeAreaView here on purpose - the gradient background stays
+          full-bleed edge to edge, only the button's own bottom padding grows
+          by the real inset. Without this, the button sat right under (or
+          behind) Android's 3-button nav bar - a fixed Spacing.five never
+          accounts for it. */}
+      <View style={[styles.footer, { paddingBottom: Spacing.five + insets.bottom }]}>
         <GradientButton
           label={isLast ? 'Comenzar' : 'Siguiente'}
           onPress={() => {
