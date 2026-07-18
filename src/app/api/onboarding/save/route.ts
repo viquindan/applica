@@ -4,6 +4,16 @@ import { db } from '@/db/client';
 import { users, professionalProfiles, platformSettings, resumes } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 
+// Postgres text[] columns reject a bare string outright (a real request
+// sent targetSeniority as a string, not an array, and got a bare 500 with no
+// detail). Coercing at this boundary turns a hard crash into predictable
+// behavior for any array-shaped field that arrives malformed.
+function toArray(value: unknown): string[] {
+  if (Array.isArray(value)) return value;
+  if (typeof value === 'string' && value.trim()) return [value.trim()];
+  return [];
+}
+
 export async function POST(req: NextRequest) {
   const session = await auth();
   if (!session?.user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -27,53 +37,61 @@ export async function POST(req: NextRequest) {
 
       if (existingProfile) {
         await db.update(professionalProfiles).set({
-          targetCountries: data.targetCountries,
+          targetCountries: toArray(data.targetCountries),
           updatedAt: new Date(),
         }).where(eq(professionalProfiles.userId, userId));
       }
     }
 
     if (stepKey === 'profile') {
-      const [existingProfile] = await db.select().from(professionalProfiles)
-        .where(eq(professionalProfiles.userId, userId))
-        .limit(1);
+      // Real bug found in production QA (2026-07-18): the resume insert used
+      // to commit BEFORE the professionalProfiles update below. When that
+      // update then failed (e.g. a malformed field for a text[] column), the
+      // resume row was already committed but never linked via baseResumeId -
+      // an orphaned CV, confirmed on a real QA account. A transaction makes
+      // the whole step atomic: either both writes land or neither does.
+      await db.transaction(async (tx) => {
+        const [existingProfile] = await tx.select().from(professionalProfiles)
+          .where(eq(professionalProfiles.userId, userId))
+          .limit(1);
 
-      let baseResumeId = existingProfile?.baseResumeId ?? null;
-      if (data.cvText?.trim()) {
-        if (baseResumeId) {
-          await db.update(resumes).set({
-            label: data.cvFileName || 'CV Base',
-            filePath: data.cvFilePath || null,
-            textContent: data.cvText,
-            isBase: true,
-          }).where(and(eq(resumes.id, baseResumeId), eq(resumes.userId, userId)));
-        } else {
-          const [baseResume] = await db.insert(resumes).values({
-            userId,
-            label: data.cvFileName || 'CV Base',
-            filePath: data.cvFilePath || null,
-            textContent: data.cvText,
-            isBase: true,
-          }).returning();
-          baseResumeId = baseResume.id;
+        let baseResumeId = existingProfile?.baseResumeId ?? null;
+        if (data.cvText?.trim()) {
+          if (baseResumeId) {
+            await tx.update(resumes).set({
+              label: data.cvFileName || 'CV Base',
+              filePath: data.cvFilePath || null,
+              textContent: data.cvText,
+              isBase: true,
+            }).where(and(eq(resumes.id, baseResumeId), eq(resumes.userId, userId)));
+          } else {
+            const [baseResume] = await tx.insert(resumes).values({
+              userId,
+              label: data.cvFileName || 'CV Base',
+              filePath: data.cvFilePath || null,
+              textContent: data.cvText,
+              isBase: true,
+            }).returning();
+            baseResumeId = baseResume.id;
+          }
         }
-      }
 
-      await db.update(professionalProfiles).set({
-        baseResumeId,
-        experience: data.experience, education: data.education,
-        certifications: data.certifications, skills: data.skills,
-        achievements: data.achievements,
-        targetRoles: data.targetRoles,
-        targetIndustries: data.targetIndustries,
-        targetSeniority: data.targetSeniority,
-        targetCompanies: data.targetCompanies,
-        excludedCompanies: data.excludedCompanies, excludedIndustries: data.excludedIndustries,
-        excludedRoles: data.excludedRoles, priorityKeywords: data.priorityKeywords,
-        alertKeywords: data.alertKeywords, cvTone: data.cvTone, coverLetterTone: data.coverLetterTone,
-        updatedAt: new Date(),
-      }).where(eq(professionalProfiles.userId, userId));
-      await db.update(users).set({ onboardingStep: 3, updatedAt: new Date() }).where(eq(users.id, userId));
+        await tx.update(professionalProfiles).set({
+          baseResumeId,
+          experience: data.experience, education: data.education,
+          certifications: data.certifications, skills: data.skills,
+          achievements: data.achievements,
+          targetRoles: toArray(data.targetRoles),
+          targetIndustries: toArray(data.targetIndustries),
+          targetSeniority: toArray(data.targetSeniority),
+          targetCompanies: toArray(data.targetCompanies),
+          excludedCompanies: toArray(data.excludedCompanies), excludedIndustries: toArray(data.excludedIndustries),
+          excludedRoles: toArray(data.excludedRoles), priorityKeywords: toArray(data.priorityKeywords),
+          alertKeywords: toArray(data.alertKeywords), cvTone: data.cvTone, coverLetterTone: data.coverLetterTone,
+          updatedAt: new Date(),
+        }).where(eq(professionalProfiles.userId, userId));
+        await tx.update(users).set({ onboardingStep: 3, updatedAt: new Date() }).where(eq(users.id, userId));
+      });
     }
 
     if (step === 4) {
