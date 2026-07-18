@@ -28,7 +28,12 @@ const cachedAdapters = {
 const smartRecruitersAdapter = new SmartRecruitersAdapter();
 
 const CACHE_TTL_MS = 6 * 60 * 60 * 1000;
-const PER_PLATFORM_LIMIT = 20000;
+// Greenhouse alone already serves ~23.7k jobs across 518 active boards
+// (2026-07-18) and the discovery keeps growing the registry - 20k was
+// silently truncating it. 40k gives headroom; at ~5KB/job worst case this
+// bounds the cache at roughly 200MB per platform hitting the ceiling, fine
+// for the 16GB VPS (13GB available at the time of the change).
+const PER_PLATFORM_LIMIT = 40000;
 const MAX_DESCRIPTION_CHARS = 5000; // bound memory; scoring keywords sit early in the text
 
 let cache: NormalizedVacancy[] = [];
