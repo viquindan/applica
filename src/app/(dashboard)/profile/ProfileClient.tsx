@@ -16,6 +16,21 @@ function blankEducation() {
   return { institution: '', degree: '', field: '', year: undefined as number | undefined };
 }
 
+function normalizeSkills(value: unknown): Array<{ skill: string; level?: string }> {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (typeof item === 'string') return { skill: item };
+    if (item && typeof item === 'object') {
+      const row = item as { skill?: unknown; name?: unknown; level?: unknown };
+      return {
+        skill: String(row.skill ?? row.name ?? '').trim(),
+        ...(row.level ? { level: String(row.level) } : {}),
+      };
+    }
+    return { skill: '' };
+  }).filter((item) => item.skill.length > 0);
+}
+
 type Tab = 'perfil' | 'cv' | 'experiencia' | 'preferencias';
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'perfil', label: 'Perfil' },
@@ -23,6 +38,41 @@ const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'experiencia', label: 'Experiencia' },
   { key: 'preferencias', label: 'Preferencias' },
 ];
+
+// Same values the onboarding step writes and roleTaxonomy's seniorityMatches
+// expects - only labels are localized (mirrored in the mobile Perfil too).
+const SENIORITY_OPTIONS: Array<[string, string]> = [
+  ['Intern', 'Practicante'], ['Junior', 'Junior'], ['Mid-level', 'Semi senior'],
+  ['Senior', 'Senior'], ['Lead', 'Lead'], ['Manager', 'Manager'],
+  ['Director', 'Director'], ['VP', 'VP'], ['C-Level', 'C-Level'],
+];
+
+// One chip editor for every free-text array the scorer consumes (industries,
+// priority/alert keywords) - same interaction as the existing targetRoles tags.
+function TagInput({ tags, onChange, placeholder }: { tags: string[]; onChange: (tags: string[]) => void; placeholder: string }) {
+  return (
+    <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+      {tags.map((tag, i) => (
+        <span key={i} className="tag">
+          {tag}
+          <button type="button" aria-label={`Quitar ${tag}`} onClick={() => onChange(tags.filter((_, idx) => idx !== i))}></button>
+        </span>
+      ))}
+      <input className="input" style={{ maxWidth: 220, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+        placeholder={placeholder}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') {
+            e.preventDefault();
+            const val = (e.target as HTMLInputElement).value.trim();
+            if (val && !tags.includes(val)) {
+              onChange([...tags, val]);
+              (e.target as HTMLInputElement).value = '';
+            }
+          }
+        }} />
+    </div>
+  );
+}
 
 export default function ProfileClient({ user, profile, resumes }: { user: SafeUser; profile: ProfessionalProfile; resumes: Resume[] }) {
   const router = useRouter();
@@ -68,11 +118,15 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
     salaryMin: user.salaryMin ?? '',
     salaryCurrency: user.salaryCurrency ?? 'USD',
     targetRoles: profile.targetRoles ?? [],
+    targetSeniority: profile.targetSeniority ?? [],
+    targetIndustries: profile.targetIndustries ?? [],
+    priorityKeywords: profile.priorityKeywords ?? [],
+    alertKeywords: profile.alertKeywords ?? [],
     targetCountries: profile.targetCountries ?? [],
     experience: profile.experience ?? [],
     education: profile.education ?? [],
     certifications: profile.certifications ?? [],
-    skills: profile.skills ?? [],
+    skills: normalizeSkills(profile.skills),
     achievements: profile.achievements ?? '',
   });
   // Phone = dial code + number. Split any stored value; ignore junk (e.g. an email
@@ -437,6 +491,60 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="field-group" style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Seniority objetivo</label>
+                <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap' }}>
+                  {SENIORITY_OPTIONS.map(([value, label]) => {
+                    const active = form.targetSeniority.includes(value);
+                    return (
+                      <button key={value} type="button"
+                        onClick={() => setForm({
+                          ...form,
+                          targetSeniority: active
+                            ? form.targetSeniority.filter((s: string) => s !== value)
+                            : [...form.targetSeniority, value],
+                        })}
+                        style={{
+                          padding: '0.3rem 0.75rem', borderRadius: 'var(--radius-full)', fontSize: '0.75rem', fontWeight: 600,
+                          border: `1px solid ${active ? 'var(--gold)' : 'var(--border)'}`,
+                          background: active ? 'var(--gold-dim)' : 'var(--surface)',
+                          color: active ? 'var(--text-gold)' : 'var(--text-3)',
+                          cursor: 'pointer', transition: 'all var(--transition)',
+                        }}>
+                        {label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="field-group" style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Industrias objetivo (vacío = todas)</label>
+                <TagInput
+                  tags={form.targetIndustries}
+                  onChange={(targetIndustries) => setForm({ ...form, targetIndustries })}
+                  placeholder="Ej. Fintech, Salud... Enter para añadir"
+                />
+              </div>
+
+              <div className="field-group" style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Palabras clave prioritarias (suben el puntaje de una vacante)</label>
+                <TagInput
+                  tags={form.priorityKeywords}
+                  onChange={(priorityKeywords) => setForm({ ...form, priorityKeywords })}
+                  placeholder="Ej. React, SaaS... Enter para añadir"
+                />
+              </div>
+
+              <div className="field-group" style={{ marginBottom: '1rem' }}>
+                <label className="field-label">Palabras de alerta (bajan el puntaje o marcan advertencia)</label>
+                <TagInput
+                  tags={form.alertKeywords}
+                  onChange={(alertKeywords) => setForm({ ...form, alertKeywords })}
+                  placeholder="Ej. comisión pura... Enter para añadir"
+                />
               </div>
 
               <div className="field-group">
