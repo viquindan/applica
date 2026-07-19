@@ -63,6 +63,14 @@ export async function PUT(req: NextRequest) {
   if (has(body, 'achievements')) profileUpdate.achievements = body.achievements ?? null;
   if (has(body, 'targetRoles')) profileUpdate.targetRoles = body.targetRoles ?? [];
   if (has(body, 'targetCountries')) profileUpdate.targetCountries = body.targetCountries ?? [];
+  // These four are real fitScorer inputs (seniority component, industry
+  // component, priority/alert keyword adjustments) that until now could only
+  // ever be set during onboarding - no editor could round-trip them because
+  // the endpoint silently dropped them from the payload.
+  if (has(body, 'targetSeniority')) profileUpdate.targetSeniority = body.targetSeniority ?? [];
+  if (has(body, 'targetIndustries')) profileUpdate.targetIndustries = body.targetIndustries ?? [];
+  if (has(body, 'priorityKeywords')) profileUpdate.priorityKeywords = body.priorityKeywords ?? [];
+  if (has(body, 'alertKeywords')) profileUpdate.alertKeywords = body.alertKeywords ?? [];
 
   await Promise.all([
     db.update(users).set(userUpdate).where(eq(users.id, userId)),

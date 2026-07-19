@@ -67,7 +67,9 @@ export type ProfileUser = {
   // Real shape is {language, proficiency}[] (CV parser output), not string[]
   // as this type previously claimed - confirmed against a live API response.
   languages: Language[];
-  workAuthorization: string[];
+  // Real shape is {country, status}[] (schema.ts jsonb), not string[] as this
+  // type previously claimed - eligibility.ts's hasWorkAuthFor() reads both keys.
+  workAuthorization: Array<{ country: string; status: string }>;
   relocationAvailable: boolean;
   // Mirrors src/core/scoring/fitScorer.ts's ScoringProfile.workModalityPrefs
   // EXACTLY - the scorer keys off remoteScope/remoteRegions/hybridLocations/
@@ -97,14 +99,25 @@ export type ProfessionalProfile = {
   // Real shape is {skill, level}[] (CV parser output), not string[] as this
   // type previously claimed - confirmed against a live API response.
   skills: Array<{ skill: string; level?: string }>;
+  // Free text the CV parser fills and expertise.ts feeds into keyword +
+  // semantic matching - not just cover-letter decoration.
+  achievements: string | null;
   targetRoles: string[];
   targetCountries: string[];
+  // All four are direct fitScorer inputs (seniority/industry components,
+  // priority boost, alert penalty) - the API always returned them, the mobile
+  // type just never declared them so no screen could render an editor.
+  targetSeniority: string[];
+  targetIndustries: string[];
+  priorityKeywords: string[];
+  alertKeywords: string[];
 };
 
 export type Resume = {
   id: string;
   label: string;
   filePath: string;
+  version: number;
   isBase: boolean;
   createdAt: string;
 };

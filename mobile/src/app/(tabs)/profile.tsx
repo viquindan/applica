@@ -31,6 +31,8 @@ const PROFICIENCY_LABELS: Record<string, string> = {
   Native: 'Nativo', C2: 'C2', C1: 'C1', B2: 'B2', B1: 'B1', A2: 'A2', A1: 'A1',
 };
 
+type WorkAuth = { country: string; status: string };
+
 type FormState = {
   name: string;
   phone: string;
@@ -40,6 +42,11 @@ type FormState = {
   portfolio: string;
   noticePeriod: string;
   targetRoles: string[];
+  targetSeniority: string[];
+  targetIndustries: string[];
+  priorityKeywords: string[];
+  alertKeywords: string[];
+  achievements: string;
   salaryMin: string;
   salaryCurrency: string;
   acceptsRemote: boolean;
@@ -50,14 +57,21 @@ type FormState = {
   acceptsOnsite: boolean;
   onsiteLocations: string[];
   targetCountries: string[];
+  relocationAvailable: boolean;
+  workAuthorization: WorkAuth[];
   skills: Array<{ skill: string; level?: string }>;
   languages: Language[];
 };
 
+// Tab layout mirrors how the data flows through the product:
+// Perfil = who you are (contact/identity), CV = the source document and what
+// the parser extracted from it, Busqueda = every field the matching engine
+// scores against (roles/seniority/industries/skills/keywords), Preferencias =
+// hard constraints (languages, modality, geography, permits, salary).
 const TABS = [
   { key: 'contact', label: 'Perfil' },
   { key: 'cv', label: 'CV' },
-  { key: 'skills', label: 'Experiencia' },
+  { key: 'search', label: 'Búsqueda' },
   { key: 'prefs', label: 'Preferencias' },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -73,6 +87,11 @@ function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): 
     portfolio: user?.portfolio ?? '',
     noticePeriod: user?.noticePeriod ?? '',
     targetRoles: profile?.targetRoles ?? [],
+    targetSeniority: profile?.targetSeniority ?? [],
+    targetIndustries: profile?.targetIndustries ?? [],
+    priorityKeywords: profile?.priorityKeywords ?? [],
+    alertKeywords: profile?.alertKeywords ?? [],
+    achievements: profile?.achievements ?? '',
     salaryMin: user?.salaryMin != null ? String(user.salaryMin) : '',
     salaryCurrency: user?.salaryCurrency ?? 'USD',
     acceptsRemote: prefs?.acceptsRemote ?? false,
@@ -83,6 +102,8 @@ function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): 
     acceptsOnsite: prefs?.acceptsOnsite ?? false,
     onsiteLocations: prefs?.onsiteLocations ?? [],
     targetCountries: profile?.targetCountries ?? [],
+    relocationAvailable: user?.relocationAvailable ?? false,
+    workAuthorization: user?.workAuthorization ?? [],
     skills: normalizeSkills(profile?.skills),
     languages: user?.languages ?? [],
   };
@@ -161,8 +182,8 @@ export default function ProfileScreen() {
         portfolio: form.portfolio,
         noticePeriod: form.noticePeriod,
         languages: form.languages,
-        workAuthorization: data?.user?.workAuthorization ?? [],
-        relocationAvailable: data?.user?.relocationAvailable ?? false,
+        workAuthorization: form.workAuthorization,
+        relocationAvailable: form.relocationAvailable,
         salaryMin: form.salaryMin ? Number(form.salaryMin) : null,
         salaryCurrency: form.salaryCurrency,
         // Full shape - fitScorer.ts's remoteScope/remoteRegions/hybridLocations/
@@ -180,6 +201,11 @@ export default function ProfileScreen() {
           onsiteLocations: form.onsiteLocations,
         },
         targetRoles: form.targetRoles,
+        targetSeniority: form.targetSeniority,
+        targetIndustries: form.targetIndustries,
+        priorityKeywords: form.priorityKeywords,
+        alertKeywords: form.alertKeywords,
+        achievements: form.achievements.trim() || null,
         targetCountries: form.targetCountries,
         experience: data?.profile?.experience ?? [],
         education: data?.profile?.education ?? [],
@@ -332,13 +358,8 @@ export default function ProfileScreen() {
                   <GradientButton label={uploading ? 'Subiendo...' : 'Subir CV'} onPress={onPickResume} loading={uploading} variant="secondary" />
                 </Section>
 
-              </>
-            ) : null}
-
-            {tab === 'skills' ? (
-              <>
                 {data?.profile?.experience?.length ? (
-                  <Section title="Experiencia">
+                  <Section title="Experiencia (extraída del CV)">
                     {data.profile.experience.map((exp, i) => (
                       <View key={i} style={[styles.readCard, { backgroundColor: theme.backgroundElement }]}>
                         <ThemedText style={styles.readTitle}>{exp.role ?? 'Rol'}</ThemedText>
@@ -367,8 +388,113 @@ export default function ProfileScreen() {
                   </Section>
                 ) : null}
 
+                {data?.profile?.certifications?.length ? (
+                  <Section title="Certificaciones">
+                    <View style={styles.toggleRow}>
+                      {data.profile.certifications.map((cert, i) => (
+                        <View key={i} style={[styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                          <ThemedText style={styles.chipText}>{typeof cert === 'string' ? cert : String(cert)}</ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  </Section>
+                ) : null}
+
+                <Section title="Logros destacados">
+                  <ThemedText style={styles.hint}>
+                    El buscador también usa este texto para el matching. Cuéntanos resultados concretos: cifras, proyectos, reconocimientos.
+                  </ThemedText>
+                  <TextInput
+                    style={[styles.input, styles.multiline, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, color: theme.text }]}
+                    value={form.achievements}
+                    onChangeText={(v) => setForm((f) => ({ ...f, achievements: v }))}
+                    placeholder="Ej. Lideré la migración a la nube que redujo costos 30%..."
+                    placeholderTextColor="#a3a9aa"
+                    multiline
+                    numberOfLines={5}
+                    textAlignVertical="top"
+                  />
+                </Section>
+
+                {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
+                <View style={styles.saveWrap}>
+                  <GradientButton label="Guardar cambios" onPress={onSave} loading={saving} />
+                </View>
+              </>
+            ) : null}
+
+            {tab === 'search' ? (
+              <>
+                <ThemedText style={styles.hint}>
+                  Todo lo de esta pestaña alimenta directamente el buscador: define qué vacantes te mostramos y cómo puntúan.
+                </ThemedText>
+
+                <Section title="Roles objetivo">
+                  <TagEditor
+                    tags={form.targetRoles}
+                    onChange={(targetRoles) => setForm((f) => ({ ...f, targetRoles }))}
+                    placeholder="Ej. Product Manager"
+                    emptyText="Sin roles objetivo todavía."
+                    removeLabel="rol"
+                  />
+                </Section>
+
+                <Section title="Seniority objetivo">
+                  <View style={styles.toggleRow}>
+                    {SENIORITY_OPTIONS.map((s) => (
+                      <ToggleChip
+                        key={s.value}
+                        label={s.label}
+                        active={form.targetSeniority.includes(s.value)}
+                        onPress={() => setForm((f) => ({
+                          ...f,
+                          targetSeniority: f.targetSeniority.includes(s.value)
+                            ? f.targetSeniority.filter((x) => x !== s.value)
+                            : [...f.targetSeniority, s.value],
+                        }))}
+                      />
+                    ))}
+                  </View>
+                </Section>
+
+                <Section title="Industrias objetivo">
+                  <TagEditor
+                    tags={form.targetIndustries}
+                    onChange={(targetIndustries) => setForm((f) => ({ ...f, targetIndustries }))}
+                    placeholder="Ej. Fintech, Salud, Educación"
+                    emptyText="Sin industrias definidas (se buscará en todas)."
+                    removeLabel="industria"
+                  />
+                </Section>
+
                 <Section title="Habilidades">
                   <SkillEditor skills={form.skills} onChange={(skills) => setForm((f) => ({ ...f, skills }))} />
+                </Section>
+
+                <Section title="Palabras clave prioritarias">
+                  <ThemedText style={styles.hint}>
+                    Las vacantes que las mencionen suben de puntaje.
+                  </ThemedText>
+                  <TagEditor
+                    tags={form.priorityKeywords}
+                    onChange={(priorityKeywords) => setForm((f) => ({ ...f, priorityKeywords }))}
+                    placeholder="Ej. React, SaaS, B2B"
+                    emptyText="Sin palabras prioritarias todavía."
+                    removeLabel="palabra clave"
+                  />
+                </Section>
+
+                <Section title="Palabras de alerta">
+                  <ThemedText style={styles.hint}>
+                    Las vacantes que las mencionen bajan de puntaje o se marcan con advertencia.
+                  </ThemedText>
+                  <TagEditor
+                    tags={form.alertKeywords}
+                    onChange={(alertKeywords) => setForm((f) => ({ ...f, alertKeywords }))}
+                    placeholder="Ej. comisión pura, ventas en frío"
+                    emptyText="Sin palabras de alerta todavía."
+                    removeLabel="palabra de alerta"
+                  />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -387,10 +513,6 @@ export default function ProfileScreen() {
                   <CountryInput label="País" value={form.country} onChangeText={(v) => setForm((f) => ({ ...f, country: v }))} />
                   <LabeledInput label="LinkedIn" value={form.linkedin} onChangeText={(v) => setForm((f) => ({ ...f, linkedin: v }))} autoCapitalize="none" />
                   <LabeledInput label="Portafolio" value={form.portfolio} onChangeText={(v) => setForm((f) => ({ ...f, portfolio: v }))} autoCapitalize="none" />
-                </Section>
-
-                <Section title="Roles objetivo">
-                  <RoleEditor roles={form.targetRoles} onChange={(roles) => setForm((f) => ({ ...f, targetRoles: roles }))} />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -471,6 +593,23 @@ export default function ProfileScreen() {
                     locations={form.targetCountries}
                     homeCountry={form.country}
                     onChange={(locs) => setForm((f) => ({ ...f, targetCountries: locs }))}
+                  />
+                </Section>
+
+                <Section title="Reubicación y permisos de trabajo">
+                  <ThemedText style={styles.hint}>
+                    Si tienes permiso de trabajo en otro país (o disposición a reubicarte), el buscador deja de excluir vacantes presenciales o híbridas ahí.
+                  </ThemedText>
+                  <View style={styles.toggleRow}>
+                    <ToggleChip
+                      label="Disponible para reubicarme"
+                      active={form.relocationAvailable}
+                      onPress={() => setForm((f) => ({ ...f, relocationAvailable: !f.relocationAvailable }))}
+                    />
+                  </View>
+                  <WorkAuthEditor
+                    auths={form.workAuthorization}
+                    onChange={(workAuthorization) => setForm((f) => ({ ...f, workAuthorization }))}
                   />
                 </Section>
 
@@ -643,36 +782,111 @@ function LocationList({ title, locations, homeCountry, onChange }: {
   );
 }
 
-function RoleEditor({ roles, onChange }: { roles: string[]; onChange: (roles: string[]) => void }) {
+// Same values the onboarding step (Step2Profile.tsx) writes and
+// roleTaxonomy's seniorityMatches expects - only the labels are localized.
+const SENIORITY_OPTIONS = [
+  { value: 'Intern', label: 'Practicante' },
+  { value: 'Junior', label: 'Junior' },
+  { value: 'Mid-level', label: 'Semi senior' },
+  { value: 'Senior', label: 'Senior' },
+  { value: 'Lead', label: 'Lead' },
+  { value: 'Manager', label: 'Manager' },
+  { value: 'Director', label: 'Director' },
+  { value: 'VP', label: 'VP' },
+  { value: 'C-Level', label: 'C-Level' },
+] as const;
+
+// One chip-list editor for every free-text array the scorer consumes
+// (roles, industries, priority/alert keywords) - identical add/remove
+// interaction everywhere instead of one-off comma-separated inputs.
+function TagEditor({ tags, onChange, placeholder, emptyText, removeLabel }: {
+  tags: string[]; onChange: (tags: string[]) => void;
+  placeholder: string; emptyText: string; removeLabel: string;
+}) {
   const theme = useTheme();
   const [draft, setDraft] = useState('');
 
-  function addRole() {
+  function addTag() {
     const v = draft.trim();
-    if (v && !roles.includes(v)) onChange([...roles, v]);
+    if (v && !tags.includes(v)) onChange([...tags, v]);
     setDraft('');
   }
 
   return (
     <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={styles.toggleRow}>
-        {roles.map((role, i) => (
-          <AnimatedPressable key={i} haptic="light" onPress={() => onChange(roles.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar rol ${role}`} style={[styles.chip, styles.chipActive]}>
-            <ThemedText style={styles.chipTextActive}>{role} ✕</ThemedText>
+        {tags.map((tag, i) => (
+          <AnimatedPressable key={i} haptic="light" onPress={() => onChange(tags.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar ${removeLabel} ${tag}`} style={[styles.chip, styles.chipActive]}>
+            <ThemedText style={styles.chipTextActive}>{tag} ✕</ThemedText>
           </AnimatedPressable>
         ))}
-        {!roles.length ? <ThemedText style={styles.empty}>Sin roles objetivo todavía.</ThemedText> : null}
+        {!tags.length ? <ThemedText style={styles.empty}>{emptyText}</ThemedText> : null}
       </View>
       <View style={styles.addRow}>
         <TextInput
           style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
           value={draft}
           onChangeText={setDraft}
-          placeholder="Ej. Product Manager"
+          placeholder={placeholder}
           placeholderTextColor="#a3a9aa"
-          onSubmitEditing={addRole}
+          onSubmitEditing={addTag}
           returnKeyType="done"
         />
+      </View>
+    </View>
+  );
+}
+
+const WORK_AUTH_STATUSES = ['Ciudadano', 'Residente permanente', 'Visa de trabajo', 'En trámite'];
+
+function WorkAuthEditor({ auths, onChange }: { auths: WorkAuth[]; onChange: (auths: WorkAuth[]) => void }) {
+  const theme = useTheme();
+  const [draftCountry, setDraftCountry] = useState('');
+  const [draftStatus, setDraftStatus] = useState(WORK_AUTH_STATUSES[0]);
+  const query = draftCountry.trim().toLowerCase();
+  const suggestions = query
+    ? COUNTRIES.filter((c) => !auths.some((a) => a.country === c) && c.toLowerCase().includes(query)).slice(0, 6)
+    : [];
+
+  function addAuth(country: string) {
+    onChange([...auths, { country, status: draftStatus }]);
+    setDraftCountry('');
+  }
+
+  return (
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+      <ThemedText style={[styles.subCardTitle, { color: theme.text }]}>Autorización laboral por país</ThemedText>
+      <View style={styles.toggleRow}>
+        {auths.map((auth, i) => (
+          <AnimatedPressable key={i} haptic="light" onPress={() => onChange(auths.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar autorización en ${auth.country}`} style={[styles.chip, styles.chipActive]}>
+            <ThemedText style={styles.chipTextActive}>{auth.country} · {auth.status} ✕</ThemedText>
+          </AnimatedPressable>
+        ))}
+        {!auths.length ? <ThemedText style={styles.empty}>Solo tu país de residencia por ahora.</ThemedText> : null}
+      </View>
+      <View style={[styles.toggleRow, { marginTop: Spacing.two }]}>
+        {WORK_AUTH_STATUSES.map((s) => (
+          <ToggleChip key={s} label={s} active={draftStatus === s} onPress={() => setDraftStatus(s)} />
+        ))}
+      </View>
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
+          value={draftCountry}
+          onChangeText={setDraftCountry}
+          placeholder="Escribe un país..."
+          placeholderTextColor="#a3a9aa"
+          onSubmitEditing={() => { if (suggestions.length === 1) addAuth(suggestions[0]); }}
+        />
+        {suggestions.length > 0 ? (
+          <View style={[styles.suggestionBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+            {suggestions.map((s) => (
+              <AnimatedPressable key={s} haptic="light" onPress={() => addAuth(s)} style={styles.suggestionRow}>
+                <ThemedText style={styles.suggestionText}>{s}</ThemedText>
+              </AnimatedPressable>
+            ))}
+          </View>
+        ) : null}
       </View>
     </View>
   );
@@ -804,6 +1018,7 @@ const styles = StyleSheet.create({
   fieldWrap: { gap: 4 },
   fieldLabel: { fontSize: 12 },
   input: { backgroundColor: '#FFFFFF', borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, fontSize: 14, color: '#1A1C1C', borderWidth: 1, borderColor: '#eeeeed' },
+  multiline: { minHeight: 110, paddingTop: Spacing.two },
   toggleRow: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   chip: { paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: '#f4f3f3', borderWidth: 1, borderColor: '#eeeeed' },
   chipActive: { backgroundColor: Gold, borderColor: Gold },
