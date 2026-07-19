@@ -7,7 +7,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'reac
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getToken } from '@/api/auth';
-import { AVATAR_URL, getProfileData, saveProfile, uploadAvatar } from '@/api/profile';
+import { AVATAR_URL, getProfileData, saveProfile, sendTestPush, uploadAvatar } from '@/api/profile';
 import { activateResume, deleteResume, uploadBaseResume } from '@/api/resumes';
 import { AnimatedPressable } from '@/components/animated-pressable';
 import { GradientButton } from '@/components/gradient-button';
@@ -16,6 +16,7 @@ import { ThemedView } from '@/components/themed-view';
 import { Gold, GoldDim, Gradients, Petrol, Radius, Shadows, Spacing, TextGold } from '@/constants/theme';
 import { useAuth } from '@/hooks/use-auth';
 import { useRefreshOnFocus } from '@/hooks/use-refresh-on-focus';
+import { useTheme } from '@/hooks/use-theme';
 import type { Language, ProfessionalProfile, ProfileUser, Resume } from '@/types';
 import { COUNTRIES } from '@/constants/countries';
 
@@ -31,13 +32,14 @@ const PROFICIENCY_LABELS: Record<string, string> = {
 };
 
 type FormState = {
+  name: string;
   phone: string;
   location: string;
   country: string;
   linkedin: string;
   portfolio: string;
   noticePeriod: string;
-  targetRoles: string;
+  targetRoles: string[];
   salaryMin: string;
   salaryCurrency: string;
   acceptsRemote: boolean;
@@ -53,9 +55,9 @@ type FormState = {
 };
 
 const TABS = [
+  { key: 'contact', label: 'Perfil' },
   { key: 'cv', label: 'CV' },
-  { key: 'skills', label: 'Habilidades' },
-  { key: 'contact', label: 'Contacto' },
+  { key: 'skills', label: 'Experiencia' },
   { key: 'prefs', label: 'Preferencias' },
 ] as const;
 type TabKey = (typeof TABS)[number]['key'];
@@ -63,13 +65,14 @@ type TabKey = (typeof TABS)[number]['key'];
 function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): FormState {
   const prefs = user?.workModalityPrefs;
   return {
+    name: user?.name ?? '',
     phone: user?.phone ?? '',
     location: user?.location ?? '',
     country: user?.country ?? '',
     linkedin: user?.linkedin ?? '',
     portfolio: user?.portfolio ?? '',
     noticePeriod: user?.noticePeriod ?? '',
-    targetRoles: (profile?.targetRoles ?? []).join(', '),
+    targetRoles: profile?.targetRoles ?? [],
     salaryMin: user?.salaryMin != null ? String(user.salaryMin) : '',
     salaryCurrency: user?.salaryCurrency ?? 'USD',
     acceptsRemote: prefs?.acceptsRemote ?? false,
@@ -80,12 +83,28 @@ function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): 
     acceptsOnsite: prefs?.acceptsOnsite ?? false,
     onsiteLocations: prefs?.onsiteLocations ?? [],
     targetCountries: profile?.targetCountries ?? [],
-    skills: profile?.skills ?? [],
+    skills: normalizeSkills(profile?.skills),
     languages: user?.languages ?? [],
   };
 }
 
+function normalizeSkills(value: unknown): Array<{ skill: string; level?: string }> {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (typeof item === 'string') return { skill: item };
+    if (item && typeof item === 'object') {
+      const row = item as { skill?: unknown; name?: unknown; level?: unknown };
+      return {
+        skill: String(row.skill ?? row.name ?? '').trim(),
+        ...(row.level ? { level: String(row.level) } : {}),
+      };
+    }
+    return { skill: '' };
+  }).filter((item) => item.skill.length > 0);
+}
+
 export default function ProfileScreen() {
+  const theme = useTheme();
   const { user: authUser, logout } = useAuth();
   const qc = useQueryClient();
   const { data, isLoading, refetch } = useQuery({ queryKey: ['profile'], queryFn: getProfileData });
@@ -97,7 +116,21 @@ export default function ProfileScreen() {
   const [avatarNonce, setAvatarNonce] = useState(0);
   const [authHeader, setAuthHeader] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
-  const [tab, setTab] = useState<TabKey>('cv');
+  const [tab, setTab] = useState<TabKey>('contact');
+  const [testingPush, setTestingPush] = useState(false);
+
+  async function onSendTestPush() {
+    setTestingPush(true);
+    setMessage(null);
+    try {
+      await sendTestPush();
+      setMessage('Notificación enviada. Debería llegar en unos segundos.');
+    } catch (e) {
+      setMessage(e instanceof Error ? e.message : 'No se pudo enviar la notificación de prueba.');
+    } finally {
+      setTestingPush(false);
+    }
+  }
 
   useEffect(() => {
     if (data) setForm(toForm(data.user, data.profile));
@@ -119,7 +152,7 @@ export default function ProfileScreen() {
       // everything we fetched (experience/education/etc we don't edit here) and
       // only override what this form actually changed.
       await saveProfile({
-        name: data?.user?.name,
+        name: form.name,
         email: data?.user?.email,
         phone: form.phone,
         location: form.location,
@@ -146,7 +179,7 @@ export default function ProfileScreen() {
           acceptsOnsite: form.acceptsOnsite,
           onsiteLocations: form.onsiteLocations,
         },
-        targetRoles: form.targetRoles.split(',').map((r) => r.trim()).filter(Boolean),
+        targetRoles: form.targetRoles,
         targetCountries: form.targetCountries,
         experience: data?.profile?.experience ?? [],
         education: data?.profile?.education ?? [],
@@ -226,7 +259,10 @@ export default function ProfileScreen() {
     qc.invalidateQueries({ queryKey: ['profile'] });
   }
 
-  const activeResume = (data?.resumes ?? []).find((r) => r.isBase);
+  const visibleResumes = (data?.resumes ?? []).filter((resume) => (
+    resume.version === 1 || /\.(pdf|docx?|rtf)$/i.test(resume.label.trim())
+  ));
+  const activeResume = visibleResumes.find((r) => r.isBase);
 
   return (
     <ThemedView style={styles.container}>
@@ -262,21 +298,21 @@ export default function ProfileScreen() {
               )}
             </AnimatedPressable>
             <View>
-              <ThemedText type="subtitle" style={styles.name}>{data?.user?.name ?? authUser?.name}</ThemedText>
-              <ThemedText style={styles.email}>{data?.user?.email ?? authUser?.email}</ThemedText>
+              <ThemedText type="subtitle" style={[styles.name, { color: theme.text }]}>{data?.user?.name ?? authUser?.name}</ThemedText>
+              <ThemedText style={[styles.email, { color: theme.textSecondary }]}>{data?.user?.email ?? authUser?.email}</ThemedText>
             </View>
           </View>
 
           {activeResume ? (
-            <ThemedText style={styles.activeResumeHint} numberOfLines={1}>
+            <ThemedText style={[styles.activeResumeHint, { color: theme.textSecondary }]} numberOfLines={1}>
               La búsqueda usa: {activeResume.label}
             </ThemedText>
           ) : null}
 
           <View style={styles.tabBar}>
             {TABS.map((t) => (
-              <AnimatedPressable key={t.key} haptic="light" onPress={() => setTab(t.key)} style={[styles.tabButton, tab === t.key && styles.tabButtonActive]}>
-                <ThemedText style={[styles.tabButtonText, tab === t.key && styles.tabButtonTextActive]}>{t.label}</ThemedText>
+              <AnimatedPressable key={t.key} haptic="light" onPress={() => setTab(t.key)} style={[styles.tabButton, { backgroundColor: theme.backgroundElement }, tab === t.key && styles.tabButtonActive]}>
+                <ThemedText style={[styles.tabButtonText, { color: theme.textSecondary }, tab === t.key && styles.tabButtonTextActive]}>{t.label}</ThemedText>
               </AnimatedPressable>
             ))}
           </View>
@@ -289,17 +325,22 @@ export default function ProfileScreen() {
             {tab === 'cv' ? (
               <>
                 <Section title="CVs">
-                  {(data?.resumes ?? []).map((r) => (
+                  {visibleResumes.map((r) => (
                     <ResumeRow key={r.id} resume={r} onActivate={() => onActivateResume(r.id)} onDelete={() => onDeleteResume(r.id)} />
                   ))}
-                  {!data?.resumes?.length ? <ThemedText style={styles.empty}>Sin CVs subidos todavía.</ThemedText> : null}
+                  {!visibleResumes.length ? <ThemedText style={[styles.empty, { color: theme.textSecondary }]}>Sin CVs subidos todavía.</ThemedText> : null}
                   <GradientButton label={uploading ? 'Subiendo...' : 'Subir CV'} onPress={onPickResume} loading={uploading} variant="secondary" />
                 </Section>
 
+              </>
+            ) : null}
+
+            {tab === 'skills' ? (
+              <>
                 {data?.profile?.experience?.length ? (
                   <Section title="Experiencia">
                     {data.profile.experience.map((exp, i) => (
-                      <View key={i} style={styles.readCard}>
+                      <View key={i} style={[styles.readCard, { backgroundColor: theme.backgroundElement }]}>
                         <ThemedText style={styles.readTitle}>{exp.role ?? 'Rol'}</ThemedText>
                         <ThemedText style={styles.readSubtitle}>
                           {exp.company}{exp.current ? ' · Actual' : ''}
@@ -318,24 +359,16 @@ export default function ProfileScreen() {
                 {data?.profile?.education?.length ? (
                   <Section title="Educación">
                     {data.profile.education.map((ed, i) => (
-                      <View key={i} style={styles.readCard}>
+                      <View key={i} style={[styles.readCard, { backgroundColor: theme.backgroundElement }]}>
                         <ThemedText style={styles.readTitle}>{ed.degree ?? ed.field ?? 'Título'}</ThemedText>
                         <ThemedText style={styles.readSubtitle}>{ed.institution}{ed.year ? ` · ${ed.year}` : ''}</ThemedText>
                       </View>
                     ))}
                   </Section>
                 ) : null}
-              </>
-            ) : null}
 
-            {tab === 'skills' ? (
-              <>
                 <Section title="Habilidades">
                   <SkillEditor skills={form.skills} onChange={(skills) => setForm((f) => ({ ...f, skills }))} />
-                </Section>
-
-                <Section title="Idiomas">
-                  <LanguageEditor languages={form.languages} onChange={(languages) => setForm((f) => ({ ...f, languages }))} />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -348,6 +381,7 @@ export default function ProfileScreen() {
             {tab === 'contact' ? (
               <>
                 <Section title="Datos de contacto">
+                  <LabeledInput label="Nombre" value={form.name} onChangeText={(v) => setForm((f) => ({ ...f, name: v }))} />
                   <LabeledInput label="Teléfono" value={form.phone} onChangeText={(v) => setForm((f) => ({ ...f, phone: v }))} />
                   <LabeledInput label="Ubicación" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} />
                   <CountryInput label="País" value={form.country} onChangeText={(v) => setForm((f) => ({ ...f, country: v }))} />
@@ -356,12 +390,7 @@ export default function ProfileScreen() {
                 </Section>
 
                 <Section title="Roles objetivo">
-                  <LabeledInput
-                    label="Separados por coma"
-                    value={form.targetRoles}
-                    onChangeText={(v) => setForm((f) => ({ ...f, targetRoles: v }))}
-                    placeholder="Product Manager, Growth Lead"
-                  />
+                  <RoleEditor roles={form.targetRoles} onChange={(roles) => setForm((f) => ({ ...f, targetRoles: roles }))} />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -373,6 +402,10 @@ export default function ProfileScreen() {
 
             {tab === 'prefs' ? (
               <>
+                <Section title="Idiomas">
+                  <LanguageEditor languages={form.languages} onChange={(languages) => setForm((f) => ({ ...f, languages }))} />
+                </Section>
+
                 <Section title="Modalidad de trabajo">
                   <ThemedText style={styles.hint}>
                     Elige todas las que acepten. Presencial e híbrido se limitan a los países que agregues abajo (no podemos asistir a una oficina en un país donde no vivimos ni tenemos permiso de trabajo) - remoto puede ser mundial.
@@ -384,8 +417,8 @@ export default function ProfileScreen() {
                   </View>
 
                   {form.acceptsRemote ? (
-                    <View style={styles.subCard}>
-                      <ThemedText style={styles.subCardTitle}>Alcance remoto</ThemedText>
+                    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+                      <ThemedText style={[styles.subCardTitle, { color: theme.text }]}>Alcance remoto</ThemedText>
                       <View style={styles.toggleRow}>
                         <ToggleChip label="Todo el mundo" active={form.remoteScope === 'worldwide'} onPress={() => setForm((f) => ({ ...f, remoteScope: 'worldwide' }))} />
                         <ToggleChip label="Regiones específicas" active={form.remoteScope === 'regions'} onPress={() => setForm((f) => ({ ...f, remoteScope: 'regions' }))} />
@@ -463,6 +496,15 @@ export default function ProfileScreen() {
                   <GradientButton label="Guardar cambios" onPress={onSave} loading={saving} />
                 </View>
 
+                <View style={styles.saveWrap}>
+                  <GradientButton
+                    label={testingPush ? 'Enviando...' : 'Enviar notificación de prueba'}
+                    onPress={onSendTestPush}
+                    loading={testingPush}
+                    variant="secondary"
+                  />
+                </View>
+
                 <AnimatedPressable haptic="light" onPress={() => logout()}>
                   <ThemedText style={styles.logout}>Cerrar sesión</ThemedText>
                 </AnimatedPressable>
@@ -476,15 +518,17 @@ export default function ProfileScreen() {
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  const theme = useTheme();
   return (
     <View style={styles.section}>
-      <ThemedText style={styles.sectionTitle}>{title}</ThemedText>
+      <ThemedText style={[styles.sectionTitle, { color: theme.textSecondary }]}>{title}</ThemedText>
       {children}
     </View>
   );
 }
 
 function CountryInput({ label, value, onChangeText }: { label: string; value: string; onChangeText: (v: string) => void }) {
+  const theme = useTheme();
   const [draft, setDraft] = useState(value);
   // Sync from outside (e.g. initial profile load) without fighting local typing.
   useEffect(() => { setDraft(value); }, [value]);
@@ -498,16 +542,16 @@ function CountryInput({ label, value, onChangeText }: { label: string; value: st
 
   return (
     <View style={styles.fieldWrap}>
-      <ThemedText style={styles.fieldLabel}>{label}</ThemedText>
+      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{label}</ThemedText>
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, color: theme.text }]}
         value={draft}
         onChangeText={setDraft}
         placeholder="Escribe un país..."
         placeholderTextColor="#a3a9aa"
       />
       {suggestions.length > 0 ? (
-        <View style={styles.suggestionBox}>
+        <View style={[styles.suggestionBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
           {suggestions.map((s) => (
             <AnimatedPressable key={s} haptic="light" onPress={() => onChangeText(s)} style={styles.suggestionRow}>
               <ThemedText style={styles.suggestionText}>{s}</ThemedText>
@@ -520,11 +564,12 @@ function CountryInput({ label, value, onChangeText }: { label: string; value: st
 }
 
 function LabeledInput(props: { label: string; value: string; onChangeText: (v: string) => void; placeholder?: string; autoCapitalize?: 'none' | 'sentences'; keyboardType?: 'default' | 'number-pad' }) {
+  const theme = useTheme();
   return (
     <View style={styles.fieldWrap}>
-      <ThemedText style={styles.fieldLabel}>{props.label}</ThemedText>
+      <ThemedText style={[styles.fieldLabel, { color: theme.textSecondary }]}>{props.label}</ThemedText>
       <TextInput
-        style={styles.input}
+        style={[styles.input, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected, color: theme.text }]}
         value={props.value}
         onChangeText={props.onChangeText}
         placeholder={props.placeholder}
@@ -537,9 +582,10 @@ function LabeledInput(props: { label: string; value: string; onChangeText: (v: s
 }
 
 function ToggleChip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const theme = useTheme();
   return (
-    <AnimatedPressable haptic="light" onPress={onPress} hitSlop={8} style={[styles.chip, active && styles.chipActive]}>
-      <ThemedText style={[styles.chipText, active && styles.chipTextActive]}>{label}</ThemedText>
+    <AnimatedPressable haptic="light" onPress={onPress} hitSlop={8} style={[styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }, active && styles.chipActive]}>
+      <ThemedText style={[styles.chipText, { color: theme.textSecondary }, active && styles.chipTextActive]}>{label}</ThemedText>
     </AnimatedPressable>
   );
 }
@@ -547,6 +593,7 @@ function ToggleChip({ label, active, onPress }: { label: string; active: boolean
 function LocationList({ title, locations, homeCountry, onChange }: {
   title: string; locations: string[]; homeCountry: string; onChange: (locs: string[]) => void;
 }) {
+  const theme = useTheme();
   const [draft, setDraft] = useState('');
   const query = draft.trim().toLowerCase();
   const suggestions = query
@@ -559,8 +606,8 @@ function LocationList({ title, locations, homeCountry, onChange }: {
   }
 
   return (
-    <View style={styles.subCard}>
-      <ThemedText style={styles.subCardTitle}>{title}</ThemedText>
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+      <ThemedText style={[styles.subCardTitle, { color: theme.text }]}>{title}</ThemedText>
       <View style={styles.toggleRow}>
         {locations.map((loc) => (
           <AnimatedPressable key={loc} haptic="light" onPress={() => onChange(locations.filter((l) => l !== loc))} hitSlop={8} accessibilityLabel={`Quitar ${loc}`} style={[styles.chip, styles.chipActive]}>
@@ -575,7 +622,7 @@ function LocationList({ title, locations, homeCountry, onChange }: {
       </View>
       <View style={styles.addRow}>
         <TextInput
-          style={[styles.input, styles.addInput]}
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
           value={draft}
           onChangeText={setDraft}
           placeholder="Escribe un país..."
@@ -583,7 +630,7 @@ function LocationList({ title, locations, homeCountry, onChange }: {
           onSubmitEditing={() => { if (suggestions.length === 1) addCountry(suggestions[0]); }}
         />
         {suggestions.length > 0 ? (
-          <View style={styles.suggestionBox}>
+          <View style={[styles.suggestionBox, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
             {suggestions.map((s) => (
               <AnimatedPressable key={s} haptic="light" onPress={() => addCountry(s)} style={styles.suggestionRow}>
                 <ThemedText style={styles.suggestionText}>{s}</ThemedText>
@@ -591,6 +638,41 @@ function LocationList({ title, locations, homeCountry, onChange }: {
             ))}
           </View>
         ) : null}
+      </View>
+    </View>
+  );
+}
+
+function RoleEditor({ roles, onChange }: { roles: string[]; onChange: (roles: string[]) => void }) {
+  const theme = useTheme();
+  const [draft, setDraft] = useState('');
+
+  function addRole() {
+    const v = draft.trim();
+    if (v && !roles.includes(v)) onChange([...roles, v]);
+    setDraft('');
+  }
+
+  return (
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+      <View style={styles.toggleRow}>
+        {roles.map((role, i) => (
+          <AnimatedPressable key={i} haptic="light" onPress={() => onChange(roles.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar rol ${role}`} style={[styles.chip, styles.chipActive]}>
+            <ThemedText style={styles.chipTextActive}>{role} ✕</ThemedText>
+          </AnimatedPressable>
+        ))}
+        {!roles.length ? <ThemedText style={styles.empty}>Sin roles objetivo todavía.</ThemedText> : null}
+      </View>
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Ej. Product Manager"
+          placeholderTextColor="#a3a9aa"
+          onSubmitEditing={addRole}
+          returnKeyType="done"
+        />
       </View>
     </View>
   );
@@ -604,10 +686,11 @@ const SKILL_LEVEL_LABELS: Record<string, string> = {
 function SkillEditor({ skills, onChange }: {
   skills: Array<{ skill: string; level?: string }>; onChange: (skills: Array<{ skill: string; level?: string }>) => void;
 }) {
+  const theme = useTheme();
   const [draft, setDraft] = useState('');
   const [draftLevel, setDraftLevel] = useState('Intermediate');
   return (
-    <View style={styles.subCard}>
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={styles.toggleRow}>
         {skills.map((s, i) => (
           <AnimatedPressable key={i} haptic="light" onPress={() => onChange(skills.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar habilidad ${s.skill}`} style={[styles.chip, styles.chipActive]}>
@@ -620,7 +703,7 @@ function SkillEditor({ skills, onChange }: {
       </View>
       <View style={styles.addRow}>
         <TextInput
-          style={[styles.input, styles.addInput]}
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
           value={draft}
           onChangeText={setDraft}
           placeholder="Añadir habilidad..."
@@ -641,10 +724,11 @@ function SkillEditor({ skills, onChange }: {
 }
 
 function LanguageEditor({ languages, onChange }: { languages: Language[]; onChange: (langs: Language[]) => void }) {
+  const theme = useTheme();
   const [draftLang, setDraftLang] = useState('English');
   const [draftProf, setDraftProf] = useState('B2');
   return (
-    <View style={styles.subCard}>
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={styles.toggleRow}>
         {languages.map((l, i) => (
           <AnimatedPressable key={i} haptic="light" onPress={() => onChange(languages.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar idioma ${l.language}`} style={[styles.chip, styles.chipActive]}>
@@ -655,7 +739,7 @@ function LanguageEditor({ languages, onChange }: { languages: Language[]; onChan
         ))}
         {!languages.length ? <ThemedText style={styles.empty}>Sin idiomas todavía.</ThemedText> : null}
       </View>
-      <ThemedText style={styles.subCardTitle}>Añadir idioma</ThemedText>
+      <ThemedText style={[styles.subCardTitle, { color: theme.text }]}>Añadir idioma</ThemedText>
       <View style={styles.toggleRow}>
         {LANGUAGE_OPTIONS.map((opt) => (
           <ToggleChip key={opt} label={LANGUAGE_LABELS[opt]} active={draftLang === opt} onPress={() => setDraftLang(opt)} />
@@ -678,14 +762,15 @@ function LanguageEditor({ languages, onChange }: { languages: Language[]; onChan
 }
 
 function ResumeRow({ resume, onActivate, onDelete }: { resume: Resume; onActivate: () => void; onDelete: () => void }) {
+  const theme = useTheme();
   return (
-    <View style={styles.resumeRow}>
-      <ThemedText style={styles.resumeLabel} numberOfLines={1}>{resume.label}</ThemedText>
+    <View style={[styles.resumeRow, { backgroundColor: theme.backgroundElement }]}>
+      <ThemedText style={[styles.resumeLabel, { color: theme.text }]} numberOfLines={1}>{resume.label}</ThemedText>
       {resume.isBase ? (
         <ThemedText style={styles.badgeBase}>Activo</ThemedText>
       ) : (
         <View style={styles.resumeActions}>
-          <ThemedText onPress={onActivate} style={styles.resumeAction}>Activar</ThemedText>
+          <ThemedText onPress={onActivate} style={[styles.resumeAction, { color: theme.text }]}>Activar</ThemedText>
           <ThemedText onPress={onDelete} style={[styles.resumeAction, styles.resumeActionDanger]}>Borrar</ThemedText>
         </View>
       )}
@@ -705,45 +790,45 @@ const styles = StyleSheet.create({
   avatarOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, borderRadius: 28, backgroundColor: 'rgba(0,0,0,0.35)', alignItems: 'center', justifyContent: 'center' },
   avatarEditBadge: { position: 'absolute', bottom: -2, right: -2, width: 20, height: 20, borderRadius: 10, backgroundColor: Petrol, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FAF9F9' },
   avatarEditBadgeText: { color: '#fff', fontSize: 10 },
-  name: { fontSize: 18, color: Petrol },
-  email: { color: '#5c6366', fontSize: 13 },
-  activeResumeHint: { color: '#5c6366', fontSize: 11 },
+  name: { fontSize: 18 },
+  email: { fontSize: 13 },
+  activeResumeHint: { fontSize: 11 },
   tabBar: { flexDirection: 'row', gap: 6, marginTop: Spacing.one },
   tabButton: { flex: 1, minHeight: 44, justifyContent: 'center', paddingVertical: 9, borderRadius: Radius.full, alignItems: 'center', backgroundColor: '#f4f3f3' },
   tabButtonActive: { backgroundColor: Petrol },
-  tabButtonText: { fontSize: 12.5, fontWeight: '700', color: '#5c6366' },
+  tabButtonText: { fontSize: 12.5, fontWeight: '700' },
   tabButtonTextActive: { color: '#FAF9F9' },
   section: { marginTop: Spacing.four, gap: Spacing.two },
-  sectionTitle: { fontSize: 12, fontWeight: '700', color: '#5c6366', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
-  empty: { color: '#5c6366', fontSize: 13, marginTop: Spacing.four, textAlign: 'center' },
+  sectionTitle: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
+  empty: { fontSize: 13, marginTop: Spacing.four, textAlign: 'center' },
   fieldWrap: { gap: 4 },
-  fieldLabel: { fontSize: 12, color: '#5c6366' },
+  fieldLabel: { fontSize: 12 },
   input: { backgroundColor: '#FFFFFF', borderRadius: Radius.sm, paddingHorizontal: Spacing.three, paddingVertical: Spacing.two, fontSize: 14, color: '#1A1C1C', borderWidth: 1, borderColor: '#eeeeed' },
   toggleRow: { flexDirection: 'row', gap: Spacing.two, flexWrap: 'wrap' },
   chip: { paddingHorizontal: Spacing.three, paddingVertical: 8, borderRadius: Radius.full, backgroundColor: '#f4f3f3', borderWidth: 1, borderColor: '#eeeeed' },
   chipActive: { backgroundColor: Gold, borderColor: Gold },
-  chipText: { fontSize: 13, color: '#414849' },
+  chipText: { fontSize: 13 },
   chipTextActive: { color: TextGold, fontWeight: '700' },
-  message: { color: Petrol, fontSize: 13, marginTop: Spacing.three, textAlign: 'center' },
-  hint: { color: '#5c6366', fontSize: 12, lineHeight: 17, marginBottom: 2 },
+  message: { fontSize: 13, marginTop: Spacing.three, textAlign: 'center' },
+  hint: { fontSize: 12, lineHeight: 17, marginBottom: 2 },
   subCard: { backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.three, marginTop: Spacing.two, gap: Spacing.two, borderWidth: 1, borderColor: '#eeeeed' },
-  subCardTitle: { fontSize: 12, fontWeight: '700', color: '#414849' },
+  subCardTitle: { fontSize: 12, fontWeight: '700' },
   addRow: { marginTop: 2 },
   addInput: { fontSize: 13, paddingVertical: 8 },
   suggestionBox: { marginTop: 4, backgroundColor: '#FFFFFF', borderRadius: Radius.sm, borderWidth: 1, borderColor: '#eeeeed', overflow: 'hidden' },
   suggestionRow: { paddingHorizontal: Spacing.three, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#f4f3f3' },
-  suggestionText: { fontSize: 13, color: '#414849' },
+  suggestionText: { fontSize: 13 },
   saveWrap: { marginTop: Spacing.four },
   resumeRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.three, marginBottom: Spacing.two },
-  resumeLabel: { flexShrink: 1, color: '#414849', fontSize: 13 },
+  resumeLabel: { flexShrink: 1, fontSize: 13 },
   badgeBase: { color: TextGold, backgroundColor: GoldDim, fontSize: 11, fontWeight: '700', paddingHorizontal: 8, paddingVertical: 2, borderRadius: Radius.sm, overflow: 'hidden' },
   resumeActions: { flexDirection: 'row', gap: Spacing.two },
   resumeAction: { color: Petrol, fontSize: 12, fontWeight: '600' },
   resumeActionDanger: { color: '#b91c1c' },
   readCard: { backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.three, marginBottom: Spacing.two, gap: 2 },
-  readTitle: { color: Petrol, fontSize: 14, fontWeight: '700' },
-  readSubtitle: { color: '#414849', fontSize: 13 },
-  readMeta: { color: '#5c6366', fontSize: 11 },
-  readBody: { color: '#5c6366', fontSize: 12.5, marginTop: 4, lineHeight: 18 },
+  readTitle: { fontSize: 14, fontWeight: '700' },
+  readSubtitle: { fontSize: 13 },
+  readMeta: { fontSize: 11 },
+  readBody: { fontSize: 12.5, marginTop: 4, lineHeight: 18 },
   logout: { textAlign: 'center', color: '#b91c1c', marginTop: Spacing.six, marginBottom: Spacing.four, fontSize: 14 },
 });

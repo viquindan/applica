@@ -11,6 +11,8 @@ export const getProfileData = () => api.get<ProfileData>('/api/mobile/profile');
 export const saveProfile = (body: Record<string, unknown>) =>
   api.put<{ success: boolean }>('/api/profile', body);
 
+export const sendTestPush = () => api.post<{ success: boolean }>('/api/notifications/test');
+
 // Same WinterCG-fetch FormData workaround as uploadBaseResume (see resumes.ts).
 export async function uploadAvatar(photo: { uri: string; name: string; mimeType?: string | null }): Promise<void> {
   const token = await getToken();
