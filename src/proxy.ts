@@ -57,7 +57,12 @@ export default auth((req) => {
     return NextResponse.redirect(new URL('/b2b-hq', req.url));
   }
 
-  const isPublicRoute = pathname === '/' || pathname === '/terms' || pathname === '/privacy' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || isAdminLoginPage;
+  // '/downloads' is a real deployed path (public/downloads/*, e.g. a test
+  // APK) - unlike '/public' above (dead: Next strips that prefix, no real
+  // URL ever starts with it), files under public/ are served at the ROOT,
+  // so a new public/ subfolder needs its own explicit allow here or it's
+  // gated by login like any other page.
+  const isPublicRoute = pathname === '/' || pathname === '/terms' || pathname === '/privacy' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || pathname.startsWith('/downloads') || isAdminLoginPage;
 
   if (isApi) return NextResponse.next();
   if (pathname === '/home') return NextResponse.redirect(new URL('/applications', req.url));
