@@ -192,8 +192,14 @@ export async function startWorkers() {
       // serves all users). Fallback: live per-platform fetch if the cache is cold.
       let vacancies: Awaited<ReturnType<typeof gatherSearchCandidates>> = [];
       if (isJobCacheFresh()) {
+        // SmartRecruiters is the single largest source (~46k jobs) but is NOT
+        // in the shared cache (its postings need a per-listing detail fetch).
+        // It's searched live here - and unlike the cached platforms we pull
+        // ALL its active boards every run (it only has ~170), not a rotating
+        // 100-board page, so its whole footprint is considered on every
+        // search instead of drifting in and out with the cursor.
         const srTokens = enabledNames.has('smartrecruiters')
-          ? await resolveBoardTokens('smartrecruiters', null, cursorOffset)
+          ? await getActiveAtsBoardTokensBatch('smartrecruiters', 500, 0)
           : [];
         vacancies = await gatherSearchCandidates({ roles, locations, homeCountries, maxAgeDays, acceptsRemote, limit: 200, smartRecruitersTokens: srTokens });
         // Honor explicit per-user platform opt-outs against the shared pool.
