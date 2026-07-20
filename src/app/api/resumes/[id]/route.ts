@@ -53,19 +53,25 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     try {
       extracted = await extractProfileFromCv(resume.textContent);
 
-      // Update profile with extracted data
+      // Update profile with extracted data. Gemini's extraction is NOT
+      // deterministic - the exact same CV text can come back with 0
+      // experience entries on one run and 5 correct ones on the next (found
+      // in production, 2026-07-20). `?? []` always overwrote regardless, so
+      // a flaky run silently wiped real, previously-populated data. Only
+      // overwrite these fields when the new extraction actually found
+      // something.
       if (extracted) {
         await db.update(professionalProfiles)
           .set({
             baseResumeId: id,
-            experience: extracted.experience ?? [],
-            education: extracted.education ?? [],
-            certifications: extracted.certifications ?? [],
-            skills: extracted.skills ?? [],
+            ...(extracted.experience?.length ? { experience: extracted.experience } : {}),
+            ...(extracted.education?.length ? { education: extracted.education } : {}),
+            ...(extracted.certifications?.length ? { certifications: extracted.certifications } : {}),
+            ...(extracted.skills?.length ? { skills: extracted.skills } : {}),
           })
           .where(eq(professionalProfiles.userId, userId));
 
-        if (extracted.languages) {
+        if (extracted.languages?.length) {
            await db.update(users).set({ languages: extracted.languages }).where(eq(users.id, userId));
         }
       }

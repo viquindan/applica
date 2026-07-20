@@ -62,6 +62,15 @@ export async function POST(req: NextRequest) {
     updatedAt: new Date(),
   }).where(eq(professionalProfiles.userId, userId));
 
+  // Real bug found in production (2026-07-20): Gemini's structured extraction
+  // is NOT deterministic - re-running it against the exact same CV text
+  // returned 0 experience entries once, then 5 correct ones the next run.
+  // `extracted.experience || undefined` never caught this because an empty
+  // array is truthy in JS - a flaky run silently wiped a user's real,
+  // previously-populated experience/education/certifications/skills. These
+  // array fields now only overwrite when the new extraction actually found
+  // something; an empty/sparse AI run leaves the existing DB value alone
+  // instead of erasing it.
   await Promise.all([
     db.update(users).set({
       name: extracted.name || undefined,
@@ -70,14 +79,14 @@ export async function POST(req: NextRequest) {
       portfolio: extracted.portfolio || undefined,
       location: extracted.location || undefined,
       country: extracted.country || undefined,
-      languages: extracted.languages || undefined,
+      languages: extracted.languages?.length ? extracted.languages : undefined,
       updatedAt: new Date(),
     }).where(eq(users.id, userId)),
     db.update(professionalProfiles).set({
-      experience: extracted.experience || undefined,
-      education: extracted.education || undefined,
-      certifications: extracted.certifications || undefined,
-      skills: extracted.skills || undefined,
+      experience: extracted.experience?.length ? extracted.experience : undefined,
+      education: extracted.education?.length ? extracted.education : undefined,
+      certifications: extracted.certifications?.length ? extracted.certifications : undefined,
+      skills: extracted.skills?.length ? extracted.skills : undefined,
       achievements: extracted.achievements || undefined,
       updatedAt: new Date(),
     }).where(eq(professionalProfiles.userId, userId)),
