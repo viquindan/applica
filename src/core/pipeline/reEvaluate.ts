@@ -5,7 +5,6 @@ import { scoreVacancy, type NormalizedVacancy } from '../scoring/fitScorer';
 import { evaluateEligibility, formRequiresForeignWorkAuth } from '../scoring/eligibility';
 import { getReusableAnswersMap } from '../memory/memoryStore';
 import { queuePrepareApplicationMaterials } from '../jobs/boss';
-import { trackApplicationPrepared } from '../billing/usageTracker';
 
 /**
  * Re-evaluate a user's stored vacancies against the CURRENT eligibility + scoring
@@ -93,7 +92,8 @@ export async function reEvaluateVacancies(userId: string): Promise<{ checked: nu
         userId, vacancyId: r.id, status: 'draft', mode: 'semi', formAnswers: reusableAnswers,
       }).returning();
       await db.update(vacancies).set({ status: 'generating', updatedAt: new Date() }).where(eq(vacancies.id, r.id));
-      await trackApplicationPrepared(userId);
+      // No quota charge on promotion - preparing is free; the send (swipe) is
+      // what counts against the monthly limit (see the action route).
       await queuePrepareApplicationMaterials(application.id);
       promoted++;
     }

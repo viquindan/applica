@@ -9,7 +9,6 @@ import { maybeSemanticAdjust } from '../scoring/semanticMatch';
 import { getReusableAnswersMap } from '../memory/memoryStore';
 import { queuePrepareApplicationMaterials } from '../jobs/boss';
 import { getUserPlanLimits } from '../billing/planLimits';
-import { getCurrentMonthApplicationCount, trackApplicationPrepared } from '../billing/usageTracker';
 
 /** Guards against garbage salary parses overflowing the integer column. */
 function sanitizeSalary(value?: number | null): number | null {
@@ -18,18 +17,20 @@ function sanitizeSalary(value?: number | null): number | null {
 }
 
 export async function processVacancyForUser(userId: string, vacancy: NormalizedVacancy, context?: {
-  user: any; profile: any; settings: any; planLimits: any; currentCount: number;
+  user: any; profile: any; settings: any; planLimits: any; currentCount?: number;
 }) {
   const planLimits = context?.planLimits ?? await getUserPlanLimits(userId);
-  const currentCount = context?.currentCount ?? await getCurrentMonthApplicationCount(userId);
 
   if (vacancy.platform === 'linkedin' && !planLimits.canUseLinkedInScraper) {
     return { skipped: true, reason: 'linkedin_pro_only' };
   }
 
-  if (currentCount >= planLimits.maxMonthlyApplications) {
-    return { skipped: true, reason: 'limit_reached' };
-  }
+  // NOTE: the monthly-application quota is NOT enforced here anymore. Preparing
+  // materials is automatic background work and must never consume a user's
+  // quota or block the Feed - otherwise a free user gets locked out without
+  // ever applying to anything (real production bug: 83/30 with 0 active apps).
+  // The quota is charged at SEND time instead - see the swipe/approve/assisted
+  // actions in src/app/api/applications/[id]/action/route.ts.
   const [userRows, profileRows, settingsRows, vacancyRows] = await Promise.all([
     context?.user ? Promise.resolve([context.user]) : db.select().from(users).where(eq(users.id, userId)).limit(1),
     context?.profile ? Promise.resolve([context.profile]) : db.select().from(professionalProfiles).where(eq(professionalProfiles.userId, userId)).limit(1),
@@ -141,8 +142,6 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     mode: 'semi',
     formAnswers: reusableAnswers,
   }).returning();
-
-  await trackApplicationPrepared(userId);
 
   await queuePrepareApplicationMaterials(application.id);
   return { vacancyId: storedVacancy.id, created: true, applicationId: application.id };

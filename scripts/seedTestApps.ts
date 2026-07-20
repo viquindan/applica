@@ -58,7 +58,6 @@ async function main() {
   const { vacancies, applications, userSettings } = await import('../src/db/schema');
   const { queuePrepareApplicationMaterials } = await import('../src/core/jobs/boss');
   const { getReusableAnswersMap } = await import('../src/core/memory/memoryStore');
-  const { trackApplicationPrepared } = await import('../src/core/billing/usageTracker');
 
   const [u] = (await db.execute(sql`SELECT u.id FROM users u JOIN professional_profiles p ON p.user_id=u.id LIMIT 1`)).rows as any[];
   const userId = u.id;
@@ -85,7 +84,6 @@ async function main() {
           userId, vacancyId: vac.id, status: 'draft',
           mode: settings?.globalAutomationMode === 'full' ? 'auto' : 'semi', formAnswers: reusable,
         }).returning();
-        await trackApplicationPrepared(userId);
         await queuePrepareApplicationMaterials(app.id);
         added++;
         console.log(`+ [${platform}] ${j.company} - ${j.title.slice(0, 40)}`);

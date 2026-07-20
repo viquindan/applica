@@ -155,10 +155,10 @@ export async function startWorkers() {
       let filteredCount = 0;
 
       const { getUserPlanLimits } = await import('../billing/planLimits');
-      const { getCurrentMonthApplicationCount } = await import('../billing/usageTracker');
       const planLimits = await getUserPlanLimits(userId);
-      const currentCount = await getCurrentMonthApplicationCount(userId);
-      const context = { user, profile, settings, planLimits, currentCount };
+      // Quota is charged at SEND time (swipe), not at preparation - so the
+      // per-user month count is no longer needed to prepare materials.
+      const context = { user, profile, settings, planLimits };
 
       // Resolve a rotating cursor once per run so each platform paginates through
       // its own registry across successive searches.

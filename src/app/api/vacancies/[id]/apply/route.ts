@@ -5,7 +5,6 @@ import { vacancies, applications } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { queuePrepareApplicationMaterials } from '@/core/jobs/boss';
 import { getReusableAnswersMap } from '@/core/memory/memoryStore';
-import { trackApplicationPrepared } from '@/core/billing/usageTracker';
 
 /**
  * "Apply anyway" to a low-score / filtered vacancy the user liked on review.
@@ -37,7 +36,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }).returning();
 
   await db.update(vacancies).set({ status: 'generating', updatedAt: new Date() }).where(eq(vacancies.id, id));
-  await trackApplicationPrepared(userId);
+  // No quota charge here: this only PREPARES the application. The quota is
+  // spent when the user actually sends it (swipe/approve) - see the action route.
   await queuePrepareApplicationMaterials(application.id);
 
   return NextResponse.json({ success: true, applicationId: application.id });

@@ -7,8 +7,30 @@ import { queueProcessApplication, queueRegenerateMaterials, queueAssistedApply }
 import { captureApplicationDecisionLearning } from '@/core/memory/memoryStore';
 import { getLinkedInStatus } from '@/core/automation/linkedinSession';
 import { unresolvedBlockers } from '@/core/automation/blockers';
+import { getUserPlanLimits } from '@/core/billing/planLimits';
+import { getCurrentMonthApplicationCount, trackApplicationSent } from '@/core/billing/usageTracker';
 
 const VALID_ACTIONS = ['approve', 'assisted', 'cancel_assisted', 'mark_applied', 'skip', 'archive', 'regenerate_cv', 'regenerate_letter'];
+
+// The monthly quota is spent HERE - at send time (swipe), not at preparation.
+// approve/assisted/mark_applied all represent the user authorizing a send.
+// Returns an error response if the user is over their plan's monthly cap, or
+// null if they may proceed (and, when they may, records the send).
+const SEND_ACTIONS = new Set(['approve', 'assisted', 'mark_applied']);
+async function chargeMonthlyQuota(userId: string): Promise<NextResponse | null> {
+  const [planLimits, used] = await Promise.all([
+    getUserPlanLimits(userId),
+    getCurrentMonthApplicationCount(userId),
+  ]);
+  if (used >= planLimits.maxMonthlyApplications) {
+    return NextResponse.json({
+      error: `Alcanzaste tu límite mensual de ${planLimits.maxMonthlyApplications} aplicaciones. Se renueva el primer día del mes.`,
+      limitReached: true,
+    }, { status: 429 });
+  }
+  await trackApplicationSent(userId);
+  return null;
+}
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getAuthUserId(req);
@@ -30,6 +52,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     location: vacancies.location,
     platform: vacancies.platform,
   }).from(vacancies).where(eq(vacancies.id, app.vacancyId)).limit(1);
+
+  // Charge the monthly quota once, at the moment of a real send - only when
+  // the app is moving OUT of a not-yet-sent state (so a retry on an already
+  // approved/submitted app never double-charges; those retries also 409 in
+  // their own branches below).
+  if (SEND_ACTIONS.has(action) && app.status !== 'submitted' && app.status !== 'approved') {
+    const quotaError = await chargeMonthlyQuota(userId);
+    if (quotaError) return quotaError;
+  }
 
   // "Ya apliqué" - the user applied manually. ALWAYS mark as submitted/manual,
   // regardless of platform or LinkedIn connection (never triggers auto-apply).
