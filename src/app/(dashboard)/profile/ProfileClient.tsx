@@ -31,11 +31,15 @@ function normalizeSkills(value: unknown): Array<{ skill: string; level?: string 
   }).filter((item) => item.skill.length > 0);
 }
 
-type Tab = 'perfil' | 'cv' | 'experiencia' | 'preferencias';
+// Same 4 tabs, same order and grouping as the mobile Perfil screen (see
+// mobile/src/app/(tabs)/profile.tsx) - Perfil=identidad, CV=documento fuente
+// + lo que el parser extrajo, Busqueda=TODO lo que fitScorer consume,
+// Preferencias=restricciones duras. Keep these in lockstep by hand.
+type Tab = 'perfil' | 'cv' | 'busqueda' | 'preferencias';
 const TABS: Array<{ key: Tab; label: string }> = [
   { key: 'perfil', label: 'Perfil' },
   { key: 'cv', label: 'CV' },
-  { key: 'experiencia', label: 'Experiencia' },
+  { key: 'busqueda', label: 'Búsqueda' },
   { key: 'preferencias', label: 'Preferencias' },
 ];
 
@@ -310,6 +314,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
 
       <form onSubmit={save}>
         {tab === 'cv' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
           <div className="card" style={{ display: 'flex', flexDirection: 'column', gap: '1rem', maxWidth: 640 }}>
             <div className="card-label">Portafolio de CV</div>
             <p style={{ fontSize: '.78rem', color: 'var(--text-3)', margin: '-.5rem 0 0' }}>
@@ -414,43 +419,134 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
               </div>
             )}
           </div>
+
+          <div className="card">
+            <div className="card-label">Experiencia</div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setForm({ ...form, experience: [...form.experience, blankExperience()] })}>+ Añadir experiencia</button>
+            {form.experience.map((exp, index) => (
+              <div key={index} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                <div className="grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
+                  <div className="field-group">
+                    <label className="field-label">Empresa</label>
+                    <input className="input" placeholder="Empresa" value={exp.company} onChange={(e) => {
+                      const experience = [...form.experience]; experience[index] = { ...exp, company: e.target.value }; setForm({ ...form, experience });
+                    }} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Rol</label>
+                    <input className="input" placeholder="Rol" value={exp.role} onChange={(e) => {
+                      const experience = [...form.experience]; experience[index] = { ...exp, role: e.target.value }; setForm({ ...form, experience });
+                    }} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Fecha inicio</label>
+                    <input type="month" className="input" value={exp.startDate} onChange={(e) => {
+                      const experience = [...form.experience]; experience[index] = { ...exp, startDate: e.target.value }; setForm({ ...form, experience });
+                    }} />
+                  </div>
+                  <div className="field-group">
+                    <label className="field-label">Fecha fin</label>
+                    <input type="month" className="input" value={exp.endDate} disabled={exp.current} onChange={(e) => {
+                      const experience = [...form.experience]; experience[index] = { ...exp, endDate: e.target.value }; setForm({ ...form, experience });
+                    }} />
+                    <label className="toggle-wrapper" style={{ marginTop: '0.5rem' }}>
+                      <div className={`toggle ${exp.current ? 'on' : ''}`} onClick={() => {
+                        const experience = [...form.experience]; experience[index] = { ...exp, current: !exp.current }; setForm({ ...form, experience });
+                      }} style={{ width: 32, height: 18 }} />
+                      <span className="toggle-label" style={{ fontSize: '0.75rem' }}>Trabajo actual</span>
+                    </label>
+                  </div>
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Descripción y logros</label>
+                  <textarea className="textarea" placeholder="Descripción y logros" value={exp.description} onChange={(e) => {
+                    const experience = [...form.experience]; experience[index] = { ...exp, description: e.target.value }; setForm({ ...form, experience });
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <div className="card-label">Educación y credenciales</div>
+            <button type="button" className="btn btn-secondary btn-sm" onClick={() => setForm({ ...form, education: [...form.education, blankEducation()] })}>+ Añadir educación</button>
+            {form.education.map((edu, index) => (
+              <div key={index} className="grid-2" style={{ gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
+                <div className="field-group">
+                  <label className="field-label">Institución</label>
+                  <input className="input" placeholder="Institución" value={edu.institution} onChange={(e) => {
+                    const education = [...form.education]; education[index] = { ...edu, institution: e.target.value }; setForm({ ...form, education });
+                  }} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Título</label>
+                  <input className="input" placeholder="Título" value={edu.degree} onChange={(e) => {
+                    const education = [...form.education]; education[index] = { ...edu, degree: e.target.value }; setForm({ ...form, education });
+                  }} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Campo de estudio (ej. Finanzas, Medicina)</label>
+                  <input className="input" placeholder="Campo de estudio" value={edu.field} onChange={(e) => {
+                    const education = [...form.education]; education[index] = { ...edu, field: e.target.value }; setForm({ ...form, education });
+                  }} />
+                </div>
+                <div className="field-group">
+                  <label className="field-label">Año de graduación</label>
+                  <input type="number" className="input" placeholder="Año" value={edu.year || ''} onChange={(e) => {
+                    const education = [...form.education]; education[index] = { ...edu, year: parseInt(e.target.value) || undefined }; setForm({ ...form, education });
+                  }} />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="card">
+            <div className="card-label">Logros</div>
+            <textarea className="textarea" value={form.achievements} onChange={(e) => setForm({ ...form, achievements: e.target.value })} placeholder="Logros que Applica debería recordar al preparar aplicaciones" />
+          </div>
+          </div>
         )}
 
         {tab === 'perfil' && (
-          <div className="grid-2" style={{ gap: '1.5rem', alignItems: 'start' }}>
-            <div className="card">
-              <div className="card-label">Identidad y contacto</div>
-              <div className="grid-2" style={{ gap: '1rem' }}>
-                {[
-                  ['name', 'Nombre completo', true],
-                  ['email', 'Email (para tus postulaciones)', true],
-                  ['linkedin', 'LinkedIn', false],
-                  ['portfolio', 'Portafolio', false],
-                ].map(([key, label, isRequired]) => (
-                  <div className="field-group" key={key as string}>
-                    <label className="field-label">{label as string}{isRequired ? ' *' : ''}</label>
-                    <input className="input" type={key === 'email' ? 'email' : 'text'} required={isRequired as boolean} value={(form as any)[key as string]} onChange={(e) => setForm({ ...form, [key as string]: e.target.value })} />
-                  </div>
-                ))}
-                <div className="field-group">
-                  <label className="field-label">Teléfono</label>
-                  <div style={{ display: 'flex', gap: '.5rem' }}>
-                    <select className="select" value={dial} onChange={(e) => setPhone(e.target.value, phoneNum)} style={{ flex: '0 0 auto', width: 150 }}>
-                      {DIAL_CODES.map(([country, code]) => <option key={country} value={code}>{code} {country}</option>)}
-                    </select>
-                    <input className="input" type="tel" inputMode="tel" placeholder="6000-0000" value={phoneNum} onChange={(e) => setPhone(dial, e.target.value.replace(/[^\d\s-]/g, ''))} style={{ flex: 1 }} />
-                  </div>
+          <div className="card" style={{ maxWidth: 640 }}>
+            <div className="card-label">Identidad y contacto</div>
+            <div className="grid-2" style={{ gap: '1rem' }}>
+              {[
+                ['name', 'Nombre completo', true],
+                ['email', 'Email (para tus postulaciones)', true],
+                ['linkedin', 'LinkedIn', false],
+                ['portfolio', 'Portafolio', false],
+              ].map(([key, label, isRequired]) => (
+                <div className="field-group" key={key as string}>
+                  <label className="field-label">{label as string}{isRequired ? ' *' : ''}</label>
+                  <input className="input" type={key === 'email' ? 'email' : 'text'} required={isRequired as boolean} value={(form as any)[key as string]} onChange={(e) => setForm({ ...form, [key as string]: e.target.value })} />
                 </div>
-                <div className="field-group">
-                  <label className="field-label">País de residencia</label>
-                  <select className="select" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>
-                    <option value="">Selecciona un país...</option>
-                    {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+              ))}
+              <div className="field-group">
+                <label className="field-label">Teléfono</label>
+                <div style={{ display: 'flex', gap: '.5rem' }}>
+                  <select className="select" value={dial} onChange={(e) => setPhone(e.target.value, phoneNum)} style={{ flex: '0 0 auto', width: 150 }}>
+                    {DIAL_CODES.map(([country, code]) => <option key={country} value={code}>{code} {country}</option>)}
                   </select>
+                  <input className="input" type="tel" inputMode="tel" placeholder="6000-0000" value={phoneNum} onChange={(e) => setPhone(dial, e.target.value.replace(/[^\d\s-]/g, ''))} style={{ flex: 1 }} />
                 </div>
               </div>
+              <div className="field-group">
+                <label className="field-label">País de residencia</label>
+                <select className="select" value={form.country} onChange={(e) => setForm({ ...form, country: e.target.value })}>
+                  <option value="">Selecciona un país...</option>
+                  {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
             </div>
+          </div>
+        )}
 
+        {tab === 'busqueda' && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            <p style={{ fontSize: '.8rem', color: 'var(--text-3)', margin: 0 }}>
+              Todo lo de esta pestaña alimenta directamente el buscador: define qué vacantes te mostramos y cómo puntúan.
+            </p>
             <div className="card">
               <div className="card-label">Roles y Expectativas</div>
               <div className="field-group" style={{ marginBottom: '1rem' }}>
@@ -570,90 +666,6 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                 </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {tab === 'experiencia' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-            <div className="card">
-              <div className="card-label">Experiencia</div>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setForm({ ...form, experience: [...form.experience, blankExperience()] })}>+ Añadir experiencia</button>
-              {form.experience.map((exp, index) => (
-                <div key={index} style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                  <div className="grid-2" style={{ gap: '1rem', marginBottom: '1rem' }}>
-                    <div className="field-group">
-                      <label className="field-label">Empresa</label>
-                      <input className="input" placeholder="Empresa" value={exp.company} onChange={(e) => {
-                        const experience = [...form.experience]; experience[index] = { ...exp, company: e.target.value }; setForm({ ...form, experience });
-                      }} />
-                    </div>
-                    <div className="field-group">
-                      <label className="field-label">Rol</label>
-                      <input className="input" placeholder="Rol" value={exp.role} onChange={(e) => {
-                        const experience = [...form.experience]; experience[index] = { ...exp, role: e.target.value }; setForm({ ...form, experience });
-                      }} />
-                    </div>
-                    <div className="field-group">
-                      <label className="field-label">Fecha inicio</label>
-                      <input type="month" className="input" value={exp.startDate} onChange={(e) => {
-                        const experience = [...form.experience]; experience[index] = { ...exp, startDate: e.target.value }; setForm({ ...form, experience });
-                      }} />
-                    </div>
-                    <div className="field-group">
-                      <label className="field-label">Fecha fin</label>
-                      <input type="month" className="input" value={exp.endDate} disabled={exp.current} onChange={(e) => {
-                        const experience = [...form.experience]; experience[index] = { ...exp, endDate: e.target.value }; setForm({ ...form, experience });
-                      }} />
-                      <label className="toggle-wrapper" style={{ marginTop: '0.5rem' }}>
-                        <div className={`toggle ${exp.current ? 'on' : ''}`} onClick={() => {
-                          const experience = [...form.experience]; experience[index] = { ...exp, current: !exp.current }; setForm({ ...form, experience });
-                        }} style={{ width: 32, height: 18 }} />
-                        <span className="toggle-label" style={{ fontSize: '0.75rem' }}>Trabajo actual</span>
-                      </label>
-                    </div>
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">Descripción y logros</label>
-                    <textarea className="textarea" placeholder="Descripción y logros" value={exp.description} onChange={(e) => {
-                      const experience = [...form.experience]; experience[index] = { ...exp, description: e.target.value }; setForm({ ...form, experience });
-                    }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <div className="card-label">Educación y credenciales</div>
-              <button type="button" className="btn btn-secondary btn-sm" onClick={() => setForm({ ...form, education: [...form.education, blankEducation()] })}>+ Añadir educación</button>
-              {form.education.map((edu, index) => (
-                <div key={index} className="grid-2" style={{ gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border)' }}>
-                  <div className="field-group">
-                    <label className="field-label">Institución</label>
-                    <input className="input" placeholder="Institución" value={edu.institution} onChange={(e) => {
-                      const education = [...form.education]; education[index] = { ...edu, institution: e.target.value }; setForm({ ...form, education });
-                    }} />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">Título</label>
-                    <input className="input" placeholder="Título" value={edu.degree} onChange={(e) => {
-                      const education = [...form.education]; education[index] = { ...edu, degree: e.target.value }; setForm({ ...form, education });
-                    }} />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">Campo de estudio (ej. Finanzas, Medicina)</label>
-                    <input className="input" placeholder="Campo de estudio" value={edu.field} onChange={(e) => {
-                      const education = [...form.education]; education[index] = { ...edu, field: e.target.value }; setForm({ ...form, education });
-                    }} />
-                  </div>
-                  <div className="field-group">
-                    <label className="field-label">Año de graduación</label>
-                    <input type="number" className="input" placeholder="Año" value={edu.year || ''} onChange={(e) => {
-                      const education = [...form.education]; education[index] = { ...edu, year: parseInt(e.target.value) || undefined }; setForm({ ...form, education });
-                    }} />
-                  </div>
-                </div>
-              ))}
-            </div>
 
             <div className="card">
               <div className="card-label">Habilidades</div>
@@ -682,11 +694,6 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                     }
                   }} />
               </div>
-            </div>
-
-            <div className="card">
-              <div className="card-label">Logros</div>
-              <textarea className="textarea" value={form.achievements} onChange={(e) => setForm({ ...form, achievements: e.target.value })} placeholder="Logros que Applica debería recordar al preparar aplicaciones" />
             </div>
           </div>
         )}
