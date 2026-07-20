@@ -15,7 +15,7 @@ export default async function ProfilePage() {
     // (found and fixed for the mobile equivalent of this query earlier).
     db.select({
       id: users.id, name: users.name, email: users.email, avatarPath: users.avatarPath,
-      phone: users.phone, linkedin: users.linkedin, portfolio: users.portfolio,
+      phone: users.phone, linkedin: users.linkedin, portfolio: users.portfolio, portfolioLinks: users.portfolioLinks,
       location: users.location, country: users.country, languages: users.languages,
       workAuthorization: users.workAuthorization, relocationAvailable: users.relocationAvailable,
       workModality: users.workModality, workModalityPrefs: users.workModalityPrefs,
@@ -37,5 +37,11 @@ export default async function ProfilePage() {
       .where(and(eq(resumes.userId, userId), eq(resumes.isBase, true)))
       .orderBy(desc(resumes.createdAt)),
   ]);
-  return <ProfileClient user={user} profile={profile} resumes={resumeVersions} />;
+  // One-time soft migration for display only (see the same fallback in
+  // GET /api/mobile/profile) - never written back here.
+  const portfolioLinks = user.portfolioLinks?.length
+    ? user.portfolioLinks
+    : (user.portfolio ? user.portfolio.split(',').map((s) => s.trim()).filter(Boolean) : []);
+
+  return <ProfileClient user={{ ...user, portfolioLinks }} profile={profile} resumes={resumeVersions} />;
 }

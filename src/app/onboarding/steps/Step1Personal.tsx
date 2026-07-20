@@ -16,7 +16,13 @@ const LANGUAGES = [
   { value: 'Japanese', label: 'Japanese (日本語)' },
 ];
 const PROFICIENCY_LEVELS = ['Native', 'C2', 'C1', 'B2', 'B1', 'A2', 'A1'];
-const NOTICE_OPTIONS = ['Inmediato', '2 semanas', '1 mes', '2 meses', '3 meses', 'Por definir'];
+// Same option set used in the Perfil "Preferencias" tab (web and mobile) -
+// this is a free-text varchar shared by all three surfaces, and each one
+// used to offer a different set of values ("2 semanas" vs "1 semana" only
+// existing on one side, mobile asking for a raw day count instead of any of
+// these) - keep this list in lockstep with ProfileClient.tsx's select and
+// mobile/src/app/(tabs)/profile.tsx's NOTICE_PERIOD_OPTIONS.
+const NOTICE_OPTIONS = ['Inmediato', '1 semana', '2 semanas', '1 mes', '2 meses', '3 meses', 'Por definir'];
 const REGIONS = ['Norteamérica', 'LATAM', 'Europa', 'Asia', 'África', 'Oceanía', 'Remoto Global'];
 
 export default function Step1Personal({ data, onNext, onBack, saving, isLastStep }: { data: any; onNext: (d: any) => void; onBack: () => void; saving: boolean; isLastStep?: boolean }) {

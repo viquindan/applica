@@ -3,11 +3,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Linking, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { getToken } from '@/api/auth';
-import { AVATAR_URL, getProfileData, saveProfile, sendTestPush, uploadAvatar } from '@/api/profile';
+import { AVATAR_URL, getProfileData, saveProfile, uploadAvatar } from '@/api/profile';
 import { activateResume, deleteResume, uploadBaseResume } from '@/api/resumes';
 import { AnimatedPressable } from '@/components/animated-pressable';
 import { GradientButton } from '@/components/gradient-button';
@@ -21,6 +21,11 @@ import type { Language, ProfessionalProfile, ProfileUser, Resume } from '@/types
 import { COUNTRIES } from '@/constants/countries';
 
 const REMOTE_REGIONS = ['Europa', 'América del Norte', 'América Latina', 'Asia', 'Medio Oriente', 'África', 'Oceanía'];
+// Same varchar field, same option set as onboarding (Step1Personal.tsx) and
+// the web Perfil "Preferencias" tab - previously mobile asked for a raw day
+// count while the other two used a dropdown of natural-language values, so
+// whichever surface a user touched last stored a totally different format.
+const NOTICE_PERIOD_OPTIONS = ['Inmediato', '1 semana', '2 semanas', '1 mes', '2 meses', '3 meses', 'Por definir'];
 const LANGUAGE_OPTIONS = ['Spanish', 'English', 'French', 'Portuguese', 'German', 'Italian', 'Mandarin', 'Japanese', 'Other'];
 const LANGUAGE_LABELS: Record<string, string> = {
   Spanish: 'Español', English: 'Inglés', French: 'Francés', Portuguese: 'Portugués',
@@ -39,7 +44,7 @@ type FormState = {
   location: string;
   country: string;
   linkedin: string;
-  portfolio: string;
+  portfolioLinks: string[];
   noticePeriod: string;
   targetRoles: string[];
   targetSeniority: string[];
@@ -84,7 +89,7 @@ function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): 
     location: user?.location ?? '',
     country: user?.country ?? '',
     linkedin: user?.linkedin ?? '',
-    portfolio: user?.portfolio ?? '',
+    portfolioLinks: user?.portfolioLinks ?? [],
     noticePeriod: user?.noticePeriod ?? '',
     targetRoles: profile?.targetRoles ?? [],
     targetSeniority: profile?.targetSeniority ?? [],
@@ -138,20 +143,6 @@ export default function ProfileScreen() {
   const [authHeader, setAuthHeader] = useState<Record<string, string>>({});
   const [message, setMessage] = useState<string | null>(null);
   const [tab, setTab] = useState<TabKey>('contact');
-  const [testingPush, setTestingPush] = useState(false);
-
-  async function onSendTestPush() {
-    setTestingPush(true);
-    setMessage(null);
-    try {
-      await sendTestPush();
-      setMessage('Notificación enviada. Debería llegar en unos segundos.');
-    } catch (e) {
-      setMessage(e instanceof Error ? e.message : 'No se pudo enviar la notificación de prueba.');
-    } finally {
-      setTestingPush(false);
-    }
-  }
 
   useEffect(() => {
     if (data) setForm(toForm(data.user, data.profile));
@@ -179,7 +170,7 @@ export default function ProfileScreen() {
         location: form.location,
         country: form.country,
         linkedin: form.linkedin,
-        portfolio: form.portfolio,
+        portfolioLinks: form.portfolioLinks,
         noticePeriod: form.noticePeriod,
         languages: form.languages,
         workAuthorization: form.workAuthorization,
@@ -512,7 +503,13 @@ export default function ProfileScreen() {
                   <LabeledInput label="Ubicación" value={form.location} onChangeText={(v) => setForm((f) => ({ ...f, location: v }))} />
                   <CountryInput label="País" value={form.country} onChangeText={(v) => setForm((f) => ({ ...f, country: v }))} />
                   <LabeledInput label="LinkedIn" value={form.linkedin} onChangeText={(v) => setForm((f) => ({ ...f, linkedin: v }))} autoCapitalize="none" />
-                  <LabeledInput label="Portafolio" value={form.portfolio} onChangeText={(v) => setForm((f) => ({ ...f, portfolio: v }))} autoCapitalize="none" />
+                </Section>
+
+                <Section title="Portafolio">
+                  <ThemedText style={styles.hint}>
+                    Cada enlace es tocable - úsalo para verificar que apunte al sitio correcto.
+                  </ThemedText>
+                  <UrlEditor links={form.portfolioLinks} onChange={(portfolioLinks) => setForm((f) => ({ ...f, portfolioLinks }))} />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -621,27 +618,24 @@ export default function ProfileScreen() {
                     keyboardType="number-pad"
                     placeholder="Ej. 5000"
                   />
-                  <LabeledInput
-                    label="Periodo de aviso (días)"
-                    value={form.noticePeriod}
-                    onChangeText={(v) => setForm((f) => ({ ...f, noticePeriod: v }))}
-                    keyboardType="number-pad"
-                    placeholder="Ej. 15"
-                  />
+                  <View style={styles.fieldWrap}>
+                    <ThemedText themeColor="textSecondary" style={styles.fieldLabel}>Periodo de aviso</ThemedText>
+                    <View style={styles.toggleRow}>
+                      {NOTICE_PERIOD_OPTIONS.map((opt) => (
+                        <ToggleChip
+                          key={opt}
+                          label={opt}
+                          active={form.noticePeriod === opt}
+                          onPress={() => setForm((f) => ({ ...f, noticePeriod: opt }))}
+                        />
+                      ))}
+                    </View>
+                  </View>
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
                 <View style={styles.saveWrap}>
                   <GradientButton label="Guardar cambios" onPress={onSave} loading={saving} />
-                </View>
-
-                <View style={styles.saveWrap}>
-                  <GradientButton
-                    label={testingPush ? 'Enviando...' : 'Enviar notificación de prueba'}
-                    onPress={onSendTestPush}
-                    loading={testingPush}
-                    variant="secondary"
-                  />
                 </View>
 
                 <AnimatedPressable haptic="light" onPress={() => logout()}>
@@ -666,17 +660,27 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
+// Country names carry accents ("Panamá", "Perú") but a phone keyboard rarely
+// types them - a plain "panama" query against "panamá" never matched
+// (accented á != plain a in a substring check), so suggestions silently
+// never appeared for most accented countries. Every country search below
+// strips diacritics on both sides before comparing.
+const DIACRITIC_MARKS_RX = new RegExp('[\\u0300-\\u036f]', 'g');
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(DIACRITIC_MARKS_RX, '');
+}
+
 function CountryInput({ label, value, onChangeText }: { label: string; value: string; onChangeText: (v: string) => void }) {
   const theme = useTheme();
   const [draft, setDraft] = useState(value);
   // Sync from outside (e.g. initial profile load) without fighting local typing.
   useEffect(() => { setDraft(value); }, [value]);
 
-  const query = draft.trim().toLowerCase();
+  const query = stripAccents(draft.trim().toLowerCase());
   // Never gated on focus/blur: blur fires before a tap on a suggestion
   // registers and would unmount the list before the press completes.
   const suggestions = draft !== value && query
-    ? COUNTRIES.filter((c) => c.toLowerCase().includes(query)).slice(0, 6)
+    ? COUNTRIES.filter((c) => stripAccents(c.toLowerCase()).includes(query)).slice(0, 6)
     : [];
 
   return (
@@ -734,9 +738,9 @@ function LocationList({ title, locations, homeCountry, onChange }: {
 }) {
   const theme = useTheme();
   const [draft, setDraft] = useState('');
-  const query = draft.trim().toLowerCase();
+  const query = stripAccents(draft.trim().toLowerCase());
   const suggestions = query
-    ? COUNTRIES.filter((c) => !locations.includes(c) && c.toLowerCase().includes(query)).slice(0, 6)
+    ? COUNTRIES.filter((c) => !locations.includes(c) && stripAccents(c.toLowerCase()).includes(query)).slice(0, 6)
     : [];
 
   function addCountry(country: string) {
@@ -799,6 +803,61 @@ const SENIORITY_OPTIONS = [
 // One chip-list editor for every free-text array the scorer consumes
 // (roles, industries, priority/alert keywords) - identical add/remove
 // interaction everywhere instead of one-off comma-separated inputs.
+// Reported bug (2026-07-18): a real user's 3 portfolio links were jammed
+// into one comma-separated text field, unreadable and impossible to verify.
+// Each link here gets its own row - tapping the URL opens it (to confirm it
+// really goes where intended), tapping ✕ removes it. Two separate tap
+// targets on purpose: a single chip can't both open AND remove.
+function normalizeUrl(value: string): string {
+  const v = value.trim();
+  if (!v) return v;
+  return /^https?:\/\//i.test(v) ? v : `https://${v}`;
+}
+
+function UrlEditor({ links, onChange }: { links: string[]; onChange: (links: string[]) => void }) {
+  const theme = useTheme();
+  const [draft, setDraft] = useState('');
+
+  function addLink() {
+    const v = draft.trim();
+    if (v && !links.includes(v)) onChange([...links, v]);
+    setDraft('');
+  }
+
+  return (
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+      {links.map((link, i) => (
+        <View key={i} style={styles.urlRow}>
+          <ThemedText
+            themeColor="text"
+            style={styles.urlText}
+            numberOfLines={1}
+            onPress={() => Linking.openURL(normalizeUrl(link)).catch(() => {})}>
+            {link}
+          </ThemedText>
+          <AnimatedPressable haptic="light" onPress={() => onChange(links.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar enlace ${link}`}>
+            <ThemedText themeColor="textSecondary" style={styles.urlRemove}>✕</ThemedText>
+          </AnimatedPressable>
+        </View>
+      ))}
+      {!links.length ? <ThemedText style={styles.empty}>Sin enlaces todavía.</ThemedText> : null}
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
+          value={draft}
+          onChangeText={setDraft}
+          placeholder="Ej. portafolio.com"
+          placeholderTextColor="#a3a9aa"
+          autoCapitalize="none"
+          keyboardType="url"
+          onSubmitEditing={addLink}
+          returnKeyType="done"
+        />
+      </View>
+    </View>
+  );
+}
+
 function TagEditor({ tags, onChange, placeholder, emptyText, removeLabel }: {
   tags: string[]; onChange: (tags: string[]) => void;
   placeholder: string; emptyText: string; removeLabel: string;
@@ -843,9 +902,9 @@ function WorkAuthEditor({ auths, onChange }: { auths: WorkAuth[]; onChange: (aut
   const theme = useTheme();
   const [draftCountry, setDraftCountry] = useState('');
   const [draftStatus, setDraftStatus] = useState(WORK_AUTH_STATUSES[0]);
-  const query = draftCountry.trim().toLowerCase();
+  const query = stripAccents(draftCountry.trim().toLowerCase());
   const suggestions = query
-    ? COUNTRIES.filter((c) => !auths.some((a) => a.country === c) && c.toLowerCase().includes(query)).slice(0, 6)
+    ? COUNTRIES.filter((c) => !auths.some((a) => a.country === c) && stripAccents(c.toLowerCase()).includes(query)).slice(0, 6)
     : [];
 
   function addAuth(country: string) {
@@ -1028,6 +1087,9 @@ const styles = StyleSheet.create({
   hint: { fontSize: 12, lineHeight: 17, marginBottom: 2 },
   subCard: { backgroundColor: '#FFFFFF', borderRadius: Radius.md, padding: Spacing.three, marginTop: Spacing.two, gap: Spacing.two, borderWidth: 1, borderColor: '#eeeeed' },
   subCardTitle: { fontSize: 12, fontWeight: '700' },
+  urlRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.two, paddingVertical: 4 },
+  urlText: { flex: 1, fontSize: 13, textDecorationLine: 'underline' },
+  urlRemove: { fontSize: 13, paddingHorizontal: 4 },
   addRow: { marginTop: 2 },
   addInput: { fontSize: 13, paddingVertical: 8 },
   suggestionBox: { marginTop: 4, backgroundColor: '#FFFFFF', borderRadius: Radius.sm, borderWidth: 1, borderColor: '#eeeeed', overflow: 'hidden' },

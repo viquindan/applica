@@ -107,7 +107,7 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
     email: user.email ?? '',
     phone: user.phone ?? '',
     linkedin: user.linkedin ?? '',
-    portfolio: user.portfolio ?? '',
+    portfolioLinks: user.portfolioLinks ?? [],
     location: user.location ?? '',
     country: user.country ?? '',
     languages: user.languages ?? [],
@@ -515,7 +515,6 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                 ['name', 'Nombre completo', true],
                 ['email', 'Email (para tus postulaciones)', true],
                 ['linkedin', 'LinkedIn', false],
-                ['portfolio', 'Portafolio', false],
               ].map(([key, label, isRequired]) => (
                 <div className="field-group" key={key as string}>
                   <label className="field-label">{label as string}{isRequired ? ' *' : ''}</label>
@@ -538,6 +537,44 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                   {COUNTRIES.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
+            </div>
+
+            <div className="field-group" style={{ marginTop: '1rem' }}>
+              <label className="field-label">Portafolio</label>
+              <p style={{ fontSize: '.75rem', color: 'var(--text-3)', margin: '0 0 0.5rem' }}>
+                Cada enlace es clicable - úsalo para verificar que apunte al sitio correcto.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.35rem', marginBottom: '0.5rem' }}>
+                {form.portfolioLinks.map((link: string, i: number) => (
+                  <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <a
+                      href={/^https?:\/\//i.test(link) ? link : `https://${link}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ fontSize: '0.85rem', color: 'var(--petrol)', textDecoration: 'underline', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+                    >
+                      {link}
+                    </a>
+                    <button type="button" aria-label={`Quitar ${link}`} onClick={() => {
+                      const portfolioLinks = form.portfolioLinks.filter((_: string, idx: number) => idx !== i);
+                      setForm({ ...form, portfolioLinks });
+                    }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)' }}></button>
+                  </div>
+                ))}
+              </div>
+              <input className="input" style={{ maxWidth: 280, fontSize: '0.8rem' }}
+                placeholder="Ej. portafolio.com... Enter para añadir"
+                autoCapitalize="off"
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    const val = (e.target as HTMLInputElement).value.trim();
+                    if (val && !form.portfolioLinks.includes(val)) {
+                      setForm({ ...form, portfolioLinks: [...form.portfolioLinks, val] });
+                      (e.target as HTMLInputElement).value = '';
+                    }
+                  }
+                }} />
             </div>
           </div>
         )}
@@ -781,7 +818,12 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                   <option value="1 semana">1 semana</option>
                   <option value="2 semanas">2 semanas</option>
                   <option value="1 mes">1 mes</option>
-                  <option value="Más de 1 mes">Más de 1 mes</option>
+                  <option value="2 meses">2 meses</option>
+                  <option value="3 meses">3 meses</option>
+                  <option value="Por definir">Por definir</option>
+                  {form.noticePeriod && !['Inmediato', '1 semana', '2 semanas', '1 mes', '2 meses', '3 meses', 'Por definir'].includes(form.noticePeriod) && (
+                    <option value={form.noticePeriod}>{form.noticePeriod}</option>
+                  )}
                 </select>
               </div>
             </div>

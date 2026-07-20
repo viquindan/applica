@@ -13,6 +13,15 @@ interface CountryTagInputProps {
 // confirm) - free text is never pushed into the tag list, so typos like
 // "Colobmia" or "Estados Ulidos" can no longer end up stored and silently
 // fail to match in eligibility.ts.
+// Country names carry accents ("Panamá", "Perú") that a query typed without
+// them ("panama") would never match via plain substring comparison - strip
+// diacritics on both sides before comparing (mirrors the same fix in the
+// mobile Perfil screen).
+const DIACRITIC_MARKS_RX = new RegExp('[\\u0300-\\u036f]', 'g');
+function stripAccents(s: string): string {
+  return s.normalize('NFD').replace(DIACRITIC_MARKS_RX, '');
+}
+
 export default function CountryTagInput({ value, onChange, placeholder }: CountryTagInputProps) {
   const [input, setInput] = useState('');
   const [open, setOpen] = useState(false);
@@ -20,8 +29,8 @@ export default function CountryTagInput({ value, onChange, placeholder }: Countr
 
   const suggestions = useMemo(() => {
     if (!input.trim()) return [];
-    const q = input.trim().toLowerCase();
-    return COUNTRIES.filter((c) => !value.includes(c) && c.toLowerCase().includes(q)).slice(0, 8);
+    const q = stripAccents(input.trim().toLowerCase());
+    return COUNTRIES.filter((c) => !value.includes(c) && stripAccents(c.toLowerCase()).includes(q)).slice(0, 8);
   }, [input, value]);
 
   function addCountry(country: string) {

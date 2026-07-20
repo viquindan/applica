@@ -55,7 +55,14 @@ export const users = pgTable('users', {
   avatarPath: text('avatar_path'),
   phone: varchar('phone', { length: 50 }),
   linkedin: text('linkedin'),
+  // Legacy single free-text field - a real user had 3 links jammed into one
+  // comma-separated string here ("sortcash.org, applica.com, casaocash.com"),
+  // unreadable and not clickable. portfolioLinks (below) is the real field
+  // going forward; `portfolio` stays only so old rows aren't silently
+  // dropped (read as a one-time fallback split when portfolioLinks is empty
+  // - see GET /api/mobile/profile and profile/page.tsx).
   portfolio: text('portfolio'),
+  portfolioLinks: text('portfolio_links').array().default([]),
   location: varchar('location', { length: 255 }),
   country: varchar('country', { length: 100 }),
   languages: jsonb('languages').$type<Array<{ language: string; proficiency: string }>>().default([]),

@@ -41,7 +41,7 @@ export async function PUT(req: NextRequest) {
   if (body.email?.trim() && /.+@.+\..+/.test(body.email.trim())) userUpdate.email = body.email.trim();
   if (has(body, 'phone')) userUpdate.phone = body.phone?.trim() || null;
   if (has(body, 'linkedin')) userUpdate.linkedin = body.linkedin?.trim() || null;
-  if (has(body, 'portfolio')) userUpdate.portfolio = body.portfolio?.trim() || null;
+  if (has(body, 'portfolioLinks')) userUpdate.portfolioLinks = Array.isArray(body.portfolioLinks) ? body.portfolioLinks : [];
   if (has(body, 'location')) userUpdate.location = body.location?.trim() || null;
   if (has(body, 'country')) userUpdate.country = body.country?.trim() || null;
   if (has(body, 'languages')) userUpdate.languages = body.languages ?? [];

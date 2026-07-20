@@ -61,7 +61,12 @@ export type ProfileUser = {
   avatarPath: string | null;
   phone: string | null;
   linkedin: string | null;
-  portfolio: string | null;
+  // Real shape is a proper array (schema.ts portfolioLinks, text[]), not a
+  // single comma-separated string - a real user had "sortcash.org,
+  // applica.com, casaocash.com" jammed into one field with no way to tell
+  // them apart or open one directly. GET routes already migrate the legacy
+  // `portfolio` string into this array for display.
+  portfolioLinks: string[];
   location: string | null;
   country: string | null;
   // Real shape is {language, proficiency}[] (CV parser output), not string[]

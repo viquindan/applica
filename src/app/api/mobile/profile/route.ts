@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
     db.select({
       id: users.id, name: users.name, email: users.email, role: users.role,
       avatarPath: users.avatarPath,
-      phone: users.phone, linkedin: users.linkedin, portfolio: users.portfolio,
+      phone: users.phone, linkedin: users.linkedin, portfolio: users.portfolio, portfolioLinks: users.portfolioLinks,
       location: users.location, country: users.country, languages: users.languages,
       workAuthorization: users.workAuthorization, relocationAvailable: users.relocationAvailable,
       workModality: users.workModality, workModalityPrefs: users.workModalityPrefs,
@@ -47,5 +47,14 @@ export async function GET(req: NextRequest) {
       : eq(resumes.userId, userId)
   ).orderBy(desc(resumes.createdAt));
 
-  return NextResponse.json({ user, profile, resumes: resumeVersions });
+  // One-time soft migration for the display layer only (never written back
+  // here): a real user had 3 links jammed into the old single `portfolio`
+  // string ("sortcash.org, applica.com, casaocash.com"). If the new array
+  // field is still empty, split the legacy value so it doesn't just vanish
+  // from the UI - the next real save writes through portfolioLinks properly.
+  const portfolioLinks = user.portfolioLinks?.length
+    ? user.portfolioLinks
+    : (user.portfolio ? user.portfolio.split(',').map((s) => s.trim()).filter(Boolean) : []);
+
+  return NextResponse.json({ user: { ...user, portfolioLinks }, profile, resumes: resumeVersions });
 }
