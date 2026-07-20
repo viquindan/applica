@@ -23,6 +23,7 @@ import { SmartRecruitersAdapter } from '../platforms/smartrecruiters';
 import { RecruiteeAdapter } from '../platforms/recruitee';
 import { GenericAdapter } from '../platforms/genericAdapter';
 import { processVacancyForUser } from '../pipeline/processVacancy';
+import { buildSearchRoles } from '../scoring/fitScorer';
 import { sendPushToUser } from '../notifications/pushSender';
 import { generateCoverLetter, tailorCV } from '../tailoring/cvTailor';
 import { getInternalAiConfig } from '../ai/config';
@@ -166,7 +167,19 @@ export async function startWorkers() {
       const cursorOffset = cursorState.searchCursorOffset ?? 0;
 
       const enabledNames = new Set<string>(activePlatforms.map((p) => p.platformName));
-      const roles = profile?.targetRoles ?? [];
+      // Target roles are a guide, not a hard filter: also search for roles the
+      // candidate's CV/experience qualifies them for (buildSearchRoles derives
+      // them from experience and dedupes against the explicit targets), so the
+      // pool includes strong adjacent matches - e.g. "Director of Operations"
+      // for someone who has run operations but only listed fintech titles. The
+      // scorer weights these experience-derived matches slightly below explicit
+      // ones (see fitScorer.ts). Falls back to whatever targetRoles exist if
+      // there's no experience to derive from.
+      const searchRoles = buildSearchRoles({
+        ...profile,
+        homeCountry: user?.country || user?.location,
+      } as any);
+      const roles = searchRoles.all.length ? searchRoles.all : (profile?.targetRoles ?? []);
       const locations = profile?.targetCountries ?? [];
       const homeCountries = [user?.country, user?.location].filter((c): c is string => Boolean(c));
       const maxAgeDays = settings?.maxVacancyAgeDays ?? 14;

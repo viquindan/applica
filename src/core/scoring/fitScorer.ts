@@ -90,7 +90,7 @@ function overlap(a: string[], b: string[]): number {
  * similar work) so scoring degrades gracefully instead of collapsing.
  * Explicit targetRoles from the user always take priority when present.
  */
-function inferImplicitTargetRoles(profile: ScoringProfile): string[] {
+function inferImplicitTargetRoles(profile: ScoringProfile, limit = 2): string[] {
   const experience = (profile.experience ?? []) as Array<{ role?: string | null; current?: boolean | null; endDate?: string | null; startDate?: string | null }>;
   if (!experience.length) return [];
   const sorted = [...experience].sort((a, b) => {
@@ -101,7 +101,30 @@ function inferImplicitTargetRoles(profile: ScoringProfile): string[] {
   const roles = sorted
     .map((e) => e.role?.trim())
     .filter((r): r is string => Boolean(r));
-  return [...new Set(roles)].slice(0, 2);
+  return [...new Set(roles)].slice(0, limit);
+}
+
+/**
+ * The roles a search should actually look for: the user's explicit target
+ * roles PLUS roles their CV/experience plausibly qualifies them for. Target
+ * roles are a guide, not a hard filter - a candidate who lists fintech
+ * leadership roles but has run operations and P&L should still see strong
+ * "Director of Operations" matches even if they never typed that title. The
+ * experience-derived roles are deduped against the explicit ones and returned
+ * separately so the scorer can weight them slightly below an explicit pick.
+ */
+export function buildSearchRoles(profile: ScoringProfile): { explicit: string[]; fromExperience: string[]; all: string[] } {
+  const explicit = profile.targetRoles ?? [];
+  const explicitFamilies = new Set(explicit.map((r) => getRoleFamily(r)).filter(Boolean));
+  const fromExperience = inferImplicitTargetRoles(profile, 5).filter((role) => {
+    // Drop an experience role that's already covered by an explicit target
+    // (same normalized title or same role family) to avoid double-counting.
+    if (explicit.some((e) => e.trim().toLowerCase() === role.trim().toLowerCase())) return false;
+    const fam = getRoleFamily(role);
+    if (fam && explicitFamilies.has(fam)) return false;
+    return true;
+  });
+  return { explicit, fromExperience, all: [...explicit, ...fromExperience] };
 }
 
 function includesNormalizedPhrase(haystack: string, needle: string): boolean {
@@ -132,35 +155,56 @@ export function scoreVacancy(
   const redFlags: string[] = [];
   const warnings: string[] = [];
 
-  // Role match (30pts) - explicit targetRoles win; otherwise infer from the
-  // candidate's own recent job titles so an incomplete profile doesn't zero
-  // out every vacancy (see inferImplicitTargetRoles above).
-  const explicitTargetRoles = profile.targetRoles || [];
+  // Role match (30pts). Target roles are a GUIDE, not a hard filter: an
+  // explicit target match wins (30/26), but a vacancy the candidate's own
+  // experience qualifies them for - even a title they never typed - still
+  // scores well (22/20) instead of collapsing to the overlap floor. Example:
+  // a fintech-leadership candidate who has run operations/P&L sees strong
+  // "Director of Operations" matches even though it isn't in their targets.
+  const { explicit: explicitTargetRoles, fromExperience: experienceRoles } = buildSearchRoles(profile);
   const usingInferredRoles = explicitTargetRoles.length === 0;
-  const targetRoles = usingInferredRoles ? inferImplicitTargetRoles(profile) : explicitTargetRoles;
-  if (usingInferredRoles && targetRoles.length > 0) {
-    warnings.push(`Sin roles objetivo definidos en tu perfil - usando tu experiencia reciente (${targetRoles.join(', ')}) como referencia.`);
+  // When no explicit targets exist, the experience roles ARE the targets
+  // (previous behavior); otherwise experience roles are a secondary, lower-
+  // weight signal on top of the explicit ones.
+  const primaryRoles = usingInferredRoles ? inferImplicitTargetRoles(profile) : explicitTargetRoles;
+  if (usingInferredRoles && primaryRoles.length > 0) {
+    warnings.push(`Sin roles objetivo definidos en tu perfil - usando tu experiencia reciente (${primaryRoles.join(', ')}) como referencia.`);
   }
-  const roleTargets = targetRoles.flatMap(r => normalizeText(r));
-  const exactTitleRoleMatch = targetRoles.some((role) => roleMatches(vacancy.title, role));
-  const familyRoleMatch = targetRoles.some((role) =>
+  const roleTargets = primaryRoles.flatMap(r => normalizeText(r));
+  const exactTitleRoleMatch = primaryRoles.some((role) => roleMatches(vacancy.title, role));
+  const familyRoleMatch = primaryRoles.some((role) =>
     getRoleFamily(role) && getRoleFamily(role) === getRoleFamily(vacancy.title),
   );
-  const matchedFamily = targetRoles
+  const matchedFamily = primaryRoles
     .map((role) => getRoleFamily(role))
     .find((family) => family && family === getRoleFamily(vacancy.title));
+  // Only checked when the explicit targets didn't match - a role the CV
+  // qualifies for but the user never listed.
+  const experienceExactMatch = !usingInferredRoles && !exactTitleRoleMatch && !familyRoleMatch
+    && experienceRoles.some((role) => roleMatches(vacancy.title, role));
+  const experienceFamilyMatch = !usingInferredRoles && !exactTitleRoleMatch && !familyRoleMatch && !experienceExactMatch
+    && experienceRoles.some((role) => getRoleFamily(role) && getRoleFamily(role) === getRoleFamily(vacancy.title));
   const titleRoleOverlap = overlap(titleWords, roleTargets);
   const contextualRoleOverlap = overlap([...titleWords, ...descWords.slice(0, 50)], roleTargets);
   const roleScore = exactTitleRoleMatch
     ? 30
     : familyRoleMatch
       ? 26
+    : experienceExactMatch
+      ? 22
+    : experienceFamilyMatch
+      ? 20
     : Math.max(
         Math.round(titleRoleOverlap * 25),
         Math.round(contextualRoleOverlap * 30),
       );
-  if (isLikelyFalsePositiveRole(vacancy.title, matchedFamily)) {
-    redFlags.push(...getSemanticRoleWarnings(vacancy.title, matchedFamily));
+  if (experienceExactMatch || experienceFamilyMatch) {
+    const matched = experienceRoles.find((role) => roleMatches(vacancy.title, role) || (getRoleFamily(role) && getRoleFamily(role) === getRoleFamily(vacancy.title)));
+    warnings.push(`Rol relacionado con tu experiencia (${matched}) aunque no está en tus roles objetivo - podría valer la pena considerarlo.`);
+  }
+  const effectiveMatchedFamily = matchedFamily ?? (experienceFamilyMatch ? getRoleFamily(vacancy.title) : undefined);
+  if (isLikelyFalsePositiveRole(vacancy.title, effectiveMatchedFamily)) {
+    redFlags.push(...getSemanticRoleWarnings(vacancy.title, effectiveMatchedFamily));
   }
 
   // Industry match (15pts)

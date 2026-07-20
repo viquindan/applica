@@ -102,4 +102,38 @@ describe('scoreVacancy - role match', () => {
     expect(result.breakdown.roleMatch).toBeGreaterThan(0);
     expect(result.warnings.some((w) => /sin roles objetivo/i.test(w))).toBe(true);
   });
+
+  // Real request (2026-07-20, vael27@hotmail.com): target roles should be a
+  // GUIDE, not a hard filter. A candidate who has run operations/P&L but only
+  // listed fintech-leadership titles should still get a strong match on a
+  // "Director of Operations" role their CV clearly qualifies them for.
+  it('gives a solid role score to a role the CV qualifies for but that is not an explicit target', () => {
+    const p = profile({
+      targetRoles: ['Head of Fintech Partnerships', 'Country Manager, LATAM'],
+      experience: [
+        { role: 'Chief Operating Officer', company: 'Adasoft', startDate: '2021-01', current: false, endDate: '2023-04' } as any,
+        { role: 'Regional Director, Latin America', company: 'Postindustria', startDate: '2023-04', current: true } as any,
+      ],
+    });
+    const result = scoreVacancy(
+      vacancy({ title: 'Director of Operations', location: 'Remote - Worldwide', description: 'Fully remote operations leadership role.' }),
+      p,
+    );
+    // Not an explicit target, but the COO experience -> operations_leadership
+    // family match, so it scores in the experience band (>=20), not the floor.
+    expect(result.breakdown.roleMatch).toBeGreaterThanOrEqual(20);
+    expect(result.warnings.some((w) => /relacionado con tu experiencia/i.test(w))).toBe(true);
+  });
+
+  it('does not inflate an unrelated role just because the profile has experience', () => {
+    const p = profile({
+      targetRoles: ['Head of Fintech Partnerships'],
+      experience: [{ role: 'Chief Operating Officer', company: 'X', startDate: '2021-01', current: true } as any],
+    });
+    const result = scoreVacancy(
+      vacancy({ title: 'Registered Nurse', location: 'Remote - Worldwide', description: 'Clinical nursing role.' }),
+      p,
+    );
+    expect(result.breakdown.roleMatch).toBeLessThan(20);
+  });
 });
