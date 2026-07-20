@@ -50,6 +50,7 @@
     'chief strategy officer', 'head of strategy', 'vp strategy', 'strategy director',
     'director of strategy', 'head of corporate development', 'head of bizdev',
     'head of business development', 'vp business development',
+    'head of partnerships', 'vp partnerships', 'director of partnerships',
   ],
 };
 
@@ -83,7 +84,7 @@ export function getRoleFamily(value: string) {
   const normalized = normalizeRole(value);
   if (roleFamilyCache.has(normalized)) return roleFamilyCache.get(normalized);
   const family = Object.entries(ROLE_FAMILIES).find(([, aliases]) =>
-    aliases.some((alias) => matchesRolePhrase(normalized, alias)),
+    aliases.some((alias) => matchesRoleWords(normalized, alias)),
   )?.[0];
   roleFamilyCache.set(normalized, family);
   return family;
@@ -125,6 +126,33 @@ function matchesRolePhrase(haystack: string, needle: string) {
     phraseRegexCache.set(needle, regex);
   }
   return regex.test(haystack);
+}
+
+// Real bug found in production (2026-07-20): a title like "VP of Credit
+// Operations" was never recognized as operations_leadership because
+// matchesRolePhrase needs the alias ("vp operations") as one contiguous
+// substring - any qualifier word inserted between the seniority prefix and
+// the function noun ("of Credit") breaks it, and executive titles almost
+// always have one ("Head of Payments Strategy", "Regional Head of Business
+// Development"). Family aliases now match on significant-word presence
+// (order-independent, ignores stopwords) instead of a rigid phrase - the
+// exact-phrase check in roleMatches() above is untouched and stays strict.
+const STOPWORDS = new Set(['of', 'the', 'a', 'an', 'and', 'for', 'to', 'in', 'at']);
+const wordSetCache = new Map<string, string[]>();
+
+function significantWords(phrase: string): string[] {
+  let words = wordSetCache.get(phrase);
+  if (!words) {
+    words = phrase.split(/\s+/).filter((w) => w && !STOPWORDS.has(w));
+    wordSetCache.set(phrase, words);
+  }
+  return words;
+}
+
+function matchesRoleWords(haystack: string, aliasPhrase: string): boolean {
+  const words = significantWords(aliasPhrase);
+  if (!words.length) return false;
+  return words.every((w) => matchesRolePhrase(haystack, w));
 }
 
 function isAcronymReference(title: string, role: string) {
