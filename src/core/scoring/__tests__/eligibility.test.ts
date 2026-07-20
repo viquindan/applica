@@ -125,4 +125,33 @@ describe('evaluateEligibility - R1 (onsite/hybrid abroad)', () => {
     const result = evaluateEligibility(v, profile);
     expect(result.eligible).toBe(true);
   });
+
+  // Real bug (2026-07-20, vael27@hotmail.com): a fully-remote Canonical role
+  // located "Home Based - Americas" was hard-excluded as "presencial en LATAM"
+  // for a Panama candidate because its description mentioned "Teams meet in
+  // person 2-4 times a year" and "very few office-based roles" - incidental
+  // phrasing of a remote job that tripped the onsite regex. The explicit
+  // "Home Based" location must win over those weak description matches. These
+  // were 3 of the candidate's highest-scoring roles (81-83), silently dropped.
+  it('does not exclude a "Home Based - Americas" role that mentions occasional in-person meetings', () => {
+    const v = vacancy({
+      title: 'Public Cloud Project Manager',
+      company: 'canonical',
+      location: 'Home Based - Americas',
+      description: 'Canonical is a pioneer of global distributed collaboration, with 1200+ colleagues in 75+ countries and very few office-based roles. Teams meet two to four times yearly in person, in interesting locations around the world.',
+    });
+    const result = evaluateEligibility({ ...v, homeCountry: 'Panama' } as any, { ...profile, homeCountry: 'Panama' });
+    expect(result.eligible).toBe(true);
+  });
+
+  // Guard against over-correcting: a location that does NOT declare remote and
+  // clearly describes a physical office abroad must still be excluded.
+  it('still excludes a genuine onsite role abroad whose location names a foreign city', () => {
+    const v = vacancy({
+      location: 'Berlin, Germany',
+      description: 'This is an in-office role. You will work on-site 5 days a week at our Berlin headquarters.',
+    });
+    const result = evaluateEligibility({ ...v, homeCountry: 'Panama' } as any, { ...profile, homeCountry: 'Panama' });
+    expect(result.eligible).toBe(false);
+  });
 });

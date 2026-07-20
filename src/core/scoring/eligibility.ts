@@ -251,8 +251,17 @@ export function evaluateEligibility(vacancy: NormalizedVacancy, profile: Eligibi
   const explicitOnsite = modality === 'onsite' || modality === 'hybrid'
     || /\b(on-?site|in-?office|in[-\s]person|presencial|h[íi]brid[oa]|days?\s+(a|per)\s+week\s+in|d[íi]as?\s+(a la semana|por semana)\s+en|relocat)\b/i.test(text)
     || EXPLICIT_OFFICE_BASED_RX.test(text);
-  const mentionsRemote = /\bremot[eo]\b|\bwork from home\b|\bteletrabajo\b/i.test(`${text}\n${loc}`);
-  const onsiteForeign = explicitOnsite || (scope === 'not_remote' && !mentionsRemote);
+  // Real bug (2026-07-20, vael27@hotmail.com): a fully-remote Canonical role
+  // located "Home Based - Americas" was hard-excluded as "presencial en LATAM"
+  // because its description said "Teams meet in person 2-4x/year" and "very few
+  // office-based roles" - incidental phrases of a REMOTE job that tripped the
+  // onsite regex above. When the LOCATION field itself explicitly declares
+  // remote/home-based, that structured signal wins over weak description
+  // matches: a bare "meet in person" mention doesn't make a home-based role
+  // onsite. A genuine hybrid role still says so in its location/modality.
+  const locationSaysRemote = /\bremot[eo]\b|home[\s-]?based|work from home|teletrabajo|\bwfh\b/i.test(loc);
+  const mentionsRemote = /\bremot[eo]\b|home[\s-]?based|\bwork from home\b|teletrabajo|globally distributed|fully distributed/i.test(`${text}\n${loc}`);
+  const onsiteForeign = (explicitOnsite && !locationSaysRemote) || (scope === 'not_remote' && !mentionsRemote);
   const { globalFriendly, hardForeignBlock } = detectHiringSignals(vacancy);
 
   // R1 - Onsite/hybrid in ANY foreign country. You'd have to physically be at an
