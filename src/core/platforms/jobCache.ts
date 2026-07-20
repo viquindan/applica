@@ -85,6 +85,7 @@ export async function gatherSearchCandidates(input: {
   homeCountries?: string[];
   maxAgeDays?: number;
   limit?: number;
+  acceptsRemote?: boolean;
   smartRecruitersTokens: string[];
 }): Promise<NormalizedVacancy[]> {
   const filters: SearchFilters = {
@@ -92,6 +93,7 @@ export async function gatherSearchCandidates(input: {
     locations: input.locations,
     homeCountries: input.homeCountries,
     maxAgeDays: input.maxAgeDays,
+    acceptsRemote: input.acceptsRemote,
     limit: input.limit ?? 150,
   };
 

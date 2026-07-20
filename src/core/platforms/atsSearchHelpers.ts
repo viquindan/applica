@@ -32,7 +32,15 @@ export function matchesFilters(job: NormalizedVacancy, filters: SearchFilters): 
   const title = job.title.toLowerCase();
   const location = (job.location ?? '').toLowerCase();
   const roleMatch = !filters.roles?.length || filters.roles.some((role) => roleMatches(title, role));
-  const locationMatch = !filters.locations?.length || filters.locations.some((loc) => matchesLocation(location, loc));
+  // A remote-accepting candidate should see EVERY remote posting in the pool,
+  // not just globally/regionally-scoped ones. Without this, a candidate with
+  // targetCountries=[Colombia,Panama] lost bare-"Remote" and "Remote US" roles
+  // at the search stage - before the scorer, which reads the description and
+  // is the right place to decide whether the hiring footprint includes them.
+  const isRemote = filters.acceptsRemote && detectRemoteScope(job.location) !== 'not_remote';
+  const locationMatch = !filters.locations?.length
+    || isRemote
+    || filters.locations.some((loc) => matchesLocation(location, loc));
   const ageMatch = !filters.maxAgeDays || !job.postedAt
     ? true
     : job.postedAt >= new Date(Date.now() - filters.maxAgeDays * 24 * 60 * 60 * 1000);

@@ -170,6 +170,10 @@ export async function startWorkers() {
       const locations = profile?.targetCountries ?? [];
       const homeCountries = [user?.country, user?.location].filter((c): c is string => Boolean(c));
       const maxAgeDays = settings?.maxVacancyAgeDays ?? 14;
+      // If the candidate accepts remote work, the location pre-filter must keep
+      // every remote posting (the scorer decides the fine geo fit). Default to
+      // true when no modality prefs exist so nobody's pool silently shrinks.
+      const acceptsRemote = user?.workModalityPrefs?.acceptsRemote ?? true;
 
       // Build the candidate pool. Fast path: the shared cache (one central fetch
       // serves all users). Fallback: live per-platform fetch if the cache is cold.
@@ -178,7 +182,7 @@ export async function startWorkers() {
         const srTokens = enabledNames.has('smartrecruiters')
           ? await resolveBoardTokens('smartrecruiters', null, cursorOffset)
           : [];
-        vacancies = await gatherSearchCandidates({ roles, locations, homeCountries, maxAgeDays, limit: 200, smartRecruitersTokens: srTokens });
+        vacancies = await gatherSearchCandidates({ roles, locations, homeCountries, maxAgeDays, acceptsRemote, limit: 200, smartRecruitersTokens: srTokens });
         // Honor explicit per-user platform opt-outs against the shared pool.
         vacancies = vacancies.filter((v) => enabledNames.has(v.platform));
         console.log(`[Worker] Cache hit: ${jobCacheSize()} cached jobs -> ${vacancies.length} candidates for user ${userId}`);
@@ -188,7 +192,7 @@ export async function startWorkers() {
           const adapter = adapters[p.platformName as keyof typeof adapters];
           if (!adapter) continue;
           const boardTokens = await resolveBoardTokens(p.platformName, p.notes, cursorOffset);
-          const found = await adapter.search({ limit: 50, boardTokens, roles, locations, homeCountries, maxAgeDays });
+          const found = await adapter.search({ limit: 50, boardTokens, roles, locations, homeCountries, maxAgeDays, acceptsRemote });
           vacancies.push(...found);
         }
       }
@@ -605,6 +609,14 @@ export async function startWorkers() {
             updatedAt: new Date(),
           }).where(eq(vacancies.id, vacancy.id)),
         ]);
+        if (isSubmitted) {
+          sendPushToUser(
+            application.userId,
+            'Aplicación enviada',
+            `${vacancy.title} en ${vacancy.company} fue enviada.`,
+            { applicationId },
+          );
+        }
       }
 
       console.log('[Worker] Playwright ApplyEngine result:', result);

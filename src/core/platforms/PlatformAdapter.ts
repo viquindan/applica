@@ -34,6 +34,17 @@ export interface SearchFilters {
   maxAgeDays?: number;
   limit?: number;
   boardTokens?: string[];
+  /**
+   * The candidate accepts remote work. When true, the location pre-filter
+   * keeps EVERY remote posting (including bare "Remote" and country-scoped
+   * ones like "Remote US") instead of only the explicitly global/regional
+   * ones - the fine-grained hiring-footprint call is the scorer's job
+   * (fitScorer/eligibility read the full description via detectGeoScopeFromText),
+   * not this coarse string-only search filter. Without this, having any
+   * targetCountries paradoxically SHRANK the candidate pool by discarding
+   * remote roles the user could actually take.
+   */
+  acceptsRemote?: boolean;
   onProgress?: (progress: { scannedSources: number; totalSources: number }) => Promise<void> | void;
 }
 
