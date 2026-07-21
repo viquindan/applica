@@ -86,12 +86,19 @@ jobs:
           # one `applica-current` (and therefore live traffic) points at yet.
           npm run build
 
-          # Atomic swap: only now does the next PM2 restart pick up this
-          # release (ecosystem.config.js's `cwd` is the fixed path below).
+          # Atomic swap: only now does PM2 pick up this release
+          # (ecosystem.config.js's `cwd` is the fixed path below).
           ln -sfn "$RELEASE" "$CURRENT"
 
-          # Restart both the web app and the job worker (see ecosystem.config.js)
-          pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
+          # `pm2 restart ecosystem.config.js` does NOT reliably reload `cwd`
+          # for an already-running app (real incident, first migration
+          # deploy: both apps kept running from the OLD cwd after a plain
+          # restart - the worker crash-looped on "DATABASE_URL is not
+          # defined" because .env.local no longer existed at that stale
+          # path). `startOrReload` re-reads the whole config file fresh on
+          # every deploy instead of reusing whatever PM2 cached from the
+          # last start - use it, not `restart`.
+          pm2 startOrReload ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
           pm2 save
 
           # Keep the current release + 4 previous ones for a quick manual
