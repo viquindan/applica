@@ -224,11 +224,31 @@ export async function startWorkers() {
         updatedAt: new Date(),
       }).where(eq(userSettings.userId, userId));
 
+      // Real funnel telemetry (docs/SEARCH-ENGINE.md) - computed FROM this
+      // actual run, not a separate estimate. "Expertise" re-filters the
+      // already-in-memory cache with NO location constraint (free, no
+      // network) purely to report how many match the role before region
+      // narrows it further; "region" is the pool already computed above.
+      const roleOnlyPool = isJobCacheFresh()
+        ? await gatherSearchCandidates({ roles, locations: [], homeCountries: [], limit: 999999, smartRecruitersTokens: [] })
+        : vacancies;
+      let eligibleCount = 0;
+      let highConfidenceCount = 0;
+      let goodMatchCount = 0;
+
       let processedInLoop = 0;
       for (const vacancy of vacancies) {
         const result = await withVacancyTimeout(processVacancyForUser(userId, vacancy, context), `${vacancy.platform}:${vacancy.title}`);
         if ('applicationId' in result && result.applicationId) preparedCount += 1;
         else filteredCount += 1;
+        if ('eligible' in result && result.eligible) {
+          eligibleCount += 1;
+          const s = (result as any).score as number | undefined;
+          if (typeof s === 'number') {
+            if (s >= 70) highConfidenceCount += 1;
+            else if (s >= (settings?.minScoreToGenerateMaterials ?? 60)) goodMatchCount += 1;
+          }
+        }
 
         processedInLoop++;
         if (processedInLoop % 10 === 0) {
@@ -239,6 +259,19 @@ export async function startWorkers() {
           }).where(eq(userSettings.userId, userId));
         }
       }
+
+      const registryMetrics = await getAtsRegistryMetrics();
+      await db.update(userSettings).set({
+        lastSearchFunnel: {
+          universe: registryMetrics.jobsSeen,
+          expertiseMatch: roleOnlyPool.length,
+          regionMatch: vacancies.length,
+          eligible: eligibleCount,
+          highConfidence: highConfidenceCount,
+          goodMatch: goodMatchCount,
+        },
+        updatedAt: new Date(),
+      }).where(eq(userSettings.userId, userId));
 
       // Advance the shared registry cursor once per run, resetting when it
       // overflows the largest platform registry so rotation wraps around.

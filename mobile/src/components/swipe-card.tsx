@@ -208,6 +208,11 @@ const styles = StyleSheet.create({
     // between the HUD and the tab bar - near-100% so the card reaches down
     // close to the nav bar instead of leaving a visible gap.
     height: '99%',
+    // Real bug (2026-07-20): a long description (up to 16 lines) plus a
+    // long title could add up to more height than the card's fixed 99% -
+    // without this, that overflow text rendered straight through the
+    // rounded border instead of being clipped by it.
+    overflow: 'hidden',
   },
   badgeRow: { flexDirection: 'row', marginBottom: Spacing.two },
   scoreBadge: { borderRadius: Radius.sm, paddingHorizontal: Spacing.two, paddingVertical: 4 },

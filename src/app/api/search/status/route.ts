@@ -18,6 +18,7 @@ export async function GET(req: NextRequest) {
     lastSearchScannedSourceCount: userSettings.lastSearchScannedSourceCount,
     lastSearchAt: userSettings.lastSearchAt,
     lastSearchError: userSettings.lastSearchError,
+    lastSearchFunnel: userSettings.lastSearchFunnel,
   }).from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
 
   if (!settings) return NextResponse.json({ error: 'No settings' }, { status: 404 });

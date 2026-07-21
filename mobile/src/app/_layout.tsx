@@ -36,6 +36,7 @@ function Gate() {
       <Stack.Screen name="application/[id]" options={{ headerShown: true, title: '' }} />
       <Stack.Screen name="linkedin-apply/[id]" options={{ headerShown: true, title: 'LinkedIn' }} />
       <Stack.Screen name="streak-progress" options={{ headerShown: true, title: 'Tu progreso', presentation: 'modal' }} />
+      <Stack.Screen name="search-funnel" options={{ headerShown: true, title: 'Cómo buscamos por ti', presentation: 'modal' }} />
     </Stack>
   );
 }

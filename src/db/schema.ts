@@ -157,6 +157,18 @@ export const userSettings = pgTable('user_settings', {
   lastSearchScannedSourceCount: integer('last_search_scanned_source_count'),
   lastSearchPreparedCount: integer('last_search_prepared_count'),
   lastSearchFilteredCount: integer('last_search_filtered_count'),
+  // Real funnel telemetry from the last search_vacancies run - computed FROM
+  // the real pipeline as it executes (not a separate parallel estimate), so
+  // it can never drift from what actually happened. Powers the funnel view
+  // in the Feed (tap the queue-count chip). See docs/SEARCH-ENGINE.md.
+  lastSearchFunnel: jsonb('last_search_funnel').$type<{
+    universe: number;
+    expertiseMatch: number;
+    regionMatch: number;
+    eligible: number;
+    highConfidence: number;
+    goodMatch: number;
+  }>(),
   lastSearchError: text('last_search_error'),
   searchInProgress: boolean('search_in_progress').default(false),
   defaultTailoringLevel: tailoringLevelEnum('default_tailoring_level').default('medium'),

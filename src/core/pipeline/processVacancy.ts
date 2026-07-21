@@ -54,7 +54,12 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
   const existingVacancy = vacancyRows[0];
 
   if (!user || !profile || !settings) throw new Error(`Missing user setup for ${userId}`);
-  if (existingVacancy) return { vacancyId: existingVacancy.id, created: false, applicationId: null };
+  // `eligible`/`score` below let the caller (worker.ts) tally REAL funnel
+  // telemetry (docs/SEARCH-ENGINE.md) from the pipeline as it runs, instead
+  // of a separate parallel estimate that could drift. `existingVacancy` is
+  // `undefined` (unknown) here on purpose - a dedup hit means this vacancy
+  // was already evaluated in a PRIOR run, so counting it now would double it.
+  if (existingVacancy) return { vacancyId: existingVacancy.id, created: false, applicationId: null, eligible: undefined, score: undefined };
 
   // HARD eligibility gate: hide fundamentally-inapplicable roles entirely
   // (foreign onsite, required language you don't speak, far-market leadership).
@@ -71,7 +76,7 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     workAuthorization: user.workAuthorization,
   });
   if (!eligibility.eligible) {
-    return { skipped: true, reason: 'ineligible', reasons: eligibility.reasons } as any;
+    return { skipped: true, reason: 'ineligible', reasons: eligibility.reasons, eligible: false, score: undefined } as any;
   }
 
   const learnedSignals = await getLearnedScoringSignals(userId, vacancy);
@@ -131,7 +136,7 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
   }).returning();
 
   if (finalScore < genThreshold) {
-    return { vacancyId: storedVacancy.id, created: true, applicationId: null };
+    return { vacancyId: storedVacancy.id, created: true, applicationId: null, eligible: true, score: finalScore };
   }
 
   const reusableAnswers = await getReusableAnswersMap(userId);
@@ -144,5 +149,5 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
   }).returning();
 
   await queuePrepareApplicationMaterials(application.id);
-  return { vacancyId: storedVacancy.id, created: true, applicationId: application.id };
+  return { vacancyId: storedVacancy.id, created: true, applicationId: application.id, eligible: true, score: finalScore };
 }

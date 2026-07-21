@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, View } from 'react-native';
@@ -52,6 +53,7 @@ export function FeedHud({
   statusText,
   onRefresh,
 }: Props) {
+  const router = useRouter();
   return (
     <View style={styles.wrap}>
       <View style={styles.secondaryRow}>
@@ -62,10 +64,14 @@ export function FeedHud({
 
       <View style={styles.hudRow}>
         <GoalRing current={appliedTodayCount} goal={dailyGoal || 1} size={48} strokeWidth={5} />
-        <View style={styles.queuePill}>
+        <AnimatedPressable
+          haptic="light"
+          onPress={() => router.push('/search-funnel')}
+          accessibilityLabel={`${queueCount} vacantes para decidir. Toca para ver cómo el motor las encontró`}
+          style={styles.queuePill}>
           <ThemedText themeColor="text" style={styles.queueValue}>{queueCount}</ThemedText>
           <ThemedText themeColor="textSecondary" style={styles.queueLabel}>para decidir</ThemedText>
-        </View>
+        </AnimatedPressable>
         <StreakBadge streak={streak} />
         {/* Fixed-size circle, not a flex-stretched label button - can't
             overflow its own container regardless of sibling count. */}
