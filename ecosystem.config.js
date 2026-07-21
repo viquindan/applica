@@ -1,9 +1,22 @@
+// `cwd` is a FIXED path, not the directory this file happens to live in -
+// `/var/www/applica-current` is a symlink the deploy pipeline repoints
+// atomically at the newly-built release directory only AFTER the build
+// succeeds (see .github/workflows/deploy.yml). Before this, `npm run build`
+// ran in place inside the SAME `.next` the live process was reading from,
+// which broke real requests mid-deploy (real 2026-07-21 incident: "Cannot
+// find module .../setup-node-env.external.js", "Failed to find Server
+// Action" - confirmed in prod logs, not hypothetical). PM2 re-reads `cwd`
+// from this file on every `pm2 restart ecosystem.config.js`, so each deploy
+// picks up whatever `current` points to at restart time.
+const CWD = '/var/www/applica-current';
+
 module.exports = {
   apps: [
     {
       name: 'applica-web',
       script: 'npm',
       args: 'run start',
+      cwd: CWD,
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -22,6 +35,7 @@ module.exports = {
       // every DB query the worker made (SASL/password errors) since the
       // first production deploy.
       args: 'tsx scripts/startWorker.ts',
+      cwd: CWD,
       instances: 1, // Only 1 worker instance to avoid duplicate job claims if not handled well
       exec_mode: 'fork',
       env: {

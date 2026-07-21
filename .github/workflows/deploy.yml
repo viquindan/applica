@@ -43,25 +43,58 @@ jobs:
           # globally under the VPS's shared Node 20 install (used by the
           # other projects on this box), so keep that on PATH too.
           export PATH="/root/.nvm/versions/node/v22.23.1/bin:/root/.nvm/versions/node/v20.20.2/bin:$PATH"
-          cd "${{ secrets.VPS_APP_PATH }}"
 
-          # Pull latest code
-          git fetch origin master
-          git reset --hard origin/master
+          # Releases + atomic symlink swap (2026-07-21, real incident fixed):
+          # `npm run build` used to run in place inside the live app's own
+          # `.next` directory while the OLD process was still serving traffic
+          # from it - a request landing mid-build got a torn-down build
+          # (confirmed in prod logs: "Cannot find module .../setup-node-env.
+          # external.js", "Failed to find Server Action"). Now every deploy
+          # builds a FRESH, isolated checkout and only repoints `applica-current`
+          # (what PM2's `cwd` in ecosystem.config.js actually runs) once that
+          # build succeeds - the live process never sees a half-written build,
+          # and a failed build here (`set -e`) leaves the previous release live
+          # and untouched.
+          #
+          # /var/www/applica-shared holds what must survive every release:
+          # .env.local (secrets - UPLOAD_DIR in there is an ABSOLUTE path into
+          # this same shared dir, so uploaded CVs/avatars never depend on which
+          # release is current), and public/downloads (the Android APK,
+          # uploaded separately via scp - see docs/ARCHITECTURE.md §6).
+          SHARED="/var/www/applica-shared"
+          RELEASES="/var/www/applica-releases"
+          CURRENT="/var/www/applica-current"
+          RELEASE="$RELEASES/$(date +%Y%m%d%H%M%S)-$(echo ${{ github.sha }} | cut -c1-8)"
+
+          mkdir -p "$RELEASES"
+          git clone --depth 1 --branch master https://github.com/viquindan/applica.git "$RELEASE"
+          cd "$RELEASE"
+
+          ln -sfn "$SHARED/.env.local" .env.local
+          mkdir -p public
+          ln -sfn "$SHARED/downloads" public/downloads
 
           # Install dependencies (mobile/ has its own package.json, untouched
           # by this - only the root Next.js app is installed/built/deployed
           # here; the mobile app is distributed separately as an APK/store build)
           npm ci
 
-          # Apply schema changes (DATABASE_URL must already be exported on the
-          # VPS - e.g. in ~/.bashrc or a systemd EnvironmentFile - never
-          # committed to the repo). --force skips the interactive TTY prompt.
+          # Apply schema changes. --force skips the interactive TTY prompt.
           npx drizzle-kit push --force
 
-          # Build Next.js Web App
+          # Build Next.js Web App - into THIS release's own .next, never the
+          # one `applica-current` (and therefore live traffic) points at yet.
           npm run build
+
+          # Atomic swap: only now does the next PM2 restart pick up this
+          # release (ecosystem.config.js's `cwd` is the fixed path below).
+          ln -sfn "$RELEASE" "$CURRENT"
 
           # Restart both the web app and the job worker (see ecosystem.config.js)
           pm2 restart ecosystem.config.js --env production || pm2 start ecosystem.config.js --env production
           pm2 save
+
+          # Keep the current release + 4 previous ones for a quick manual
+          # rollback (repoint $CURRENT at an older $RELEASES/<dir> and restart
+          # PM2); prune anything older so releases/ doesn't grow forever.
+          cd "$RELEASES" && ls -1t | tail -n +6 | xargs -r rm -rf
