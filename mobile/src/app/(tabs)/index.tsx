@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { runSearch } from '@/api/applications';
@@ -29,7 +29,17 @@ export default function FeedScreen() {
   const { user } = useAuth();
   const tuningEnabled = !!user?.searchTuningEnabled;
   const { queueApps, isLoading, refetch, isRefetching, stats, settings } = useApplicationsData();
-  const { applyApp, discardApp } = useApplicationActions();
+  const { applyApp, discardApp, actionError } = useApplicationActions();
+
+  // Real bug found in production (2026-07-21): a failed swipe (approve,
+  // assisted, archive, discard - backend down, deploy window, etc.) looked
+  // IDENTICAL to a successful one here - the card flies away optimistically
+  // and nothing ever tells the user it didn't actually go through. The
+  // detail screen (application/[id].tsx) already surfaces `actionError` via
+  // Alert; the Feed, where swiping actually happens, never did.
+  useEffect(() => {
+    if (actionError) Alert.alert('No se pudo completar la accion', actionError);
+  }, [actionError]);
   const streak = useStreak();
   const celebrationRef = useRef<CelebrationBurstHandle>(null);
   const [searchState, setSearchState] = useState<'idle' | 'queuing' | 'queued'>('idle');

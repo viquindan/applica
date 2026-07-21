@@ -119,26 +119,43 @@ export function useApplicationActions() {
   const markApplied = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'mark_applied'),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const cancelAssisted = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'cancel_assisted'),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
+  // archive/discard back the Feed's negative swipe (discardApp below) - these
+  // had NO error handling at all until now, so a failed "descartar" (backend
+  // down, deploy window, etc.) looked identical to a successful one: the
+  // card just vanished, same silent-failure shape as the "Aplicar" bug this
+  // hook already fixed once for sendApprove/sendAssisted.
   const archive = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'archive'),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const discard = useMutation({
     mutationFn: (vacancyId: string) => discardVacancy(vacancyId),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const applyAnyway = useMutation({
     mutationFn: (vacancyId: string) => applyToVacancy(vacancyId),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
   const answerBlockers = useMutation({
     mutationFn: ({ app, answers }: { app: AppRow; answers: Record<string, string> }) => saveAnswers(app.id, answers),
     onSettled: invalidate,
+    onError: onActionError,
+    onSuccess: () => setActionError(null),
   });
 
   // Returns a human-readable reason when it can NOT even attempt to apply,

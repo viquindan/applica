@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Modal, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Modal, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { Gold, Petrol, Radius, Spacing, TextGold } from '@/constants/theme';
@@ -29,7 +29,10 @@ export function SwipeReasonSheet({ visible, decision, submitting, onSubmit, onCa
 
   return (
     <Modal transparent animationType="slide" visible={visible} onRequestClose={onCancel}>
-      <View style={styles.backdrop}>
+      <KeyboardAvoidingView
+        style={styles.backdrop}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : -100}>
         <View style={styles.sheet}>
           <ThemedText type="subtitle" style={styles.title}>{title}</ThemedText>
           <ScrollView keyboardShouldPersistTaps="handled" style={styles.fieldScroll}>
@@ -56,7 +59,7 @@ export function SwipeReasonSheet({ visible, decision, submitting, onSubmit, onCa
             Cancelar
           </ThemedText>
         </View>
-      </View>
+      </KeyboardAvoidingView>
     </Modal>
   );
 }

@@ -1,8 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { ActivityIndicator, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Animated, { FadeInDown, useAnimatedProps, useSharedValue, withDelay, withTiming } from 'react-native-reanimated';
+import Animated, {
+  FadeInDown, runOnJS, useAnimatedProps, useAnimatedReaction, useSharedValue, withDelay, withTiming,
+} from 'react-native-reanimated';
 import Svg, { Path } from 'react-native-svg';
 
 import { getSearchStatus } from '@/api/search';
@@ -41,6 +43,7 @@ function widthFor(value: number, maxValue: number) {
 }
 
 function ribbonPath(y1: number, w1: number, y2: number, w2: number) {
+  'worklet';
   const midY = (y1 + y2) / 2;
   const cx = CANVAS_W / 2;
   const lA = cx - w1 / 2, rA = cx + w1 / 2;
@@ -52,13 +55,40 @@ function ribbonPath(y1: number, w1: number, y2: number, w2: number) {
           Z`;
 }
 
-function FunnelRibbon({ d, color, delay }: { d: string; color: string; delay: number }) {
-  const opacity = useSharedValue(0);
+// Ribbons grow from a thin stem instead of just fading in at full width - a
+// "funnel filling up" motion that reads closer to the original mockup than a
+// flat opacity crossfade.
+function FunnelRibbon({ y1, w1, y2, w2, color, delay }: { y1: number; w1: number; y2: number; w2: number; color: string; delay: number }) {
+  const progress = useSharedValue(0);
   useEffect(() => {
-    opacity.value = withDelay(delay, withTiming(1, { duration: Motion.durationSlow }));
+    progress.value = withDelay(delay, withTiming(1, { duration: Motion.durationSlow }));
   }, []);
-  const animatedProps = useAnimatedProps(() => ({ opacity: opacity.value }));
-  return <AnimatedPath d={d} fill={color} animatedProps={animatedProps} />;
+  const animatedProps = useAnimatedProps(() => {
+    const p = progress.value;
+    const cw1 = MIN_W + (w1 - MIN_W) * p;
+    const cw2 = MIN_W + (w2 - MIN_W) * p;
+    return { d: ribbonPath(y1, cw1, y2, cw2), opacity: p };
+  });
+  return <AnimatedPath fill={color} animatedProps={animatedProps} />;
+}
+
+// Counts up from 0 to `value` instead of popping in already-settled - makes
+// the stage numbers feel measured live rather than static labels.
+function AnimatedNumber({ value, delay, style }: { value: number; delay: number; style: any }) {
+  const [display, setDisplay] = useState(0);
+  const progress = useSharedValue(0);
+
+  useEffect(() => {
+    progress.value = 0;
+    progress.value = withDelay(delay, withTiming(1, { duration: Motion.durationSlow }));
+  }, [value, delay]);
+
+  useAnimatedReaction(
+    () => progress.value,
+    (p) => runOnJS(setDisplay)(Math.round(value * p)),
+  );
+
+  return <ThemedText themeColor="text" style={style}>{display.toLocaleString('en-US')}</ThemedText>;
 }
 
 export default function SearchFunnelScreen() {
@@ -104,7 +134,10 @@ export default function SearchFunnelScreen() {
                     return (
                       <FunnelRibbon
                         key={stage.key}
-                        d={ribbonPath(y1, widthFor(v1, funnel.universe), y2, widthFor(v2, funnel.universe))}
+                        y1={y1}
+                        w1={widthFor(v1, funnel.universe)}
+                        y2={y2}
+                        w2={widthFor(v2, funnel.universe)}
                         color={colorFor[stage.color]}
                         delay={i * 140}
                       />
@@ -119,9 +152,7 @@ export default function SearchFunnelScreen() {
                     key={stage.key}
                     entering={FadeInDown.duration(350).delay(160 + i * 110)}
                     style={[styles.labelRow, { height: ROW_H }]}>
-                    <ThemedText themeColor="text" style={styles.stageValue}>
-                      {(funnel[stage.key] ?? 0).toLocaleString('en-US')}
-                    </ThemedText>
+                    <AnimatedNumber value={funnel[stage.key] ?? 0} delay={160 + i * 110} style={styles.stageValue} />
                     <ThemedText themeColor="textSecondary" style={styles.stageLabel}>{stage.label}</ThemedText>
                   </Animated.View>
                 ))}
@@ -133,12 +164,12 @@ export default function SearchFunnelScreen() {
               <View style={styles.resultRow}>
                 <View style={[styles.resultCard, { backgroundColor: ScoreBands.high.tint, borderColor: ScoreBands.high.color }]}>
                   <Glyph name="check" size={18} color={ScoreBands.high.color} />
-                  <ThemedText themeColor="text" style={styles.resultValue}>{funnel.highConfidence}</ThemedText>
+                  <AnimatedNumber value={funnel.highConfidence} delay={640} style={styles.resultValue} />
                   <ThemedText themeColor="textSecondary" style={styles.resultLabel}>Alta confianza{'\n'}score ≥ 70</ThemedText>
                 </View>
                 <View style={[styles.resultCard, { backgroundColor: GoldDim, borderColor: Gold }]}>
                   <Glyph name="target" size={18} color={ScoreBands.mid.color} />
-                  <ThemedText themeColor="text" style={styles.resultValue}>{funnel.goodMatch}</ThemedText>
+                  <AnimatedNumber value={funnel.goodMatch} delay={680} style={styles.resultValue} />
                   <ThemedText themeColor="textSecondary" style={styles.resultLabel}>Buen match{'\n'}score 60–69</ThemedText>
                 </View>
               </View>

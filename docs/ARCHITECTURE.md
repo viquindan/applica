@@ -10,7 +10,7 @@ Motor autónomo de postulación a empleos. Descubre vacantes en ATS públicos, l
 ## 2. Tech stack
 - **Framework:** Next.js 16.2.6 (App Router + Turbopack)
 - **Lenguaje:** TypeScript (estricto)
-- **DB:** Neon PostgreSQL vía Drizzle ORM (`src/db`)
+- **DB:** PostgreSQL vía Drizzle ORM (`src/db`). En **producción** es un Postgres propio corriendo en nuestro VPS (no Neon). `src/db/client.ts` detecta el host de `DATABASE_URL` (`neon.tech` → driver serverless, cualquier otro → `pg`/node-postgres), así que en dev local puede apuntar a Neon o a un Postgres local indistintamente.
 - **Cola/jobs:** pg-boss (`src/core/jobs`)
 - **Automatización:** `playwright-extra` + `puppeteer-extra-plugin-stealth` (Chromium bundled)
 - **IA:** Gemini vía Vercel `ai` SDK (`src/core/ai`)
@@ -52,3 +52,12 @@ Cola pg-boss. Handlers: `search_vacancies`, `prepare_application_materials`, `pr
 
 ## 5. Memoria del producto (motor cognitivo de Applica - NO es Claude Code)
 Dos capas: (1) datos estructurados (Postgres), (2) markdown agent-native guardado en DB tratado como paths (`memory/profile.md`, `skills/*.md`). Regla: juicios repetidos se anexan a memoria; eventualmente se promueven a "skills" para mantener el prompt compacto.
+
+## 6. Infraestructura de producción
+Applica está **en vivo** en `https://applicaswipe.com`.
+- **Hosting:** VPS de Hostinger (compartido con otros proyectos del usuario), acceso vía `ssh vps-sortcash`.
+- **Web + HTTPS:** Nginx como reverse proxy delante de Next.js, con SSL real (no self-signed). Headers de seguridad configurados (HSTS, X-Frame-Options, X-Content-Type-Options, Referrer-Policy, Permissions-Policy).
+- **Proceso:** PM2 gestiona tanto el proceso web (Next.js) como el worker (`ecosystem.config.js`); el worker debe lanzarse vía `scripts/startWorker.ts` (carga `.env.local` antes de importar nada) - lanzarlo directo se rompe (ver `DECISIONS.md`/`STATUS.md`, bug real ya corregido de `DATABASE_URL` indefinido).
+- **Deploy:** GitHub Actions con push-to-deploy - un push a `master` dispara el pipeline que actualiza el servidor. No hay deploy manual salvo casos excepcionales.
+- **Base de datos:** PostgreSQL propio corriendo en el mismo VPS (no un proveedor externo tipo Neon/Supabase), con backups diarios configurados. Ver nota en §2 sobre cómo `src/db/client.ts` distingue el driver según el host.
+- **Descargas / APK de la app móvil:** el APK de Android (compilado localmente con Gradle, sin depender de EAS/Expo cloud) se sube directo al propio VPS bajo `public/downloads/` y se sirve desde `https://applicaswipe.com/downloads/<archivo>.apk` - no se usa ningún servicio externo de distribución (ni EAS, ni un bucket de terceros). `src/proxy.ts` permite acceso público sin auth a `/downloads`.

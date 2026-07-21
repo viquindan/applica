@@ -204,10 +204,12 @@ const styles = StyleSheet.create({
     width: SCREEN_WIDTH - Spacing.four * 2,
     // Fills the space the ✕/✓ row used to take (removed - swipe is the only
     // decision gesture now) instead of floating centered with dead space
-    // above/below. Resolves against `deck` (index.tsx), which is flex:1
-    // between the HUD and the tab bar - near-100% so the card reaches down
-    // close to the nav bar instead of leaving a visible gap.
-    height: '99%',
+    // above/below. `flex: 1` against `deck` (index.tsx, itself flex:1
+    // between the HUD and the tab bar) instead of a percentage height - a
+    // '99%' height silently left a real gap above the tab bar on some
+    // devices (percentage heights need a fully definite parent height at
+    // every layout pass; flex fills whatever the parent actually resolves to).
+    flex: 1,
     // Real bug (2026-07-20): a long description (up to 16 lines) plus a
     // long title could add up to more height than the card's fixed 99% -
     // without this, that overflow text rendered straight through the
