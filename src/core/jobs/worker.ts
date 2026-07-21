@@ -201,7 +201,19 @@ export async function startWorkers() {
         const srTokens = enabledNames.has('smartrecruiters')
           ? await getActiveAtsBoardTokensBatch('smartrecruiters', 500, 0)
           : [];
-        vacancies = await gatherSearchCandidates({ roles, locations, homeCountries, maxAgeDays, acceptsRemote, limit: 200, smartRecruitersTokens: srTokens });
+        // No cap (decision 2026-07-21): a hard `limit: 200` here truncated the
+        // region-matching pool via a coarse pre-score heuristic (searchRank in
+        // atsSearchHelpers.ts - role + geo + recency + salary, NOT the real
+        // fitScorer) BEFORE the real scorer ever ran. A candidate that would've
+        // scored well on the real scorer but ranked outside the top 200 on that
+        // coarse heuristic was silently never evaluated, every run - visible as
+        // "region match: 200" flatlined regardless of the true pool size. Per
+        // candidate cost here is a couple of cheap DB round-trips (eligibility/
+        // fitScorer are pure JS); maybeSemanticAdjust only calls the embeddings
+        // API for borderline scores AND only when ENABLE_SEMANTIC_RERANK is on,
+        // so evaluating the full role+region pool is a slower search, not a
+        // materially more expensive one.
+        vacancies = await gatherSearchCandidates({ roles, locations, homeCountries, maxAgeDays, acceptsRemote, limit: 999999, smartRecruitersTokens: srTokens });
         // Honor explicit per-user platform opt-outs against the shared pool.
         vacancies = vacancies.filter((v) => enabledNames.has(v.platform));
         console.log(`[Worker] Cache hit: ${jobCacheSize()} cached jobs -> ${vacancies.length} candidates for user ${userId}`);

@@ -107,7 +107,18 @@ export function useApplicationActions() {
   const sendApprove = useMutation({
     mutationFn: (app: AppRow) => applicationAction(app.id, 'approve'),
     onSettled: invalidate,
-    onError: onActionError,
+    // A 409 with `blockers` means the silent headless attempt hit a
+    // genuinely-unknown required field - per docs/APPLY-ENGINE.md §1, that
+    // (plus a captcha) is one of the only two valid reasons for the user to
+    // step in, and the real-browser/assisted flow is exactly how they resolve
+    // it in place (same escalation the worker already does automatically for
+    // a captcha). Auto-retry as assisted instead of dead-ending on approve -
+    // no popup, and it lands in Pendientes ("Applica esta aplicando por ti")
+    // like any other assisted send, per user decision 2026-07-21.
+    onError: (err, app) => {
+      if (err instanceof ApiError && err.blockers?.length) { sendAssisted.mutate(app); return; }
+      onActionError(err);
+    },
     onSuccess: () => setActionError(null),
   });
   const sendAssisted = useMutation({
