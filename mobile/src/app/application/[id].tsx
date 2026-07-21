@@ -77,7 +77,7 @@ export default function ApplicationDetailScreen() {
           <ThemedText themeColor="textSecondary" style={styles.meta}>Plataforma: {app.vacancy?.platform}</ThemedText>
 
           {app.vacancy?.description ? (
-            <ThemedText themeColor="textSecondary" style={styles.description}>{stripHtml(app.vacancy.description)}</ThemedText>
+            <ThemedText style={[styles.description, { color: theme.text }]}>{stripHtml(app.vacancy.description)}</ThemedText>
           ) : null}
 
           {app.status === 'pending_review' && (

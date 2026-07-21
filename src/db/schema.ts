@@ -324,6 +324,20 @@ export const applications = pgTable('applications', {
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });
 
+// ─── Swipe feedback (motor de afinamiento, ver docs/SEARCH-ENGINE.md) ────────
+
+export const swipeFeedback = pgTable('swipe_feedback', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  vacancyId: uuid('vacancy_id').notNull().references(() => vacancies.id, { onDelete: 'cascade' }),
+  applicationId: uuid('application_id').references(() => applications.id, { onDelete: 'cascade' }),
+  decision: varchar('decision', { length: 10 }).notNull(), // 'positive' | 'negative'
+  reason: text('reason').notNull(),
+  scoreAtDecision: integer('score_at_decision'),
+  scoreBreakdownAtDecision: jsonb('score_breakdown_at_decision'),
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+});
+
 // ─── Application Submissions ──────────────────────────────────────────────────
 
 export const applicationSubmissions = pgTable('application_submissions', {

@@ -4,14 +4,17 @@ import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { runSearch } from '@/api/applications';
+import { postSwipeFeedback, type SwipeDecision } from '@/api/swipeFeedback';
 import { EmptyState, StatPill } from '@/components/empty-state';
 import { CelebrationBurst, type CelebrationBurstHandle } from '@/components/gamification/celebration-burst';
 import { FeedHud } from '@/components/gamification/feed-hud';
 import { MilestoneCelebration } from '@/components/gamification/milestone-celebration';
 import { SearchingPanel } from '@/components/gamification/searching-panel';
 import { SwipeCard } from '@/components/swipe-card';
+import { SwipeReasonSheet } from '@/components/swipe-reason-sheet';
 import { ThemedView } from '@/components/themed-view';
 import { Gold, Spacing } from '@/constants/theme';
+import { useAuth } from '@/hooks/use-auth';
 import { isLinkedIn, useApplicationActions, useApplicationsData } from '@/hooks/use-applications';
 import { useSearchStatus } from '@/hooks/use-search-status';
 import { useStreak } from '@/hooks/use-streak';
@@ -23,11 +26,20 @@ const STREAK_MILESTONES = [3, 7, 14, 30, 60, 100];
 
 export default function FeedScreen() {
   const router = useRouter();
+  const { user } = useAuth();
+  const tuningEnabled = !!user?.searchTuningEnabled;
   const { queueApps, isLoading, refetch, isRefetching, stats, settings } = useApplicationsData();
   const { applyApp, discardApp } = useApplicationActions();
   const streak = useStreak();
   const celebrationRef = useRef<CelebrationBurstHandle>(null);
   const [searchState, setSearchState] = useState<'idle' | 'queuing' | 'queued'>('idle');
+  // Motor de afinamiento (docs/SEARCH-ENGINE.md): mientras esto no sea null,
+  // el swipe está "en pausa" esperando el motivo obligatorio antes de que
+  // applyOrOpenLinkedIn/handleDiscard corran de verdad. Solo se usa cuando
+  // tuningEnabled es true - para cualquier otra cuenta el flujo es idéntico
+  // al de siempre.
+  const [pendingReason, setPendingReason] = useState<{ app: AppRow; decision: SwipeDecision } | null>(null);
+  const [submittingReason, setSubmittingReason] = useState(false);
   // No vertical scroll/paging anymore (removed per user feedback: it fought
   // the horizontal swipe gesture and made swiping feel sluggish). Only the
   // top card renders; swiping it away reveals the next one directly. Hiding
@@ -105,6 +117,25 @@ export default function FeedScreen() {
     discardApp(app);
   }
 
+  async function handleReasonSubmit(reason: string) {
+    if (!pendingReason) return;
+    const { app, decision } = pendingReason;
+    setSubmittingReason(true);
+    try {
+      await postSwipeFeedback({ vacancyId: app.vacancyId, applicationId: app.id, decision, reason });
+    } catch {
+      // Best-effort: un fallo al guardar el motivo no debe bloquear el swipe real.
+    }
+    setSubmittingReason(false);
+    setPendingReason(null);
+    if (decision === 'positive') applyOrOpenLinkedIn(app);
+    else handleDiscard(app);
+  }
+
+  function handleReasonCancel() {
+    setPendingReason(null);
+  }
+
   const visibleQueue = queueApps.filter((a) => !hiddenIds.has(a.id));
   const current = visibleQueue[0];
 
@@ -140,8 +171,8 @@ export default function FeedScreen() {
               key={current.id}
               app={current}
               onTap={() => router.push(`/application/${current.id}`)}
-              onSwipeRight={() => applyOrOpenLinkedIn(current)}
-              onSwipeLeft={() => handleDiscard(current)}
+              onSwipeRight={() => (tuningEnabled ? setPendingReason({ app: current, decision: 'positive' }) : applyOrOpenLinkedIn(current))}
+              onSwipeLeft={() => (tuningEnabled ? setPendingReason({ app: current, decision: 'negative' }) : handleDiscard(current))}
             />
           ) : showSearchingPanel ? (
             <SearchingPanel status={searchStatus} />
@@ -166,6 +197,13 @@ export default function FeedScreen() {
           title={celebration?.title ?? ''}
           subtitle={celebration?.subtitle ?? ''}
           onDone={() => setCelebration(null)}
+        />
+        <SwipeReasonSheet
+          visible={!!pendingReason}
+          decision={pendingReason?.decision ?? null}
+          submitting={submittingReason}
+          onSubmit={handleReasonSubmit}
+          onCancel={handleReasonCancel}
         />
       </SafeAreaView>
     </ThemedView>

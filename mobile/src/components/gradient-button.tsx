@@ -4,6 +4,7 @@ import { ActivityIndicator, StyleSheet } from 'react-native';
 import { AnimatedPressable } from '@/components/animated-pressable';
 import { ThemedText } from '@/components/themed-text';
 import { Gradients, Petrol, Radius, Shadows, Spacing, TextGold } from '@/constants/theme';
+import { useTheme } from '@/hooks/use-theme';
 
 type Props = {
   label: string;
@@ -18,10 +19,15 @@ type Props = {
 // outline for less-important actions so gold stays reserved for THE one
 // primary action per screen (apple-design skill: one primary CTA per screen).
 export function GradientButton({ label, onPress, loading, disabled, variant = 'primary' }: Props) {
+  const theme = useTheme();
   if (variant === 'secondary') {
     return (
-      <AnimatedPressable onPress={onPress} disabled={disabled || loading} style={styles.secondary} haptic="light">
-        {loading ? <ActivityIndicator color={Petrol} /> : <ThemedText style={styles.secondaryText}>{label}</ThemedText>}
+      <AnimatedPressable
+        onPress={onPress}
+        disabled={disabled || loading}
+        style={[styles.secondary, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}
+        haptic="light">
+        {loading ? <ActivityIndicator color={theme.text} /> : <ThemedText style={[styles.secondaryText, { color: theme.text }]}>{label}</ThemedText>}
       </AnimatedPressable>
     );
   }
@@ -52,5 +58,5 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: 'rgba(18,51,56,0.18)',
   },
-  secondaryText: { color: Petrol, fontWeight: '700', fontSize: 15 },
+  secondaryText: { fontWeight: '700', fontSize: 15 },
 });

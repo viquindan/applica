@@ -23,7 +23,7 @@ export default function AppTabs() {
       </NativeTabs.Trigger>
 
       <NativeTabs.Trigger name="apps">
-        <NativeTabs.Trigger.Label>Apps</NativeTabs.Trigger.Label>
+        <NativeTabs.Trigger.Label>Aplicaciones</NativeTabs.Trigger.Label>
         <NativeTabs.Trigger.Icon sf={{ default: 'tray.full', selected: 'tray.full.fill' }} md="work_history" />
       </NativeTabs.Trigger>
 

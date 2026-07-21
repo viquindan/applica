@@ -5,16 +5,19 @@
 // ported here since mobile can't import server-side code. Shared by every
 // screen that renders a vacancy description.
 export function stripHtml(input: string): string {
-  return input
+  const decodeEntities = (value: string) => value
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;/gi, "'")
+    .replace(/&amp;/gi, '&');
+  const decoded = decodeEntities(decodeEntities(input));
+
+  return decoded
     .replace(/<br\s*\/?>/gi, '\n')
     .replace(/<\/(p|div|li)>/gi, '\n')
     .replace(/<[^>]+>/g, '')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
     .replace(/\n{3,}/g, '\n\n')
     .trim();
 }

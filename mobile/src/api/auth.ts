@@ -36,11 +36,21 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export type LoginUser = { id: string; email: string; name: string };
+export type MeUser = LoginUser & { searchTuningEnabled: boolean };
 
 export async function login(email: string, password: string): Promise<LoginUser> {
   const body = await post<{ token: string; user: LoginUser }>('/api/mobile/login', { email, password });
   await setToken(body.token);
   return body.user;
+}
+
+// Re-hidrata el usuario (con flags calculados en el servidor, ej.
+// searchTuningEnabled) a partir del token ya persistido - necesario porque
+// login()/register() no traen esos flags y un reinicio en frío de la app no
+// vuelve a llamar a ninguno de los dos.
+export async function fetchMe(): Promise<MeUser> {
+  const { api } = await import('./client');
+  return api.get<MeUser>('/api/mobile/me');
 }
 
 export async function register(input: {
