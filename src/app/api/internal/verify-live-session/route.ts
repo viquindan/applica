@@ -19,16 +19,24 @@ const ASSISTED_SESSION_MAX_MS = 15 * 60 * 1000;
 // session is), which would otherwise let an old token peek at someone else's
 // captcha.
 export async function GET(req: NextRequest) {
-  // nginx sends the token via the X-Original-URI header (set from
+  // nginx sends the original request via the X-Original-URI header (set from
   // $request_uri, which - unlike $arg_token - nginx reliably resolves inside
   // an auth_request subrequest) instead of a query param on this route's own
   // URL. Fall back to our own query string for direct/manual testing.
   const originalUri = req.headers.get('x-original-uri');
-  const token = originalUri
-    ? new URL(originalUri, 'http://internal').searchParams.get('token')
-    : req.nextUrl.searchParams.get('token');
+  const originalUrl = originalUri ? new URL(originalUri, 'http://internal') : req.nextUrl;
+  const token = originalUrl.searchParams.get('token');
   const claim = verifyLiveSessionToken(token);
   if (!claim) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
+
+  // The URL path (/assisted-view/<index>/websockify) picks which pool port
+  // nginx proxies to; a token only grants access to the index it was minted
+  // for, or a client could reuse their own valid token against someone
+  // else's slot just by editing the digit in the URL.
+  const pathIndexMatch = originalUrl.pathname.match(/^\/assisted-view\/(\d+)\/websockify$/);
+  if (!pathIndexMatch || Number(pathIndexMatch[1]) !== claim.poolIndex) {
+    return NextResponse.json({ error: 'Token does not grant access to this slot' }, { status: 403 });
+  }
 
   const [app] = await db.select({
     assistedSessionStartedAt: applications.assistedSessionStartedAt,
