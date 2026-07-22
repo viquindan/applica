@@ -19,7 +19,14 @@ const ASSISTED_SESSION_MAX_MS = 15 * 60 * 1000;
 // session is), which would otherwise let an old token peek at someone else's
 // captcha.
 export async function GET(req: NextRequest) {
-  const token = req.nextUrl.searchParams.get('token');
+  // nginx sends the token via the X-Original-URI header (set from
+  // $request_uri, which - unlike $arg_token - nginx reliably resolves inside
+  // an auth_request subrequest) instead of a query param on this route's own
+  // URL. Fall back to our own query string for direct/manual testing.
+  const originalUri = req.headers.get('x-original-uri');
+  const token = originalUri
+    ? new URL(originalUri, 'http://internal').searchParams.get('token')
+    : req.nextUrl.searchParams.get('token');
   const claim = verifyLiveSessionToken(token);
   if (!claim) return NextResponse.json({ error: 'Invalid or expired token' }, { status: 401 });
 
