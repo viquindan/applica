@@ -1,7 +1,9 @@
 'use client';
 import { useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CompanyLogo, ExtensionOffer, ScoreRing } from '@/components/JobCardUI';
 import { useApplicationActions } from '../useApplicationActions';
+import { useLiveEvents } from '../useLiveEvents';
 import type { AppRow } from '../data';
 import LiveSessionButton from './LiveSessionButton';
 
@@ -12,6 +14,9 @@ export default function PendientesClient({ apps }: { apps: AppRow[] }) {
     pendingApps, queueApps, actioningId, markApplied, cancelAssisted, openApp, needsInfoFor,
     applyApp, discardApp, isAtsApp, linkedinPendingCount,
   } = useApplicationActions(apps);
+
+  const router = useRouter();
+  useLiveEvents({ onApplicationsChanged: () => router.refresh() });
 
   const [tab, setTab] = useState<Tab>(pendingApps.length > 0 ? 'attention' : 'backlog');
   const [search, setSearch] = useState('');

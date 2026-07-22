@@ -1,8 +1,10 @@
 'use client';
 import { useState, useEffect, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { IconX } from '@tabler/icons-react';
 import { CompanyLogo, ScoreRing, STATUS_META, MODE_META } from '@/components/JobCardUI';
 import { useApplicationActions } from '../useApplicationActions';
+import { useLiveEvents } from '../useLiveEvents';
 import type { AppRow } from '../data';
 import type { users, userSettings } from '@/db/schema';
 
@@ -25,6 +27,9 @@ export default function AppsClient({
   billing?: { tier: string; limits: any; currentCount: number };
 }) {
   const { historyApps, actioningId, discardApp, openApp, navigatingId } = useApplicationActions(apps);
+
+  const router = useRouter();
+  useLiveEvents({ onApplicationsChanged: () => router.refresh() });
 
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
   const [filter, setFilter] = useState('all');

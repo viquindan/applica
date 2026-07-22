@@ -1,10 +1,12 @@
 'use client';
 import { useEffect, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import SwipeDeck from '@/components/SwipeDeck';
 import SearchingPanel from '@/components/SearchingPanel';
 import SearchEnginePanel from '@/components/SearchEnginePanel';
 import { useApplicationActions } from './useApplicationActions';
 import { useSearchEngine } from './useSearchEngine';
+import { useLiveEvents } from './useLiveEvents';
 import type { AppRow } from './data';
 import type { users, professionalProfiles, userSettings } from '@/db/schema';
 
@@ -30,6 +32,12 @@ export default function FeedClient({
 
   const engine = useSearchEngine(settings);
   const { liveProgress, isSearching, runSearchNow } = engine;
+
+  const router = useRouter();
+  useLiveEvents({
+    onApplicationsChanged: () => router.refresh(),
+    onSearchProgress: engine.applyLiveProgress,
+  });
 
   // First thing a brand-new user should see: the Feed already searching, not
   // a dead "nothing here" screen. A search is only auto-queued 24h after

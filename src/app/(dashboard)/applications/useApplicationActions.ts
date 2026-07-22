@@ -52,13 +52,6 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   // Apps (historial): everything that has moved past the decision stage.
   const historyApps = live.filter((a) => a.status !== 'pending_review' && a.status !== 'approved');
 
-  const anySending = apps.some((a) => a.status === 'approved');
-  useEffect(() => {
-    if (!anySending) return;
-    const interval = setInterval(() => router.refresh(), 4000);
-    return () => clearInterval(interval);
-  }, [anySending, router]);
-
   function attentionReason(app: AppRow): AttentionReason {
     const url = app.vacancy?.url ?? '';
     const warns = (app.vacancy?.warnings as string[] | null) ?? [];

@@ -65,25 +65,23 @@ export function useSearchEngine(settings: Settings) {
     router.refresh();
   }
 
+  // Fed by the shared SSE connection (useLiveEvents, wired by whichever page
+  // component uses this hook) instead of its own polling loop - see
+  // src/app/api/events/route.ts. Falls back to a single fetch if the caller
+  // never wires SSE, so this hook still works standalone.
+  const applyLiveProgress = (data: Omit<typeof liveProgress, 'lastSearchAt'> & { lastSearchAt: string | Date | null }) => {
+    setLiveProgress({ ...data, lastSearchAt: data.lastSearchAt ? new Date(data.lastSearchAt) : null });
+    if (!data.searchInProgress && data.lastSearchStatus !== 'running' && data.lastSearchStatus !== 'queued') {
+      setStartingSearch(false);
+      router.refresh();
+    }
+  };
+
   useEffect(() => {
     if (!isSearching) return;
-    const poll = async () => {
-      try {
-        const res = await fetch('/api/search/status');
-        if (res.ok) {
-          const data = await res.json();
-          setLiveProgress(data);
-          if (!data.searchInProgress && data.lastSearchStatus !== 'running' && data.lastSearchStatus !== 'queued') {
-            setStartingSearch(false);
-            router.refresh();
-          }
-        }
-      } catch {}
-    };
-    poll();
-    const interval = setInterval(poll, 2000);
-    return () => clearInterval(interval);
-  }, [isSearching, router]);
+    fetch('/api/search/status').then((res) => res.ok && res.json()).then((data) => data && applyLiveProgress(data)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isSearching]);
 
   const timeAgo = (date: Date) => {
     const seconds = Math.floor((new Date().getTime() - date.getTime()) / 1000);
@@ -104,7 +102,7 @@ export function useSearchEngine(settings: Settings) {
   const nextSearchLabel = settings.nextSearchAt ? new Date(settings.nextSearchAt).toLocaleString('es', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' }) : 'Se programa al guardar';
 
   return {
-    liveProgress, isSearching, runSearchNow, pauseSearch,
+    liveProgress, isSearching, runSearchNow, pauseSearch, applyLiveProgress,
     settingsForm, updateSettings, savingSettings, savedSettings,
     lastSearchLabel, nextSearchLabel,
   };
