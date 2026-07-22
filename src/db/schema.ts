@@ -320,6 +320,15 @@ export const applications = pgTable('applications', {
   submissionDecision: jsonb('submission_decision'),
   responseStatus: applicationResponseEnum('response_status').default('unknown').notNull(),
   contactedAt: timestamp('contacted_at'),
+  // Live noVNC viewing (docs/APPLY-ENGINE.md §4/§5, ver plan de sesión asistida
+  // en vivo): seteados por el worker al entrar al loop de vigilancia de
+  // assisted_apply y limpiados en su `finally` (mismo punto que ya limpia el
+  // guard `activeAssisted`). El proceso API (`applica-web`) no puede leer el
+  // pool en memoria del worker (procesos PM2 separados), así que esta es la
+  // única señal que /api/applications/[id]/live-session tiene para saber si
+  // hay una sesión viva y a qué display del pool mandar al usuario.
+  assistedSessionStartedAt: timestamp('assisted_session_started_at'),
+  assistedSessionPoolIndex: integer('assisted_session_pool_index'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
 });

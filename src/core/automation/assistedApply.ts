@@ -218,7 +218,7 @@ export async function runRealBrowserApply(
   adapter: PlatformAdapter,
   url: string,
   contextData: Omit<ApplyContext, 'page' | 'fillOnly'>,
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; onChallenge?: () => void },
 ): Promise<AssistedOutcome & { auto?: boolean }> {
   const timeoutMs = opts?.timeoutMs ?? 15 * 60 * 1000;
   const logs: AssistedOutcome['logs'] = [];
@@ -324,7 +324,7 @@ export async function runRealBrowserApply(
       // steals focus from the user solving it AND reads as bot activity to the
       // anti-bot. The bot only watches until the challenge is gone.
       const challengeUp = await captchaVisible(page);
-      if (challengeUp && !challengeSeen) { challengeSeen = true; log('[auto] Captcha detectado: Applica en pausa; el usuario tiene el control.'); }
+      if (challengeUp && !challengeSeen) { challengeSeen = true; log('[auto] Captcha detectado: Applica en pausa; el usuario tiene el control.'); opts?.onChallenge?.(); }
       if (!challengeUp) {
         try {
           const n = await fillEverythingKnown(page, contextData.profileData, contextData.formAnswers ?? {}, (m) => log(`[auto] ${m}`));
@@ -416,13 +416,13 @@ export async function runAssistedApply(
   adapter: PlatformAdapter,
   url: string,
   contextData: Omit<ApplyContext, 'page' | 'fillOnly'>,
-  opts?: { timeoutMs?: number },
+  opts?: { timeoutMs?: number; display?: string; onChallenge?: () => void },
 ): Promise<AssistedOutcome> {
   const timeoutMs = opts?.timeoutMs ?? 15 * 60 * 1000;
   const logs: AssistedOutcome['logs'] = [];
   const log = (message: string) => { console.log(`[Assisted] ${message}`); logs!.push({ level: 'info', message, timestamp: new Date().toISOString() }); };
 
-  const { browser, context } = await launchHeadfulBrowser();
+  const { browser, context } = await launchHeadfulBrowser({ display: opts?.display });
   let closed = false;
   browser.on('disconnected', () => { closed = true; });
   context.on('close', () => { closed = true; });
@@ -464,6 +464,7 @@ export async function runAssistedApply(
       // Same multi-page auto-refill as the real-browser path (see there for why),
       // and same freeze while a captcha challenge is on screen.
       const challengeUp = await captchaVisible(page);
+      if (challengeUp && !challengeSeen) opts?.onChallenge?.();
       if (challengeUp) challengeSeen = true;
       if (!challengeUp) {
         try { await fillEverythingKnown(page, contextData.profileData, contextData.formAnswers ?? {}, (m) => log(`[auto] ${m}`)); } catch { /* mid-transition DOM; retry next tick */ }

@@ -695,9 +695,34 @@ export async function startWorkers() {
   // double-windows without a pg-boss singleton that would block legitimate retries).
   const activeAssisted = new Set<string>();
 
+  // Pool of virtual-display slots for concurrent assisted-apply sessions (live
+  // noVNC viewing plan, 2026-07-22): a single shared Xvfb (:99) meant only ONE
+  // assisted session could run at a time for the WHOLE platform - user B's
+  // captcha would queue behind user A's until A's finished or timed out (up to
+  // 15 min). Explicit product decision: this must scale per user, bounded only
+  // by real server capacity, not by a hardcoded single display. `ASSISTED_APPLY_POOL_SIZE`
+  // fixed (Xvfb :100.. :10N / x11vnc / websockify) triples are provisioned on
+  // the VPS via templated systemd units (`xvfb@.service` etc.) - this pool just
+  // tracks which of those N slots are free. The worker is a single Node process
+  // (no cluster), so an in-memory array is enough; no cross-process coordination
+  // needed.
+  const ASSISTED_POOL_SIZE = Number(process.env.ASSISTED_APPLY_POOL_SIZE ?? 10);
+  const assistedPoolFree: number[] = Array.from({ length: ASSISTED_POOL_SIZE }, (_, i) => i);
+  function acquirePoolSlot(): number | null {
+    return assistedPoolFree.length ? assistedPoolFree.shift()! : null;
+  }
+  function releasePoolSlot(index: number) {
+    if (!assistedPoolFree.includes(index)) assistedPoolFree.push(index);
+  }
+
   // Assisted apply: open a VISIBLE browser on the user's machine with the form
   // pre-filled, and let the user finish (CAPTCHA + submit). We watch the window.
-  await boss.work('assisted_apply', async (jobs: any) => {
+  // localConcurrency lets pg-boss run up to ASSISTED_APPLY_POOL_SIZE of these
+  // handlers at once in this same process (pg-boss v12's replacement for the
+  // older `teamSize` option) - without it, the library defaults to processing
+  // this queue one job at a time, which was the real cause of the system-wide
+  // single-session bottleneck.
+  await boss.work('assisted_apply', { localConcurrency: ASSISTED_POOL_SIZE }, async (jobs: any) => {
     const job = Array.isArray(jobs) ? jobs[0] : jobs;
     const { applicationId } = job.data as { applicationId: string };
     console.log(`[Worker] Assisted apply for application ${applicationId}`);
@@ -713,7 +738,22 @@ export async function startWorkers() {
       console.log(`[Worker] Assisted window already open for ${applicationId} - skipping duplicate.`);
       return { success: true, skipped: 'already_open' };
     }
+    // Defensive: with localConcurrency === ASSISTED_POOL_SIZE a free slot
+    // should always exist here, but never launch a browser without one -
+    // that would put two sessions on the same display.
+    const poolSlot = acquirePoolSlot();
+    if (poolSlot === null) {
+      console.warn(`[Worker] No free assisted-apply display slot for ${applicationId} - retrying later.`);
+      await resetToReview('Todas las sesiones asistidas están ocupadas ahora mismo. Vuelve a intentar en unos minutos.');
+      return { success: false, error: 'pool_exhausted' };
+    }
     activeAssisted.add(applicationId);
+    const display = `:${100 + poolSlot}`;
+    await db.update(applications).set({
+      assistedSessionStartedAt: new Date(),
+      assistedSessionPoolIndex: poolSlot,
+      updatedAt: new Date(),
+    }).where(eq(applications.id, applicationId));
 
     try {
       const { runAssistedApply, runRealBrowserApply } = require('../automation/assistedApply');
@@ -777,10 +817,25 @@ export async function startWorkers() {
         coverLetterContent: coverLetter?.content,
         formAnswers: mergedAnswers,
       };
+      // Fired the FIRST time this session hits a captcha - the only moment the
+      // user actually needs to show up (see the live-session/noVNC plan). Guards
+      // against double-firing across the two possible engines below.
+      let challengeNotified = false;
+      const onChallenge = () => {
+        if (challengeNotified) return;
+        challengeNotified = true;
+        sendPushToUser(
+          application.userId,
+          'Necesitamos que resuelvas un captcha',
+          `${vacancy.title} en ${vacancy.company} está esperando tu ayuda para continuar.`,
+          { applicationId },
+        );
+      };
+
       // Prefer the user's REAL browser (trusted fingerprint invisible captchas may
       // pass silently for a true auto-submit; also uses the real GPU). Falls back to
       // the bundled headful browser (pre-fill only) if no local browser is found.
-      let outcome = await runRealBrowserApply(adapter, vacancy.url, applyCtx);
+      let outcome = await runRealBrowserApply(adapter, vacancy.url, applyCtx, { onChallenge });
       // Fall back to the bundled headful browser ONLY if the real browser couldn't
       // be LAUNCHED (not installed, or "opens in the existing session" and
       // Playwright loses control). An error INSIDE the real browser (adapter
@@ -788,8 +843,8 @@ export async function startWorkers() {
       // user's sessions and no trusted fingerprint, which defeats the whole flow -
       // better to reset to pending_review and let the user retry in THEIR browser.
       if (outcome.status === 'error' && (outcome.reason === 'no_local_browser' || String(outcome.reason ?? '').startsWith('launch_failed'))) {
-        console.log(`[Worker] Real browser unavailable (${outcome.reason}) - falling back to bundled headful.`);
-        outcome = await runAssistedApply(adapter, vacancy.url, applyCtx);
+        console.log(`[Worker] Real browser unavailable (${outcome.reason}) - falling back to bundled headful on display ${display}.`);
+        outcome = await runAssistedApply(adapter, vacancy.url, applyCtx, { display, onChallenge });
       }
 
       // Silent learning: save answers the user filled in the window to their bank
@@ -845,6 +900,15 @@ export async function startWorkers() {
       return { success: false, error: e?.message ?? String(e) };
     } finally {
       activeAssisted.delete(applicationId);
+      releasePoolSlot(poolSlot);
+      // Clear regardless of how we got here (submitted, reverted, thrown) - a
+      // stale timestamp would make /api/applications/[id]/live-session think
+      // this session is still live after it's actually over.
+      await db.update(applications).set({
+        assistedSessionStartedAt: null,
+        assistedSessionPoolIndex: null,
+        updatedAt: new Date(),
+      }).where(eq(applications.id, applicationId)).catch(() => {});
     }
   });
 

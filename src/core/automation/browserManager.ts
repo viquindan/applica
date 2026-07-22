@@ -51,6 +51,13 @@ export interface ContextOptions {
     username?: string;
     password?: string;
   };
+  // X11 display to launch INTO, e.g. ':100' - only meaningful for the headful
+  // path (launchHeadfulBrowser). Lets several assisted-apply sessions run at
+  // once, each on its own virtual screen (see docs/APPLY-ENGINE.md and the
+  // live-session/noVNC plan) instead of all fighting over the single
+  // process-wide DISPLAY env var PM2 sets. Falls back to that inherited env
+  // var when omitted, so existing single-session behavior is unchanged.
+  display?: string;
 }
 
 /**
@@ -102,9 +109,14 @@ export async function createIncognitoContext(options?: ContextOptions): Promise<
  */
 export async function launchHeadfulBrowser(options?: ContextOptions): Promise<{ browser: Browser; context: BrowserContext }> {
   const proxy = options?.proxy ?? getProxyFromEnv();
-  console.log('[BrowserManager] Launching headful browser for assisted apply...');
+  console.log(`[BrowserManager] Launching headful browser for assisted apply${options?.display ? ` on display ${options.display}` : ''}...`);
   const browser = await chromium.launch({
     headless: false,
+    // Without an explicit `display`, Chromium inherits DISPLAY from
+    // process.env (the single Xvfb :99 that ecosystem.config.js sets) - fine
+    // for one session at a time. With one, each concurrent assisted-apply
+    // session renders into its OWN virtual screen from the pool.
+    env: options?.display ? { ...process.env, DISPLAY: options.display } : undefined,
     args: [
       '--disable-blink-features=AutomationControlled',
       '--start-maximized',
