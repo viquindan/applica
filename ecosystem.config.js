@@ -40,7 +40,15 @@ module.exports = {
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production',
-        PATH: '/root/.nvm/versions/node/v22.23.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+        PATH: '/root/.nvm/versions/node/v22.23.1/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin',
+        // Real bug found in QA (2026-07-21): assisted-apply launches a HEADFUL
+        // browser (see docs/APPLY-ENGINE.md §4/§5) - on this headless Linux
+        // VPS that always crashed ("Missing X server or $DISPLAY") and the
+        // worker silently reverted the application back to pending_review
+        // with zero trace (no error, no applicationSubmissions row) - looked
+        // exactly like nothing had happened. Xvfb (systemd service, :99) now
+        // provides a virtual display for headful Chromium to render into.
+        DISPLAY: ':99'
       }
     }
   ]
