@@ -14,7 +14,7 @@ export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { apps } = useApplicationsData();
-  const { applyApp, applyAnyway, actionError, isApplying } = useApplicationActions();
+  const { applyApp, applyAnyway, actionError } = useApplicationActions();
   const [preparing, setPreparing] = useState(false);
   const theme = useTheme();
   const app = apps.find((a) => a.id === id);
@@ -27,6 +27,14 @@ export default function ApplicationDetailScreen() {
     if (actionError) Alert.alert('No se pudo aplicar', actionError);
   }, [actionError]);
 
+  // Same "instant, don't wait" contract as the Feed swipe (index.tsx) - the
+  // real send (headless attempt, possible escalation to the assisted real
+  // browser) can take a while, and this screen used to sit on "Enviando..."
+  // for that whole round trip, unlike the swipe which moves on immediately
+  // and lets the result surface later via push notification + Pendientes.
+  // applyApp fires the mutation without awaiting it (react-query .mutate,
+  // not .mutateAsync) - navigating back right after has the same effect as
+  // the swipe's optimistic hide, just via navigation instead of a local list.
   function onApplyPress() {
     if (!app) return;
     if (isLinkedIn(app)) {
@@ -34,7 +42,8 @@ export default function ApplicationDetailScreen() {
       return;
     }
     const reason = applyApp(app);
-    if (reason) Alert.alert('Todavia no se puede aplicar', reason);
+    if (reason) { Alert.alert('Todavia no se puede aplicar', reason); return; }
+    router.back();
   }
 
   if (!app) {
@@ -81,10 +90,8 @@ export default function ApplicationDetailScreen() {
           ) : null}
 
           {app.status === 'pending_review' && (
-            <ThemedText
-              onPress={isApplying ? undefined : onApplyPress}
-              style={[styles.applyButton, isApplying && styles.applyButtonDisabled]}>
-              {isApplying ? 'Enviando...' : 'Aplicar'}
+            <ThemedText onPress={onApplyPress} style={styles.applyButton}>
+              Aplicar
             </ThemedText>
           )}
 
