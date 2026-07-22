@@ -99,7 +99,19 @@ async function callLLM(prompt: string, settings: { provider: string; apiKey: str
   if (settings.provider === 'google') {
     const { google } = await import('@ai-sdk/google');
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = settings.apiKey;
-    const { text } = await withAiRateLimit(() => generateText({ model: google(settings.model || 'gemini-2.5-flash'), prompt, maxOutputTokens: 4000 }));
+    // Real bug found in QA (2026-07-21): gemini-2.5-flash is a "thinking"
+    // model - its reasoning tokens ate the budget and truncated the JSON
+    // response returned by tailorCV mid-way (same root cause already fixed
+    // once in extractProfileFromCv.ts). A truncated response here silently
+    // fell back to "no changes" (see the catch in tailorCV below) instead of
+    // ever surfacing as a failure. Same fix: disable thinking, give the full
+    // rewritten CV + changes array real room.
+    const { text } = await withAiRateLimit(() => generateText({
+      model: google(settings.model || 'gemini-2.5-flash'),
+      prompt,
+      maxOutputTokens: 8000,
+      providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } },
+    }));
     return text;
   }
   throw new Error(`Unknown provider: ${settings.provider}`);
@@ -127,8 +139,16 @@ export async function tailorCV(
       truthfulnessScore: parsed.truthfulnessScore || 100,
       passed: (parsed.truthfulnessScore || 100) >= 80,
     };
-  } catch {
-    return { tailoredCV: cvText, coverLetter: '', changes: [], truthfulnessScore: 100, passed: true };
+  } catch (error) {
+    // Real bug found in QA (2026-07-21): this used to return `passed: true`
+    // on a parse failure, so a truncated/malformed LLM response looked
+    // EXACTLY like "the AI decided the base CV needed no changes" - a real
+    // tailoring failure was invisible end to end (confirmed live: the
+    // "tailored" CV for a real application came back byte-identical to the
+    // base CV, no error anywhere). Log the raw response so a repeat is
+    // diagnosable, and mark it unpassed instead of a false success.
+    console.warn('[cvTailor] Failed to parse tailoring response, falling back to original CV:', (error as Error)?.message, '| raw:', raw.slice(0, 500));
+    return { tailoredCV: cvText, coverLetter: '', changes: [], truthfulnessScore: 0, passed: false };
   }
 }
 

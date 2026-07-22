@@ -1,4 +1,7 @@
 import { PgBoss, type PgBoss as PgBossType } from 'pg-boss';
+import { db } from '../../db/client';
+import { userSettings } from '../../db/schema';
+import { eq } from 'drizzle-orm';
 
 let boss: PgBossType | null = null;
 
@@ -59,12 +62,43 @@ export async function queueSearch(userId: string, startAfter?: Date) {
   });
 }
 
-export async function queueImmediateSearch(userId: string) {
+// No singletonKey by design (unlike queueSearch's 15min dedup) - "search now"
+// must always be ABLE to fire, e.g. right after a scheduled search's window
+// closes. But every caller (the "Buscar ahora" button, a CV upload, future
+// ones) needs the SAME "not while one's already running" guard, or two
+// overlapping search_vacancies jobs fight over the same LinkedIn scraper/
+// Chromium/AI-limiter resources and race on userSettings' own telemetry
+// fields - confirmed live: uploading a CV twice queued two overlapping runs,
+// and the second (which found nothing new - everything already existed)
+// overwrote lastSearchFunnel with zeros, hiding real matches from the first
+// run. Centralized here instead of duplicated per call site.
+export async function queueImmediateSearch(userId: string): Promise<{ queued: boolean }> {
+  const [existing] = await db.select({
+    searchInProgress: userSettings.searchInProgress,
+    lastSearchStatus: userSettings.lastSearchStatus,
+  }).from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+  if (existing?.searchInProgress || existing?.lastSearchStatus === 'queued' || existing?.lastSearchStatus === 'running') {
+    return { queued: false };
+  }
+
+  await db.update(userSettings).set({
+    searchInProgress: false,
+    lastSearchStatus: 'queued',
+    lastSearchError: null,
+    lastSearchResultCount: 0,
+    lastSearchPreparedCount: 0,
+    lastSearchFilteredCount: 0,
+    lastSearchSourceCount: 0,
+    lastSearchScannedSourceCount: 0,
+    updatedAt: new Date(),
+  }).where(eq(userSettings.userId, userId));
+
   const b = await getBoss();
   await b.send('search_vacancies', { userId }, {
     retryLimit: 3,
     expireInSeconds: 60 * 15,
   });
+  return { queued: true };
 }
 
 export async function queueAssistedApply(applicationId: string) {

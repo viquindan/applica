@@ -119,11 +119,7 @@ function isLikelyRoleLine(line: string) {
   return !line.startsWith('•') && !/[.!?]$/.test(line) && line.split(/\s+/).length <= 8;
 }
 
-export async function extractProfileFromCv(text: string): Promise<ExtractedProfile> {
-  const ai = getInternalAiConfig();
-  if (!ai) return fallbackExtract(text);
-
-  try {
+async function runAiExtraction(text: string, ai: { apiKey: string; model: string }): Promise<ExtractedProfile> {
     const { generateObject } = await import('ai');
     const { google } = await import('@ai-sdk/google');
     process.env.GOOGLE_GENERATIVE_AI_API_KEY = ai.apiKey;
@@ -192,6 +188,36 @@ ${text.slice(0, 18000)}`,
       languages: object.languages?.length ? object.languages : fallback.languages,
       achievements: object.achievements?.trim() ? object.achievements : fallback.achievements,
     };
+}
+
+// Real bug found in QA (2026-07-21/22): reproduced 2/2 times on the same real
+// CV - experience/education/location/country came back completely empty
+// despite being clearly present in the raw extracted text (skills/name/phone
+// extracted fine in the same run, so this isn't the maxOutputTokens
+// truncation already fixed above - it's model non-determinism already
+// documented in this file's git history: "the same CV can return 0
+// experiences one run and 5 the next"). One retry is cheap and matches that
+// documented behavior; if it happens twice in a row the log below is what a
+// future session needs to actually calibrate the prompt with real data
+// instead of guessing.
+export async function extractProfileFromCv(text: string): Promise<ExtractedProfile> {
+  const ai = getInternalAiConfig();
+  if (!ai) return fallbackExtract(text);
+
+  try {
+    let result = await runAiExtraction(text, ai);
+    const substantialText = text.trim().length > 500;
+    const cameBackEmpty = !result.experience?.length && !result.education?.length;
+    if (substantialText && cameBackEmpty) {
+      console.warn('[profile-extract] experience/education both empty on a substantial CV - retrying once.');
+      const retry = await runAiExtraction(text, ai);
+      if (retry.experience?.length || retry.education?.length) {
+        result = retry;
+      } else {
+        console.warn('[profile-extract] Retry also came back empty - likely a genuine prompt/format gap, not a one-off flake.');
+      }
+    }
+    return result;
   } catch (error) {
     console.error('[profile-extract] AI extraction failed, using fallback:', error);
     return fallbackExtract(text);

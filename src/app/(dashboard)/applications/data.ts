@@ -17,13 +17,58 @@ export type AppRow = typeof applications.$inferSelect & {
  * matter which tab a user lands on. Each page slices this same `apps` array
  * client-side (see useApplicationSlices).
  */
+// Shared column shape for the vacancies+applications bundle below - kept as
+// a function (not a query fragment) so the two queries in loadApplicationsData
+// stay in lockstep without copy-pasting the object twice.
+function appRowColumns() {
+  return {
+    id: sql`coalesce(${applications.id}::text, ${vacancies.id}::text)`.mapWith(String),
+    userId: vacancies.userId,
+    vacancyId: vacancies.id,
+    status: sql`coalesce(${applications.status}::text, ${vacancies.status}::text)`.mapWith(String),
+    mode: sql`coalesce(${applications.mode}::text, 'none'::text)`.mapWith(String),
+    adaptedResumeId: applications.adaptedResumeId,
+    coverLetterId: applications.coverLetterId,
+    formAnswers: applications.formAnswers,
+    resumeChanges: applications.resumeChanges,
+    submissionDecision: applications.submissionDecision,
+    responseStatus: sql`coalesce(${applications.responseStatus}::text, 'unknown'::text)`.mapWith(String),
+    contactedAt: applications.contactedAt,
+    createdAt: sql`coalesce(${applications.createdAt}, ${vacancies.createdAt})`,
+    updatedAt: sql`coalesce(${applications.updatedAt}, ${vacancies.updatedAt})`,
+    vacancy: {
+      title: vacancies.title,
+      company: vacancies.company,
+      platform: vacancies.platform,
+      url: vacancies.url,
+      score: vacancies.score,
+      location: vacancies.location,
+      warnings: vacancies.warnings,
+      description: vacancies.description,
+    },
+  };
+}
+
+// Real bug found in QA (2026-07-21/22): a single `ORDER BY createdAt DESC
+// LIMIT 200` on the WHOLE pool meant a big search (a real run created 333
+// applications) silently pushed the OLDEST ones - which are exactly the ones
+// that finish material prep FIRST - out of the window. Result: vacancies
+// already sitting in `pending_review`, ready to swipe, were invisible in the
+// Feed/Pendientes/Apps because the query never returned them at all. Fix:
+// every currently-actionable row (pending_review/approved) is fetched with
+// NO cap - that set is bounded by the score threshold and how fast the user
+// swipes, not by total history size - and only the settled/historical rows
+// (draft, filtered, submitted, archived, skipped...) share the 200-row cap.
+const ACTIONABLE_STATUS_SQL = sql`coalesce(${applications.status}::text, ${vacancies.status}::text) in ('pending_review', 'approved')`;
+
 export async function loadApplicationsData(userId: string) {
   await ensureUserMemory(userId);
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
 
   const [
-    rows,
+    actionableRows,
+    historyRows,
     [user],
     [profile],
     [settings],
@@ -38,35 +83,16 @@ export async function loadApplicationsData(userId: string) {
     currentCount,
   ] = await Promise.all([
     db
-      .select({
-        id: sql`coalesce(${applications.id}::text, ${vacancies.id}::text)`.mapWith(String),
-        userId: vacancies.userId,
-        vacancyId: vacancies.id,
-        status: sql`coalesce(${applications.status}::text, ${vacancies.status}::text)`.mapWith(String),
-        mode: sql`coalesce(${applications.mode}::text, 'none'::text)`.mapWith(String),
-        adaptedResumeId: applications.adaptedResumeId,
-        coverLetterId: applications.coverLetterId,
-        formAnswers: applications.formAnswers,
-        resumeChanges: applications.resumeChanges,
-        submissionDecision: applications.submissionDecision,
-        responseStatus: sql`coalesce(${applications.responseStatus}::text, 'unknown'::text)`.mapWith(String),
-        contactedAt: applications.contactedAt,
-        createdAt: sql`coalesce(${applications.createdAt}, ${vacancies.createdAt})`,
-        updatedAt: sql`coalesce(${applications.updatedAt}, ${vacancies.updatedAt})`,
-        vacancy: {
-          title: vacancies.title,
-          company: vacancies.company,
-          platform: vacancies.platform,
-          url: vacancies.url,
-          score: vacancies.score,
-          location: vacancies.location,
-          warnings: vacancies.warnings,
-          description: vacancies.description,
-        },
-      })
+      .select(appRowColumns())
       .from(vacancies)
       .leftJoin(applications, eq(vacancies.id, applications.vacancyId))
-      .where(eq(vacancies.userId, userId))
+      .where(and(eq(vacancies.userId, userId), ACTIONABLE_STATUS_SQL))
+      .orderBy(sql`coalesce(${applications.createdAt}, ${vacancies.createdAt}) desc`),
+    db
+      .select(appRowColumns())
+      .from(vacancies)
+      .leftJoin(applications, eq(vacancies.id, applications.vacancyId))
+      .where(and(eq(vacancies.userId, userId), sql`not (${ACTIONABLE_STATUS_SQL})`))
       .orderBy(sql`coalesce(${applications.createdAt}, ${vacancies.createdAt}) desc`)
       .limit(200),
     db.select().from(users).where(eq(users.id, userId)).limit(1),
@@ -93,7 +119,7 @@ export async function loadApplicationsData(userId: string) {
   ]);
 
   return {
-    apps: rows as unknown as AppRow[],
+    apps: [...actionableRows, ...historyRows] as unknown as AppRow[],
     user,
     profile,
     settings,
