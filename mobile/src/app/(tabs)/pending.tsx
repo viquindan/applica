@@ -1,6 +1,6 @@
 import { useRouter } from 'expo-router';
-import { useState } from 'react';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { Animated as RNAnimated, Easing, FlatList, StyleSheet, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -13,17 +13,62 @@ import { Gold, Petrol, Radius, Shadows, Spacing, TextGold } from '@/constants/th
 import { blockerQuestion, needsInfoFor, unresolvedBlockers, useApplicationActions, useApplicationsData } from '@/hooks/use-applications';
 import type { AppRow } from '@/types';
 
+const LIVE = '#2f9e6e';
+
+// Compact status banner (design reviewed as "Opción A" with the user,
+// 2026-07-22): the list used to drop straight into the first card with zero
+// context on how many sends are actually in flight. Same pulse-dot language
+// SwipeCard already uses for "this needs a decision now" (UrgencyPulse),
+// reused here for "this is happening right now".
+function PulseDot() {
+  const pulse = useRef(new RNAnimated.Value(0)).current;
+  useEffect(() => {
+    const loop = RNAnimated.loop(
+      RNAnimated.sequence([
+        RNAnimated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+        RNAnimated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  const haloScale = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 2.6] });
+  const haloOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 0] });
+  return (
+    <View style={styles.pulseWrap}>
+      <RNAnimated.View style={[styles.pulseHalo, { transform: [{ scale: haloScale }], opacity: haloOpacity }]} />
+      <View style={styles.pulseDot} />
+    </View>
+  );
+}
+
+function SendingBanner({ count }: { count: number }) {
+  return (
+    <View style={styles.banner}>
+      <PulseDot />
+      <View style={styles.bannerText}>
+        <ThemedText style={styles.bannerTitle}>
+          {count === 1 ? '1 aplicación en curso' : `${count} aplicaciones en curso`}
+        </ThemedText>
+        <ThemedText style={styles.bannerSubtitle}>Applica está aplicando por ti - ayuda si hace falta</ThemedText>
+      </View>
+    </View>
+  );
+}
+
 export default function PendingScreen() {
   const router = useRouter();
   const { pendingApps, stats } = useApplicationsData();
   const { markApplied, cancelAssisted, answerBlockers } = useApplicationActions();
   const [fillingApp, setFillingApp] = useState<AppRow | null>(null);
+  const sendingCount = useMemo(() => pendingApps.filter((a) => a.status === 'approved').length, [pendingApps]);
 
   return (
     <ThemedView style={styles.container}>
       <SafeAreaView style={styles.safeArea}>
         {/* No page title - the tab bar already reads "Pendientes" (see Feed
             for the same change and why). */}
+        {sendingCount > 0 ? <SendingBanner count={sendingCount} /> : null}
         <FlatList
           data={pendingApps}
           keyExtractor={(a) => a.id}
@@ -116,4 +161,16 @@ const styles = StyleSheet.create({
   pillSecondaryText: { color: '#414849', fontSize: 12 },
   pillLive: { backgroundColor: Petrol, paddingHorizontal: Spacing.three, paddingVertical: 6, borderRadius: Radius.full },
   pillLiveText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
+  banner: {
+    flexDirection: 'row', alignItems: 'center', gap: Spacing.two,
+    backgroundColor: Petrol, borderRadius: Radius.lg,
+    paddingVertical: Spacing.three, paddingHorizontal: Spacing.three,
+    marginBottom: Spacing.three,
+  },
+  bannerText: { flex: 1 },
+  bannerTitle: { color: '#FFFFFF', fontWeight: '800', fontSize: 14 },
+  bannerSubtitle: { color: 'rgba(255,255,255,0.72)', fontSize: 12, marginTop: 2 },
+  pulseWrap: { width: 14, height: 14, alignItems: 'center', justifyContent: 'center' },
+  pulseHalo: { position: 'absolute', width: 14, height: 14, borderRadius: 7, backgroundColor: LIVE },
+  pulseDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: LIVE },
 });
