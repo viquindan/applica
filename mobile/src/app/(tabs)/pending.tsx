@@ -44,6 +44,7 @@ export default function PendingScreen() {
               onMarkApplied={() => markApplied.mutate(item)}
               onCancel={() => cancelAssisted.mutate(item)}
               onFillInfo={() => setFillingApp(item)}
+              onHelpLive={() => router.push(`/assisted-view/${item.id}`)}
             />
           )}
         />
@@ -63,8 +64,8 @@ export default function PendingScreen() {
   );
 }
 
-function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo }: {
-  app: AppRow; index: number; onPress: () => void; onMarkApplied: () => void; onCancel: () => void; onFillInfo: () => void;
+function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo, onHelpLive }: {
+  app: AppRow; index: number; onPress: () => void; onMarkApplied: () => void; onCancel: () => void; onFillInfo: () => void; onHelpLive: () => void;
 }) {
   const sending = app.status === 'approved';
   const missingInfo = needsInfoFor(app);
@@ -77,6 +78,9 @@ function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo }: {
       </ThemedText>
       {sending && (
         <View style={styles.rowActions}>
+          <AnimatedPressable haptic="medium" onPress={onHelpLive} style={styles.pillLive}>
+            <ThemedText style={styles.pillLiveText}>Ayudar ahora (en vivo)</ThemedText>
+          </AnimatedPressable>
           <AnimatedPressable haptic="medium" onPress={onMarkApplied} style={styles.pillPrimary}>
             <ThemedText style={styles.pillPrimaryText}>Ya envié</ThemedText>
           </AnimatedPressable>
@@ -110,4 +114,6 @@ const styles = StyleSheet.create({
   pillPrimaryText: { color: TextGold, fontWeight: '700', fontSize: 12 },
   pillSecondary: { backgroundColor: '#f4f3f3', paddingHorizontal: Spacing.three, paddingVertical: 6, borderRadius: Radius.full },
   pillSecondaryText: { color: '#414849', fontSize: 12 },
+  pillLive: { backgroundColor: Petrol, paddingHorizontal: Spacing.three, paddingVertical: 6, borderRadius: Radius.full },
+  pillLiveText: { color: '#FFFFFF', fontWeight: '700', fontSize: 12 },
 });

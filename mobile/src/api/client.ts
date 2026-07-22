@@ -1,6 +1,6 @@
 import { getToken } from './auth';
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
+export const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3000';
 
 export class ApiError extends Error {
   status: number;

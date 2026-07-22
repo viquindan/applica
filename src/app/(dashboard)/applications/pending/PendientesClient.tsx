@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { CompanyLogo, ExtensionOffer, ScoreRing } from '@/components/JobCardUI';
 import { useApplicationActions } from '../useApplicationActions';
 import type { AppRow } from '../data';
+import LiveSessionButton from './LiveSessionButton';
 
 type Tab = 'attention' | 'backlog';
 
@@ -81,6 +82,7 @@ export default function PendientesClient({ apps }: { apps: AppRow[] }) {
                   <div style={{ display: 'flex', gap: '.5rem', flexWrap: 'wrap' }}>
                     {isApproved ? (
                       <>
+                        <LiveSessionButton applicationId={app.id} />
                         <button className="btn btn-primary btn-sm" disabled={actioningId === app.id} onClick={() => markApplied(app)}>
                           {actioningId === app.id ? <span className="spinner" style={{ width: 12, height: 12 }} /> : 'Ya envié'}
                         </button>
