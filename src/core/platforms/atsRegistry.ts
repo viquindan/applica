@@ -253,7 +253,7 @@ export async function discoveratsBoardsFromText(input: {
 
 const PROBE_PLATFORMS: AtsPlatform[] = ['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'recruitee'];
 
-function companyNameToToken(name: string): string {
+export function companyNameToToken(name: string): string {
   return (name ?? '')
     .normalize('NFD').replace(new RegExp('[\\u0300-\\u036f]', 'g'), '')
     .toLowerCase()
@@ -319,6 +319,21 @@ export async function growRegistryFromCompanies(companyNames: string[]): Promise
   });
 
   return { probed: fresh.length, added };
+}
+
+/**
+ * Cheap, probe-free check of how much of a batch of company names is already
+ * known (previously probed, success or miss) - used by
+ * companyDirectoryDiscovery.ts to decide when a Wikipedia category has been
+ * mined dry and should stop earning a slot in the daily rotation. No network
+ * calls to the ATS platforms themselves, just a DB lookup.
+ */
+export async function getKnownTokenRatio(companyNames: string[]): Promise<{ total: number; known: number }> {
+  const tokens = [...new Set(companyNames.map(companyNameToToken))].filter((t) => isPlausibleBoardToken(t) && t.length >= 3);
+  if (tokens.length === 0) return { total: 0, known: 0 };
+  const known = await db.select({ token: atsBoards.token }).from(atsBoards).where(inArray(atsBoards.token, tokens));
+  const knownSet = new Set(known.map((k) => k.token));
+  return { total: tokens.length, known: tokens.filter((t) => knownSet.has(t)).length };
 }
 
 async function mapWithConcurrency<T, R>(

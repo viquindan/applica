@@ -423,6 +423,28 @@ export const atsBoards = pgTable('ats_boards', {
   };
 });
 
+// Self-expanding pool for discover_companies_directory (companyDirectoryDiscovery.ts).
+// Was a hardcoded array that saturated (growRegistryFromCompanies permanently
+// skips already-probed company names, so a fixed ~89-category list eventually
+// stops yielding anything new - real bug found+fixed 2026-07-23). Persisted
+// here so a weekly crawl of Wikipedia's own category tree can keep adding
+// genuinely new categories without a human re-curating the list by hand.
+export const atsDiscoveryCategories = pgTable('ats_discovery_categories', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  category: varchar('category', { length: 255 }).notNull(),
+  // Once a rotation of this category shows almost every member is already a
+  // known token (probed before, success or miss), it stops earning its slot
+  // in the daily rotation - no point re-fetching the same 500 names forever.
+  exhausted: boolean('exhausted').notNull().default(false),
+  lastProbedAt: timestamp('last_probed_at'),
+  lastKnownRatio: integer('last_known_ratio'), // 0-100, % of members already known at last probe
+  createdAt: timestamp('created_at').defaultNow().notNull(),
+}, (table) => {
+  return {
+    categoryIdx: uniqueIndex('ats_discovery_categories_category_idx').on(table.category),
+  };
+});
+
 export const atsBoardDiscoveries = pgTable('ats_board_discoveries', {
   id: uuid('id').primaryKey().defaultRandom(),
   platform: varchar('platform', { length: 50 }).notNull().default('greenhouse'),

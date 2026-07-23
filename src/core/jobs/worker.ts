@@ -39,7 +39,7 @@ import { seedAshbyBoards } from '../platforms/ashbySources';
 import { seedSmartRecruitersBoards } from '../platforms/smartRecruitersSources';
 import { seedRecruiteeBoards } from '../platforms/recruiteeSources';
 import { getActiveAtsBoardTokensBatch, getActiveBoardCount, refreshAtsBoardRegistry, getAtsRegistryMetrics, seedAtsBoards, growRegistryFromCompanies } from '../platforms/atsRegistry';
-import { discoverCompaniesFromDirectories } from '../platforms/companyDirectoryDiscovery';
+import { discoverCompaniesFromDirectories, discoverNewWikipediaCategories } from '../platforms/companyDirectoryDiscovery';
 import { refreshJobCache, isJobCacheFresh, gatherSearchCandidates, jobCacheSize } from '../platforms/jobCache';
 import { inspectApplicationForm, mergeDecisionWithPreview } from '../automation/formPreview';
 import { autoAnswerFields } from '../automation/standardAnswers';
@@ -1376,8 +1376,24 @@ export async function startWorkers() {
     return { success: true, ...result, metrics };
   }
 
+  // Self-expanding companion to runCompanyDirectoryDiscovery (2026-07-23): the
+  // rotating category list used to be a hardcoded array that quietly
+  // saturated after enough sessions reused it (real bug, confirmed live - a
+  // sampled category was 74% already-known). Crawls Wikipedia's own category
+  // tree (by industry/country/city/founding year) to add genuinely new
+  // categories to ats_discovery_categories on its own - weekly cadence
+  // because it's just navigating category metadata, not probing company
+  // names, so it doesn't need to run as often as the discovery job itself.
+  async function runCategoryTreeExpansion() {
+    console.log('[Worker] Expanding Wikipedia discovery category pool...');
+    const result = await discoverNewWikipediaCategories();
+    console.log(`[Worker] Category pool expansion: scanned=${result.scanned} added=${result.added}`);
+    return { success: true, ...result };
+  }
+
   await boss.work('discover_ats_boards', async () => runBoardDiscovery());
   await boss.work('discover_companies_directory', async () => runCompanyDirectoryDiscovery());
+  await boss.work('expand_discovery_categories', async () => runCategoryTreeExpansion());
 
   // Rescue orphaned assisted applications. 'approved' means "assisted window open,
   // worker watching". A freshly booted worker has ZERO active watchers, so any app
@@ -1412,6 +1428,9 @@ export async function startWorkers() {
 
   runCompanyDirectoryDiscovery().catch((e) => console.warn('[Worker] Initial company directory discovery failed:', (e as Error)?.message ?? e));
   setInterval(() => runCompanyDirectoryDiscovery().catch((e) => console.warn('[Worker] Company directory discovery failed:', (e as Error)?.message ?? e)), 24 * 60 * 60 * 1000);
+
+  runCategoryTreeExpansion().catch((e) => console.warn('[Worker] Initial category pool expansion failed:', (e as Error)?.message ?? e));
+  setInterval(() => runCategoryTreeExpansion().catch((e) => console.warn('[Worker] Category pool expansion failed:', (e as Error)?.message ?? e)), 7 * 24 * 60 * 60 * 1000);
 
   // Re-evaluate each user's stored vacancies against the current rules on startup
   // (so rule changes apply to history) and then on a 6h cadence.

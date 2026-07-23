@@ -37,6 +37,7 @@ export async function getBoss(): Promise<PgBossType> {
         boss.createQueue('refresh_ats_registry'),
         boss.createQueue('discover_ats_boards'),
         boss.createQueue('discover_companies_directory'),
+        boss.createQueue('expand_discovery_categories'),
         boss.createQueue('refresh_job_cache'),
         boss.createQueue('re_evaluate_vacancies'),
       ]);
