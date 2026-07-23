@@ -370,6 +370,14 @@ se rompen:
   hard-exclude por idioma no reconocía ningún idioma declarado, 2026-07-13)
 - **`geoScope` desde la descripción, no solo el string de location.**
   (remote-US-only vs remote-global, 2026-07-18)
+- **Vacante redactada en inglés + perfil que declara idiomas pero NO inglés →
+  penalización -8 + aviso, nunca exclusión** (decisión de producto explícita,
+  2026-07-24). Antes el inglés se asumía universal y un perfil solo-español
+  recibía vacantes en inglés sin ninguna señal. Perfil sin idiomas declarados
+  = silencio (nada que juzgar). El detector de idioma es un conteo de
+  palabras funcionales EN vs ES con mayoría clara exigida (una vacante en
+  español con anglicismos nunca dispara).
+  → `scoring/__tests__/fitScorer.test.ts` (bloque "posting language").
 
 ---
 

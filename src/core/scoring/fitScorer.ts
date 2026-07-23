@@ -400,6 +400,16 @@ export function scoreVacancy(
   // user didn't declare English at all we stay silent (nothing to judge).
   let languagePenalty = 0;
   const ENGLISH_DEMAND_RX = /\b(native|fluent|bilingual|c1|c2|full professional)[^.\n]{0,30}\benglish\b|\benglish\b[^.\n]{0,40}\b(native|fluent|fluency|bilingual|c1|c2|full professional)\b/i;
+  // Cheap, deterministic "is this posting written in English?" check: count
+  // unambiguous English vs Spanish function words. Requires a clear English
+  // majority (not just a few loanwords in a Spanish posting) before it
+  // triggers, so bilingual/Spanish postings never match.
+  const looksWrittenInEnglish = (text: string): boolean => {
+    const sample = ` ${text.slice(0, 4000).toLowerCase()} `;
+    const en = (sample.match(/[\s(]("?)(the|and|with|you|will|our|are|this|that|from)\1[\s,.)]/g) ?? []).length;
+    const es = (sample.match(/[\s(]("?)(el|la|los|las|para|con|que|una|del|este)\1[\s,.)]/g) ?? []).length;
+    return en >= 8 && en > es * 2;
+  };
   const declaredEnglish = (profile.languages ?? [])
     .map((l) => (typeof l === 'string' ? { language: l, proficiency: '' } : l))
     .find((l) => /\b(english|ingles|inglés)\b/i.test(l?.language ?? ''));
@@ -407,6 +417,20 @@ export function scoreVacancy(
   if (lowEnglish && ENGLISH_DEMAND_RX.test(desc)) {
     languagePenalty = 10;
     warnings.push(`La vacante exige inglés fluido/nativo y tu perfil declara inglés ${declaredEnglish!.proficiency} - puede ser una barrera real.`);
+  }
+
+  // Posting WRITTEN in English for a profile that declares languages but not
+  // English at all (product decision 2026-07-24, explicit user approval):
+  // English used to be assumed universally, so a Spanish-only profile got
+  // English-language vacancies with zero signal that the day-to-day job runs
+  // in a language they don't speak. Moderate penalty + warning, never a hard
+  // exclude (an English posting doesn't always mean English-only work, and
+  // plenty of LATAM candidates apply to them anyway). A profile with NO
+  // languages declared stays silent - nothing to judge, same principle as
+  // the low-English rule above.
+  if (!declaredEnglish && (profile.languages ?? []).length > 0 && looksWrittenInEnglish(desc)) {
+    languagePenalty = Math.max(languagePenalty, 8);
+    warnings.push('La vacante está redactada en inglés y tu perfil no declara inglés - confirma que el idioma no sea una barrera.');
   }
 
   // Excluded checks

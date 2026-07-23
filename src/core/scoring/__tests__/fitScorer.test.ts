@@ -137,3 +137,37 @@ describe('scoreVacancy - role match', () => {
     expect(result.breakdown.roleMatch).toBeLessThan(20);
   });
 });
+
+// Product decision 2026-07-24 (explicit user approval): a posting WRITTEN in
+// English for a profile that declares languages but not English gets a
+// moderate penalty + warning - before this, English was assumed universally
+// and a Spanish-only profile received English vacancies with zero signal.
+// Never a hard exclude; a profile with NO languages declared stays silent.
+describe('scoreVacancy - posting language vs declared languages', () => {
+  const englishDesc = 'You will work with our team on the product. This role is remote and you will report to the CTO. We are looking for someone that can start soon. The team ships fast and you will own the roadmap from day one. Our stack is modern and the culture is friendly.';
+  const spanishDesc = 'Buscamos una persona para el equipo de producto. El rol es remoto y vas a reportar con el CTO. La empresa tiene una cultura amigable y el equipo lanza rapido. Este puesto es para una persona con experiencia en el area.';
+
+  it('warns and penalizes when the posting is in English and the profile declares only Spanish', () => {
+    const p = profile({ languages: [{ language: 'Español', proficiency: 'Nativo' }] } as any);
+    const result = scoreVacancy(vacancy({ description: englishDesc, location: 'Remote - Worldwide' }), p);
+    expect(result.warnings.some((w) => /redactada en inglés/i.test(w))).toBe(true);
+  });
+
+  it('stays silent for a Spanish posting', () => {
+    const p = profile({ languages: [{ language: 'Español', proficiency: 'Nativo' }] } as any);
+    const result = scoreVacancy(vacancy({ description: spanishDesc, location: 'Remote - Worldwide' }), p);
+    expect(result.warnings.some((w) => /redactada en inglés/i.test(w))).toBe(false);
+  });
+
+  it('stays silent when the profile DOES declare English', () => {
+    const p = profile({ languages: [{ language: 'Español', proficiency: 'Nativo' }, { language: 'Inglés', proficiency: 'Avanzado' }] } as any);
+    const result = scoreVacancy(vacancy({ description: englishDesc, location: 'Remote - Worldwide' }), p);
+    expect(result.warnings.some((w) => /redactada en inglés/i.test(w))).toBe(false);
+  });
+
+  it('stays silent when the profile declares no languages at all (nothing to judge)', () => {
+    const p = profile({ languages: [] } as any);
+    const result = scoreVacancy(vacancy({ description: englishDesc, location: 'Remote - Worldwide' }), p);
+    expect(result.warnings.some((w) => /redactada en inglés/i.test(w))).toBe(false);
+  });
+});
