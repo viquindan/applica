@@ -134,27 +134,16 @@ export async function queueRegenerateMaterials(applicationId: string, kind: 'cv'
   await b.send('regenerate_materials', { applicationId, kind }, { retryLimit: 2, expireInSeconds: 60 * 15 });
 }
 
-export async function queueRegistryRefresh(startAfter?: Date) {
-  const b = await getBoss();
-  await b.send('refresh_ats_registry', {}, {
-    retryLimit: 2,
-    expireInSeconds: 60 * 30,
-    singletonKey: 'registry_refresh',
-    singletonSeconds: 60 * 60 * 12, // at most once every 12h
-    ...(startAfter ? { startAfter } : {}),
-  });
-}
-
-export async function queueJobCacheRefresh(startAfter?: Date) {
-  const b = await getBoss();
-  await b.send('refresh_job_cache', {}, {
-    retryLimit: 2,
-    expireInSeconds: 60 * 30,
-    singletonKey: 'job_cache_refresh',
-    singletonSeconds: 60 * 60 * 5, // at most once every 5h
-    ...(startAfter ? { startAfter } : {}),
-  });
-}
+// queueRegistryRefresh / queueJobCacheRefresh / queueBoardDiscovery /
+// queueCompanyDirectoryDiscovery used to live here (self-rescheduling via
+// singletonKey + startAfter). Removed 2026-07-23: dead code, nothing called
+// them anymore since the 2026-07-17 fix moved these four to an in-process
+// setInterval in worker.ts (see the long comment there on why the
+// singletonKey pattern is fragile across restarts - a real production
+// incident, not theoretical). Left in place for weeks as unused exports, a
+// future session could plausibly call one "because it's there" and
+// reintroduce that exact bug. queueReEvaluate stays: it's still the live
+// per-user re-scheduling path, called from within its own worker.ts handler.
 
 export async function queueReEvaluate(userId: string, startAfter?: Date) {
   const b = await getBoss();
@@ -167,24 +156,3 @@ export async function queueReEvaluate(userId: string, startAfter?: Date) {
   });
 }
 
-export async function queueBoardDiscovery(startAfter?: Date) {
-  const b = await getBoss();
-  await b.send('discover_ats_boards', {}, {
-    retryLimit: 2,
-    expireInSeconds: 60 * 60,
-    singletonKey: 'board_discovery',
-    singletonSeconds: 60 * 60 * 4, // at most once every 4h
-    ...(startAfter ? { startAfter } : {}),
-  });
-}
-
-export async function queueCompanyDirectoryDiscovery(startAfter?: Date) {
-  const b = await getBoss();
-  await b.send('discover_companies_directory', {}, {
-    retryLimit: 2,
-    expireInSeconds: 60 * 60,
-    singletonKey: 'company_directory_discovery',
-    singletonSeconds: 60 * 60 * 24, // at most once every 24h
-    ...(startAfter ? { startAfter } : {}),
-  });
-}
