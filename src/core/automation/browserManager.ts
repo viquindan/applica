@@ -108,14 +108,19 @@ export async function createIncognitoContext(options?: ContextOptions): Promise<
  * so it can stay open without affecting the worker's headless scraping.
  */
 // Must match the pool's Xvfb resolution (xvfb-pool@.service on the VPS,
-// `Xvfb :10%i -screen 0 420x900x24` - not tracked in this repo). `Xvfb`/the
+// `Xvfb :10%i -screen 0 500x900x24` - not tracked in this repo). `Xvfb`/the
 // assisted-apply pool run with NO window manager at all, so `--start-maximized`
 // has nothing to negotiate window geometry with and silently falls back to
 // some default size far smaller than the virtual screen - found real via the
 // user's noVNC screenshot showing the browser filling only a small fraction
 // of the phone-shaped display with a huge black margin below it. An explicit
 // `--window-size`/`--window-position` doesn't need a WM at all.
-const HEADFUL_SCREEN_SIZE = { width: 420, height: 900 };
+// Width is 500, not phone-narrow 420: verified live with `xwininfo` that
+// Chromium enforces its own ~500px minimum window width regardless of
+// `--window-size` - requesting 420 still produced a 500-wide window, wider
+// than a 420 Xvfb screen, clipping the right edge. Matching Xvfb to
+// Chromium's real floor avoids that mismatch entirely.
+const HEADFUL_SCREEN_SIZE = { width: 500, height: 900 };
 
 export async function launchHeadfulBrowser(options?: ContextOptions): Promise<{ browser: Browser; context: BrowserContext }> {
   const proxy = options?.proxy ?? getProxyFromEnv();
