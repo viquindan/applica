@@ -122,6 +122,11 @@ function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo, onHelpL
         {sending ? 'Applica está aplicando por ti...' : 'Faltan algunos datos para poder aplicar'}
       </ThemedText>
       {sending && (
+        <ThemedText style={styles.rowHint}>
+          Te avisamos si necesitamos tu ayuda - no hace falta que te quedes mirando.
+        </ThemedText>
+      )}
+      {sending && (
         <View style={styles.rowActions}>
           <AnimatedPressable haptic="medium" onPress={onHelpLive} style={styles.pillLive}>
             <ThemedText style={styles.pillLiveText}>Ayudar ahora (en vivo)</ThemedText>
@@ -154,6 +159,7 @@ const styles = StyleSheet.create({
   rowTitle: { color: Petrol, fontSize: 16, fontWeight: '700' },
   rowCompany: { color: '#414849', fontSize: 14 },
   rowStatus: { color: '#5c6366', fontSize: 12, marginTop: 4 },
+  rowHint: { color: '#8d9694', fontSize: 11, marginTop: 2, fontStyle: 'italic' },
   rowActions: { flexDirection: 'row', gap: Spacing.two, marginTop: Spacing.two },
   pillPrimary: { backgroundColor: Gold, paddingHorizontal: Spacing.three, paddingVertical: 6, borderRadius: Radius.full },
   pillPrimaryText: { color: TextGold, fontWeight: '700', fontSize: 12 },

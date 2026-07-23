@@ -80,7 +80,7 @@ export default function PendientesClient({ apps }: { apps: AppRow[] }) {
 
                   <div style={{ fontSize: '.82rem', color: 'var(--text-2)', background: 'var(--bg)', borderRadius: 'var(--radius-md)', padding: '.75rem .9rem', marginBottom: '1.1rem', lineHeight: 1.55 }}>
                     {isApproved
-                      ? 'Applica abrió una ventana con el formulario listo. Resuelve el captcha si aparece, revisa y envía. Confirma aquí al terminar.'
+                      ? 'Applica está llenando el formulario. No hace falta que te quedes mirando - te avisamos apenas necesitemos tu ayuda (un captcha o un dato puntual).'
                       : 'Esta vacante pide información que Applica todavía no tiene. Complétala para poder enviarla.'}
                   </div>
 
