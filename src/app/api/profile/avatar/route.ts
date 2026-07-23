@@ -5,13 +5,12 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
+import { resolveUploadPath } from '@/core/tailoring/cvFile';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
 };
-
-const resolveUploadPath = (p: string) => (path.isAbsolute(p) ? p : path.resolve(process.cwd(), p));
 
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(req);
@@ -26,7 +25,13 @@ export async function POST(req: NextRequest) {
   if (file.size > MAX_BYTES) return NextResponse.json({ error: 'La imagen no puede superar 5MB' }, { status: 400 });
 
   const bytes = Buffer.from(await file.arrayBuffer());
-  const uploadDir = process.env.UPLOAD_DIR || './uploads';
+  // path.resolve, not a bare env-or-fallback string: guarantees an absolute
+  // uploadDir (and therefore an absolute stored filePath below) regardless
+  // of whether UPLOAD_DIR is set - the relative fallback here is what
+  // produced a stored path like "uploads/avatar_..." once (found real,
+  // 2026-07-23), which then broke on the next deploy the same way the CV
+  // path bug did (see resolveUploadPath in cvFile.ts).
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
   await mkdir(uploadDir, { recursive: true });
   const filePath = path.join(uploadDir, `avatar_${userId}_${Date.now()}.${ext}`);
   await writeFile(filePath, bytes);

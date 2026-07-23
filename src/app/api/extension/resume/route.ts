@@ -8,7 +8,17 @@ import path from 'path';
 
 // Inlined (don't import from core/tailoring/cvFile - that transitively pulls in the
 // playwright-extra/stealth automation stack, which throws when loaded in an API route).
-const resolveUploadPath = (p: string) => (path.isAbsolute(p) ? p : path.resolve(process.cwd(), p));
+// Resolves relative paths against UPLOAD_DIR (the persistent shared uploads
+// dir), NOT process.cwd() - a relative stored path resolved against cwd only
+// worked until the next deploy (each release is its own fresh checkout
+// directory), then 404'd against a since-pruned old release. Keep this in
+// lockstep with the identical fix in cvFile.ts's own resolveUploadPath.
+function resolveUploadPath(p: string): string {
+  if (path.isAbsolute(p)) return p;
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+  const rel = p.startsWith('uploads/') || p.startsWith('uploads\\') ? p.slice('uploads/'.length) : p;
+  return path.join(uploadDir, rel);
+}
 
 const CORS = { 'Access-Control-Allow-Origin': '*' };
 
