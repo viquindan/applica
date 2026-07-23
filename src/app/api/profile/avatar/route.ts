@@ -5,12 +5,26 @@ import { users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { mkdir, readFile, writeFile } from 'fs/promises';
 import path from 'path';
-import { resolveUploadPath } from '@/core/tailoring/cvFile';
 
 const MAX_BYTES = 5 * 1024 * 1024;
 const ALLOWED_TYPES: Record<string, string> = {
   'image/jpeg': 'jpg', 'image/jpg': 'jpg', 'image/png': 'png', 'image/webp': 'webp',
 };
+
+// Inlined (don't import from core/tailoring/cvFile - that transitively pulls
+// in browserManager.ts, which runs chromium.use(stealth()) at module level
+// and breaks Next's page-data collection for this route at build time; real
+// incident, 2026-07-23: "TypeError: n.typeOf is not a function" collecting
+// page data for /api/profile/avatar, same signature already documented in
+// APPLY-ENGINE.md for the 3 LinkedIn routes that hit this before). Keep in
+// lockstep with the identical fix in cvFile.ts's own resolveUploadPath and
+// extension/resume/route.ts's inline copy.
+function resolveUploadPath(p: string): string {
+  if (path.isAbsolute(p)) return p;
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+  const rel = p.startsWith('uploads/') || p.startsWith('uploads\\') ? p.slice('uploads/'.length) : p;
+  return path.join(uploadDir, rel);
+}
 
 export async function POST(req: NextRequest) {
   const userId = await getAuthUserId(req);
