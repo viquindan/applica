@@ -61,6 +61,16 @@ export const COMPANY_DIRECTORY_CATEGORIES: string[] = [
   'Category:Companies_established_in_2020',
   'Category:Companies_established_in_2021',
   'Category:Companies_established_in_2022',
+  // 2023+ added 2026-07-23 (real, verified fix): growRegistryFromCompanies
+  // permanently skips any token it has already probed (success OR miss), so
+  // reusing the SAME rotating category list forever makes probed/added trend
+  // to 0 once it saturates - confirmed live (74% of a sampled category was
+  // already known). These four years were never in the list before, so
+  // every member is guaranteed-fresh probing material, not a re-run.
+  'Category:Companies_established_in_2023',
+  'Category:Companies_established_in_2024',
+  'Category:Companies_established_in_2025',
+  'Category:Companies_established_in_2026',
   // Cities - startup-dense hubs and major markets worldwide
   'Category:Companies_based_in_San_Francisco',
   'Category:Companies_based_in_New_York_City',
@@ -110,6 +120,41 @@ export const COMPANY_DIRECTORY_CATEGORIES: string[] = [
   'Category:Companies_based_in_Lagos',
   'Category:Companies_based_in_Nairobi',
   'Category:Companies_based_in_Dubai',
+  // Added 2026-07-23 alongside the 2023-2026 founding years, same reason
+  // (real exhaustion confirmed live) - genuinely new cities/industries the
+  // original list never touched, so their members are fresh probing material.
+  'Category:Companies_based_in_Phoenix,_Arizona',
+  'Category:Companies_based_in_Charlotte,_North_Carolina',
+  'Category:Companies_based_in_Columbus,_Ohio',
+  'Category:Companies_based_in_Indianapolis',
+  'Category:Companies_based_in_Kansas_City,_Missouri',
+  'Category:Companies_based_in_Milwaukee',
+  'Category:Companies_based_in_Tampa,_Florida',
+  'Category:Companies_based_in_Orlando,_Florida',
+  'Category:Companies_based_in_Vienna',
+  'Category:Companies_based_in_Zurich',
+  'Category:Companies_based_in_Stockholm',
+  'Category:Companies_based_in_Copenhagen',
+  'Category:Companies_based_in_Warsaw',
+  'Category:Companies_based_in_Prague',
+  'Category:Companies_based_in_Tokyo',
+  'Category:Companies_based_in_Seoul',
+  'Category:Companies_based_in_Taipei',
+  'Category:Companies_based_in_Jakarta',
+  'Category:Companies_based_in_Manila',
+  'Category:Companies_based_in_Riyadh',
+  'Category:Companies_based_in_Doha',
+  'Category:Companies_based_in_Johannesburg',
+  'Category:Aerospace_companies_of_the_United_States',
+  'Category:Automotive_companies_of_the_United_States',
+  'Category:Semiconductor_companies_of_the_United_States',
+  'Category:Video_game_publishers',
+  'Category:Clothing_companies_of_the_United_States',
+  'Category:Restaurant_companies_of_the_United_States',
+  'Category:Construction_and_civil_engineering_companies_of_the_United_States',
+  'Category:Renewable_energy_companies_of_the_United_States',
+  'Category:Waste_management_companies_of_the_United_States',
+  'Category:Sporting_goods_companies_of_the_United_States',
 ];
 
 // Rotate through a slice each run instead of hitting every category every time
