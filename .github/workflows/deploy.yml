@@ -29,14 +29,26 @@ jobs:
     - name: Run tests
       run: npm test
 
-    - name: Deploy via SSH
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.VPS_HOST }}
-        username: ${{ secrets.VPS_USER }}
-        key: ${{ secrets.VPS_SSH_KEY }}
-        script: |
-          set -e
+    # Real, recurring problem (not project-specific): the appleboy/ssh-action
+    # step failed twice in one day (2026-07-23) with a bare
+    # `dial tcp ***:22: i/o timeout` - the runner never even completed the TCP
+    # handshake to the VPS. Confirmed both times, seconds later, that the VPS
+    # itself was fine (SSH answered in ~2s, no reboot, no firewall/fail2ban
+    # change) - it's networking flakiness on the path between GitHub's runner
+    # and the VPS, not something either side is doing wrong. The whole remote
+    # script below is safe to retry as-is: it always creates a NEW timestamped
+    # release directory and only swaps the `applica-current` symlink after a
+    # full successful build, so a retried run never collides with or corrupts
+    # a prior attempt (worst case on a false-negative retry: one extra release
+    # dir, pruned by the cleanup at the bottom like any other).
+    #
+    # appleboy/ssh-action has no built-in retry, so the SSH connection itself
+    # is done as a plain `ssh` call (key written to a runner-local file just
+    # for this job) wrapped in nick-fields/retry - 3 attempts, 20s apart.
+    - name: Write deploy script
+      run: |
+        cat > deploy_remote.sh << 'DEPLOY_SCRIPT_EOF'
+        set -e
           # The VPS's system/default Node is too old for Next.js 16 and pg-boss
           # (needs >=22.12); use the nvm-managed Node 22 install reserved for
           # this app (see ecosystem.config.js). pm2 itself is only installed
@@ -105,3 +117,20 @@ jobs:
           # rollback (repoint $CURRENT at an older $RELEASES/<dir> and restart
           # PM2); prune anything older so releases/ doesn't grow forever.
           cd "$RELEASES" && ls -1t | tail -n +6 | xargs -r rm -rf
+        DEPLOY_SCRIPT_EOF
+
+    - name: Setup SSH key
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.VPS_SSH_KEY }}" > ~/.ssh/vps_deploy_key
+        chmod 600 ~/.ssh/vps_deploy_key
+        ssh-keyscan -H ${{ secrets.VPS_HOST }} >> ~/.ssh/known_hosts 2>/dev/null
+
+    - name: Deploy via SSH (retried on transient network failures)
+      uses: nick-fields/retry@v3
+      with:
+        timeout_minutes: 10
+        max_attempts: 3
+        retry_wait_seconds: 20
+        command: |
+          ssh -i ~/.ssh/vps_deploy_key -o ConnectTimeout=20 ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }} 'bash -s' < deploy_remote.sh
