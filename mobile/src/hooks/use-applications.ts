@@ -52,6 +52,14 @@ export function unresolvedBlockers(app: AppRow): string[] {
 
 export const needsInfoFor = (app: AppRow) => !isAtsApp(app) && unresolvedBlockers(app).length > 0;
 
+// Set by the worker when a USER-DECIDED send got cut short (assisted session
+// expired, window failed, or a worker restart's orphan rescue - it restarts on
+// every deploy). Keeps those apps in Pendientes with a retry prompt instead of
+// silently melting back into the Feed backlog as if never swiped (real
+// complaint 2026-07-23, confirmed in prod). Only meaningful in pending_review.
+export const wasInterrupted = (app: AppRow) =>
+  app.status === 'pending_review' && Boolean((app.submissionDecision as any)?.assistedInterrupted);
+
 export function useApplicationsData() {
   const query = useQuery({
     queryKey: ['applications'],
@@ -73,7 +81,7 @@ export function useApplicationsData() {
   const queueApps = useMemo(
     () =>
       apps
-        .filter((a) => a.status === 'pending_review' && !needsInfoFor(a))
+        .filter((a) => a.status === 'pending_review' && !needsInfoFor(a) && !wasInterrupted(a))
         .sort((a, b) => {
           const scoreDiff = (b.vacancy?.score ?? 0) - (a.vacancy?.score ?? 0);
           if (scoreDiff !== 0) return scoreDiff;
@@ -82,7 +90,7 @@ export function useApplicationsData() {
     [apps],
   );
   const pendingApps = useMemo(
-    () => apps.filter((a) => a.status === 'approved' || (a.status === 'pending_review' && needsInfoFor(a))),
+    () => apps.filter((a) => a.status === 'approved' || (a.status === 'pending_review' && (needsInfoFor(a) || wasInterrupted(a)))),
     [apps],
   );
   const historyApps = useMemo(

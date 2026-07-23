@@ -15,7 +15,7 @@ import {
   users,
   vacancies,
 } from '@/db/schema';
-import { and, eq, gte, count } from 'drizzle-orm';
+import { and, eq, gte, count, sql } from 'drizzle-orm';
 import { GreenhouseAdapter } from '../platforms/greenhouse';
 import { LeverAdapter } from '../platforms/lever';
 import { AshbyAdapter } from '../platforms/ashby';
@@ -746,9 +746,20 @@ export async function startWorkers() {
     console.log(`[Worker] Assisted apply for application ${applicationId}`);
 
     // Never leave the app stuck on "opening…": always resolve its status.
+    // `assistedInterrupted` (merged into submissionDecision) is what keeps a
+    // USER-DECIDED application visible in Pendientes ("Requieren tu atención")
+    // after the send didn't complete - real complaint (2026-07-23): reverted
+    // apps landed back in plain pending_review, indistinguishable from
+    // never-swiped ones, so they silently melted back into the backlog and
+    // the user's Pendientes "history" seemed to vanish (confirmed in prod:
+    // 3 of their apps flipped in the same second at a worker-restart rescue).
     const resetToReview = async (note?: string) => {
       const [v] = await db.select().from(vacancies).where(eq(vacancies.id, (await db.select({ vid: applications.vacancyId }).from(applications).where(eq(applications.id, applicationId)).limit(1))[0]?.vid)).limit(1);
-      await db.update(applications).set({ status: 'pending_review', updatedAt: new Date() }).where(eq(applications.id, applicationId));
+      await db.update(applications).set({
+        status: 'pending_review',
+        submissionDecision: sql`coalesce(${applications.submissionDecision}, '{}'::jsonb) || '{"assistedInterrupted": true}'::jsonb`,
+        updatedAt: new Date(),
+      }).where(eq(applications.id, applicationId));
       if (v) await db.update(vacancies).set({ status: 'pending_review', warnings: note ? [...(v.warnings ?? []), note] : (v.warnings ?? []), updatedAt: new Date() }).where(eq(vacancies.id, v.id));
     };
 
@@ -1419,11 +1430,20 @@ export async function startWorkers() {
   // crashed) and would otherwise spin forever in the UI. Reset them to
   // 'pending_review' so the user can retry instead of staring at a dead spinner.
   try {
+    // assistedInterrupted keeps these USER-DECIDED apps visible in Pendientes
+    // with a retry prompt instead of silently demoting them into the backlog -
+    // the worker restarts on EVERY deploy, so on a busy day this rescue fired
+    // many times and each one "vanished" the user's in-flight sends (real
+    // complaint 2026-07-23, confirmed in prod data).
     const orphans = await db.update(applications)
-      .set({ status: 'pending_review', updatedAt: new Date() })
+      .set({
+        status: 'pending_review',
+        submissionDecision: sql`coalesce(${applications.submissionDecision}, '{}'::jsonb) || '{"assistedInterrupted": true}'::jsonb`,
+        updatedAt: new Date(),
+      })
       .where(eq(applications.status, 'approved'))
       .returning({ id: applications.id });
-    if (orphans.length) console.log(`[Worker] Rescued ${orphans.length} orphaned assisted application(s) -> pending_review.`);
+    if (orphans.length) console.log(`[Worker] Rescued ${orphans.length} orphaned assisted application(s) -> pending_review (marked interrupted).`);
   } catch (e) {
     console.warn('[Worker] Orphan rescue failed:', (e as Error)?.message ?? e);
   }

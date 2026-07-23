@@ -292,6 +292,17 @@ LOOP DE VIGILANCIA (~2s por tick) hace todo lo demás:
   watchers, así que todo app en `approved` es huérfano de una sesión muerta ->
   pasa a `pending_review`. Sin esto, un reinicio del worker dejaba apps girando
   eternamente.
+- **Toda reversión a `pending_review` de una app YA DECIDIDA marca
+  `assistedInterrupted: true`** (merge jsonb en `submissionDecision`; lo hacen
+  `resetToReview` y el rescate de arranque). Sin la marca, la app revertida era
+  indistinguible de una nunca-swipeada y se fundía en silencio con el backlog -
+  el usuario veía su Pendientes "vaciarse" tras cada deploy (el worker se
+  reinicia en CADA deploy; confirmado en prod 2026-07-23: 3 apps del usuario
+  volteadas en el mismo segundo por el rescate). La UI (web
+  `useApplicationActions.ts` / mobile `use-applications.ts`, `wasInterrupted`)
+  mantiene esas apps en Pendientes con "Tu envío se interrumpió" + reintento de
+  un toque. La marca solo se lee en `pending_review`; cualquier
+  reintento/decisión posterior la vuelve inerte (no hace falta limpiarla).
 - `startWorker.ts` captura `unhandledRejection`/`uncaughtException` y SIGUE VIVO:
   antes un error en un apply tumbaba el worker en silencio y los clics del
   usuario encolaban jobs que nadie procesaba ("le doy y no pasa nada").

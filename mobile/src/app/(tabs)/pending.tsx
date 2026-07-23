@@ -10,7 +10,7 @@ import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
 import { UnansweredSheet } from '@/components/unanswered-sheet';
 import { Gold, Petrol, Radius, Shadows, Spacing, TextGold } from '@/constants/theme';
-import { blockerQuestion, needsInfoFor, unresolvedBlockers, useApplicationActions, useApplicationsData } from '@/hooks/use-applications';
+import { blockerQuestion, needsInfoFor, unresolvedBlockers, useApplicationActions, useApplicationsData, wasInterrupted } from '@/hooks/use-applications';
 import type { AppRow } from '@/types';
 
 const LIVE = '#2f9e6e';
@@ -59,7 +59,7 @@ function SendingBanner({ count }: { count: number }) {
 export default function PendingScreen() {
   const router = useRouter();
   const { pendingApps, stats } = useApplicationsData();
-  const { markApplied, cancelAssisted, answerBlockers } = useApplicationActions();
+  const { markApplied, cancelAssisted, answerBlockers, applyApp } = useApplicationActions();
   const [fillingApp, setFillingApp] = useState<AppRow | null>(null);
   const sendingCount = useMemo(() => pendingApps.filter((a) => a.status === 'approved').length, [pendingApps]);
 
@@ -92,6 +92,7 @@ export default function PendingScreen() {
               onCancel={() => cancelAssisted.mutate(item)}
               onFillInfo={() => setFillingApp(item)}
               onHelpLive={() => router.push(`/assisted-view/${item.id}`)}
+              onRetry={() => applyApp(item)}
             />
           )}
         />
@@ -111,18 +112,31 @@ export default function PendingScreen() {
   );
 }
 
-function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo, onHelpLive }: {
-  app: AppRow; index: number; onPress: () => void; onMarkApplied: () => void; onCancel: () => void; onFillInfo: () => void; onHelpLive: () => void;
+function Row({ app, index, onPress, onMarkApplied, onCancel, onFillInfo, onHelpLive, onRetry }: {
+  app: AppRow; index: number; onPress: () => void; onMarkApplied: () => void; onCancel: () => void; onFillInfo: () => void; onHelpLive: () => void; onRetry: () => void;
 }) {
   const sending = app.status === 'approved';
   const missingInfo = needsInfoFor(app);
+  // Interrupted send (worker restart / assisted session expired): user already
+  // decided this one - offer a one-tap retry instead of hiding it (see
+  // wasInterrupted in use-applications.ts).
+  const interrupted = !sending && !missingInfo && wasInterrupted(app);
   return (
     <Animated.View entering={FadeInDown.duration(350).delay(Math.min(index, 6) * 45)} style={styles.row}>
       <ThemedText onPress={onPress} style={styles.rowTitle}>{app.vacancy?.title}</ThemedText>
       <ThemedText style={styles.rowCompany}>{app.vacancy?.company}</ThemedText>
       <ThemedText style={styles.rowStatus}>
-        {sending ? 'Applica está aplicando por ti...' : 'Faltan algunos datos para poder aplicar'}
+        {sending ? 'Applica está aplicando por ti...'
+          : interrupted ? 'Tu envío se interrumpió - reintenta y retomamos desde donde quedó'
+          : 'Faltan algunos datos para poder aplicar'}
       </ThemedText>
+      {interrupted && (
+        <View style={styles.rowActions}>
+          <AnimatedPressable haptic="medium" onPress={onRetry} style={styles.pillPrimary}>
+            <ThemedText style={styles.pillPrimaryText}>Reintentar</ThemedText>
+          </AnimatedPressable>
+        </View>
+      )}
       {sending && (
         <ThemedText style={styles.rowHint}>
           Te avisamos si necesitamos tu ayuda - no hace falta que te quedes mirando.

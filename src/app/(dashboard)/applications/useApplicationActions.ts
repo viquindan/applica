@@ -34,6 +34,16 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   const needsInfoFor = (app: AppRow) =>
     !isAtsApp(app) &&
     unresolvedBlockers((app.submissionDecision as any)?.formPreview?.blockers, app.formAnswers as Record<string, string>).length > 0;
+  // Set by the worker when a USER-DECIDED send got cut short (assisted session
+  // expired, window failed, or a worker restart's orphan rescue - the worker
+  // restarts on every deploy). Without this flag those apps melted back into
+  // the backlog indistinguishable from never-swiped ones, and the user's
+  // Pendientes "history" seemed to vanish (real complaint, 2026-07-23,
+  // confirmed against prod data). Only meaningful while status is
+  // pending_review - any retry/decision moves the app forward and the stale
+  // flag is ignored.
+  const wasInterrupted = (app: AppRow) =>
+    app.status === 'pending_review' && Boolean((app.submissionDecision as any)?.assistedInterrupted);
 
   const live = apps.filter((a) => !discardedIds.has(a.id));
   // Feed: fresh matches to decide on (clean swipe). Apps that already need info
@@ -41,20 +51,23 @@ export function useApplicationActions(apps: AppRow[], linkedinStatusProp: 'none'
   // Priority = fit score; tie-broken by the OLDEST match first, so nothing sits
   // forgotten just because a newer, equally-good match showed up later.
   const queueApps = live
-    .filter((a) => a.status === 'pending_review' && !needsInfoFor(a))
+    .filter((a) => a.status === 'pending_review' && !needsInfoFor(a) && !wasInterrupted(a))
     .sort((a, b) => {
       const scoreDiff = (b.vacancy?.score ?? 0) - (a.vacancy?.score ?? 0);
       if (scoreDiff !== 0) return scoreDiff;
       return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     });
-  // Pendientes: mid-flight (captcha/confirmation) or blocked on missing data.
-  const pendingApps = live.filter((a) => a.status === 'approved' || (a.status === 'pending_review' && needsInfoFor(a)));
+  // Pendientes: mid-flight (captcha/confirmation), blocked on missing data, or
+  // a decided send that got interrupted and needs a retry.
+  const pendingApps = live.filter((a) => a.status === 'approved' || (a.status === 'pending_review' && (needsInfoFor(a) || wasInterrupted(a))));
   // Apps (historial): everything that has moved past the decision stage.
   const historyApps = live.filter((a) => a.status !== 'pending_review' && a.status !== 'approved');
 
   function attentionReason(app: AppRow): AttentionReason {
     const url = app.vacancy?.url ?? '';
     const warns = (app.vacancy?.warnings as string[] | null) ?? [];
+    if (wasInterrupted(app) && !needsInfoFor(app))
+      return { title: 'Tu envío se interrumpió', detail: 'Ya habías decidido aplicar a esta vacante, pero el envío no alcanzó a completarse. Reintenta y Applica retoma desde donde quedó - tu CV y respuestas siguen listos.', cta: 'go' };
     if (warns.some((w) => /verificaci[óo]n humana|captcha/i.test(w)))
       return { title: 'Hicimos el 99%. Falta tu toque final.', detail: 'Applica hizo el trabajo pesado: tu CV a medida, carta y respuestas ya están preparadas para esta vacante. Solo queda el paso final en la oferta - esta empresa exige su propia verificación de seguridad, que completas en segundos. Ábrela y aplica.', cta: 'go' };
     if (needsInfoFor(app))
