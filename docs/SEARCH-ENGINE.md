@@ -285,7 +285,21 @@ decisión consciente que se documenta en `docs/DECISIONS.md`, no un refactor.
    evita aliases de una sola palabra genérica ("engineer", "analyst") - el
    matching es por presencia de palabras y sobre-matchearía entre familias.
    → `scoring/__tests__/roleTaxonomy.test.ts` (bloque "IC and non-tech").
-8. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
+8. **El score se calcula con los MISMOS insumos en búsqueda y re-evaluación,
+   y los insumos por-usuario se cargan UNA vez por corrida.** Bug real doble
+   (auditoría 2026-07-23, N1+N2): (a) `reEvaluate.ts` re-puntuaba SIN las
+   señales aprendidas mientras la búsqueda original SÍ las pasa - una vacante
+   con ajuste aprendido (ej. -15 por empresa rechazada repetidamente)
+   oscilaba entre dos scores distintos cada 6h, reordenando el Feed sin
+   razón; (b) el historial completo del usuario (JOIN sin índice) se
+   re-consultaba POR CADA candidato del pool dentro del loop de búsqueda -
+   el consumidor de DB más pesado de toda la corrida, para datos que no
+   cambian a mitad de búsqueda. Patrón obligatorio: `getUserApplicationHistory`
+   una vez por corrida + `deriveSignals` (puro) por vacante; cualquier
+   caller nuevo que itere vacantes debe pasar `history` en el contexto de
+   `processVacancyForUser`, y cualquier re-score debe pasar las señales.
+   → `scoring/__tests__/learnedSignals.test.ts`.
+9. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
    rescate.** Un worker recién arrancado tiene CERO trabajos corriendo (un
    solo proceso, ver `ecosystem.config.js`), así que todo estado en DB que
    diga "en curso" al arrancar es huérfano de una muerte dura (SIGKILL/OOM

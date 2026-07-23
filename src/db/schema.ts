@@ -9,6 +9,7 @@ import {
   pgEnum,
   varchar,
   uniqueIndex,
+  index,
 } from 'drizzle-orm/pg-core';
 import { relations } from 'drizzle-orm';
 
@@ -303,6 +304,16 @@ export const vacancies = pgTable('vacancies', {
   status: vacancyStatusEnum('status').default('new'),
   createdAt: timestamp('created_at').defaultNow().notNull(),
   updatedAt: timestamp('updated_at').defaultNow().notNull(),
+}, (table) => {
+  // Audit 2026-07-23 (A1): the table had ONLY its pkey - the per-candidate
+  // dedup in processVacancy.ts (WHERE user_id AND (url OR platform+external_id))
+  // was a full seq scan per pool candidate, per search (confirmed live with
+  // EXPLAIN ANALYZE in production). Trivial at today's row count, quadratic
+  // as users/vacancies grow. Postgres does NOT auto-index FK columns.
+  return {
+    vacanciesUserUrlIdx: uniqueIndex('vacancies_user_url_idx').on(table.userId, table.url),
+    vacanciesUserPlatformExternalIdx: index('vacancies_user_platform_external_idx').on(table.userId, table.platform, table.externalId),
+  };
 });
 
 // ─── Applications ─────────────────────────────────────────────────────────────

@@ -171,7 +171,13 @@ export async function startWorkers() {
       const planLimits = await getUserPlanLimits(userId);
       // Quota is charged at SEND time (swipe), not at preparation - so the
       // per-user month count is no longer needed to prepare materials.
-      const context = { user, profile, settings, planLimits };
+      // Application history loaded ONCE for the whole run (audit 2026-07-23,
+      // N1): it feeds deriveSignals for every candidate and cannot change
+      // mid-search - re-fetching it per vacancy was the heaviest DB consumer
+      // of the entire search loop.
+      const { getUserApplicationHistory } = await import('../scoring/learnedSignals');
+      const history = await getUserApplicationHistory(userId);
+      const context = { user, profile, settings, planLimits, history };
 
       // Resolve a rotating cursor once per run so each platform paginates through
       // its own registry across successive searches.

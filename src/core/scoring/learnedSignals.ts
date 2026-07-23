@@ -4,15 +4,24 @@ import { applications, vacancies } from '@/db/schema';
 import type { LearnedScoringSignals, NormalizedVacancy } from './fitScorer';
 import { roleLearningKey } from '../outcomes/roleLearning';
 
-type HistoryRow = {
+export type HistoryRow = {
   status: string | null;
   responseStatus: string;
   title: string | null;
   company: string | null;
 };
 
-export async function getLearnedScoringSignals(userId: string, vacancy: NormalizedVacancy): Promise<LearnedScoringSignals> {
-  const history = await db.select({
+/**
+ * Loads the user's full application history ONCE. Audit finding 2026-07-23
+ * (N1): getLearnedScoringSignals used to be called per-candidate inside the
+ * search loop, re-running this same unindexed full-history JOIN for every
+ * vacancy in the pool - the single heaviest DB consumer of the whole search,
+ * and pure waste since the history cannot change mid-run. Callers that
+ * iterate many vacancies (search_vacancies, reEvaluate) load this once and
+ * feed deriveSignals() directly.
+ */
+export async function getUserApplicationHistory(userId: string): Promise<HistoryRow[]> {
+  return db.select({
     status: applications.status,
     responseStatus: applications.responseStatus,
     title: vacancies.title,
@@ -21,8 +30,10 @@ export async function getLearnedScoringSignals(userId: string, vacancy: Normaliz
     .from(applications)
     .leftJoin(vacancies, eq(applications.vacancyId, vacancies.id))
     .where(eq(applications.userId, userId));
+}
 
-  return deriveSignals(vacancy, history);
+export async function getLearnedScoringSignals(userId: string, vacancy: NormalizedVacancy): Promise<LearnedScoringSignals> {
+  return deriveSignals(vacancy, await getUserApplicationHistory(userId));
 }
 
 export function deriveSignals(vacancy: NormalizedVacancy, history: HistoryRow[]): LearnedScoringSignals {

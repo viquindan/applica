@@ -3,6 +3,7 @@ import { db } from '@/db/client';
 import { vacancies, applications, professionalProfiles, users, userSettings } from '@/db/schema';
 import { scoreVacancy, type NormalizedVacancy } from '../scoring/fitScorer';
 import { evaluateEligibility, formRequiresForeignWorkAuth } from '../scoring/eligibility';
+import { deriveSignals, getUserApplicationHistory } from '../scoring/learnedSignals';
 import { getReusableAnswersMap } from '../memory/memoryStore';
 import { queuePrepareApplicationMaterials } from '../jobs/boss';
 
@@ -52,6 +53,13 @@ export async function reEvaluateVacancies(userId: string): Promise<{ checked: nu
 
   let hidden = 0, rescored = 0, promoted = 0;
   const reusableAnswers = await getReusableAnswersMap(userId);
+  // Audit 2026-07-23 (N2): this re-score used to call scoreVacancy WITHOUT
+  // learned signals while the original search DOES pass them - so a vacancy
+  // with any learned adjustment (e.g. -15 for a repeatedly-skipped company)
+  // oscillated between two different scores every 6h, reshuffling the Feed
+  // order for no real reason. Load the history once (same N1 pattern as the
+  // search loop) and score with the SAME inputs the search used.
+  const history = await getUserApplicationHistory(userId);
   for (const r of rows) {
     // Never touch manual test fixtures (kept at a fixed marker score).
     if (r.title?.startsWith('[TEST]')) continue;
@@ -77,7 +85,7 @@ export async function reEvaluateVacancies(userId: string): Promise<{ checked: nu
       [...(fp?.blockers ?? []), ...((fp?.fields ?? []).map((f: any) => f.label))],
       homeCountry,
     );
-    let finalScore = scoreVacancy(nv, scoringProfile).score;
+    let finalScore = scoreVacancy(nv, scoringProfile, deriveSignals(nv, history)).score;
     if (formAuth) finalScore = Math.min(finalScore, 40);
     if (finalScore !== r.score) {
       await db.update(vacancies).set({ score: finalScore, updatedAt: new Date() }).where(eq(vacancies.id, r.id));

@@ -3,7 +3,7 @@ import { db } from '@/db/client';
 import { applications, professionalProfiles, userSettings, users, vacancies } from '@/db/schema';
 import { scoreVacancy, type NormalizedVacancy } from '../scoring/fitScorer';
 import { evaluateEligibility } from '../scoring/eligibility';
-import { getLearnedScoringSignals } from '../scoring/learnedSignals';
+import { deriveSignals, getLearnedScoringSignals, type HistoryRow } from '../scoring/learnedSignals';
 import { buildProfileText } from '../scoring/expertise';
 import { maybeSemanticAdjust } from '../scoring/semanticMatch';
 import { getReusableAnswersMap } from '../memory/memoryStore';
@@ -18,6 +18,13 @@ function sanitizeSalary(value?: number | null): number | null {
 
 export async function processVacancyForUser(userId: string, vacancy: NormalizedVacancy, context?: {
   user: any; profile: any; settings: any; planLimits: any; currentCount?: number;
+  // Pre-loaded application history for deriveSignals (audit 2026-07-23, N1):
+  // the search loop calls this function for EVERY pool candidate, and without
+  // this the learned-signals full-history JOIN re-ran per candidate - the
+  // heaviest DB consumer of the whole search, for data that can't change
+  // mid-run. Callers iterating many vacancies must pass it; the per-vacancy
+  // fallback below stays only for one-off callers.
+  history?: HistoryRow[];
 }) {
   const planLimits = context?.planLimits ?? await getUserPlanLimits(userId);
 
@@ -79,7 +86,9 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     return { skipped: true, reason: 'ineligible', reasons: eligibility.reasons, eligible: false, score: undefined } as any;
   }
 
-  const learnedSignals = await getLearnedScoringSignals(userId, vacancy);
+  const learnedSignals = context?.history
+    ? deriveSignals(vacancy, context.history)
+    : await getLearnedScoringSignals(userId, vacancy);
   const score = scoreVacancy(vacancy, {
     ...profile,
     homeCountry: user.country || user.location,
