@@ -52,6 +52,109 @@
     'head of business development', 'vp business development',
     'head of partnerships', 'vp partnerships', 'director of partnerships',
   ],
+  // ── Individual-contributor and non-tech families (added 2026-07-23) ────────
+  // Real finding from the double engine audit: every family above is
+  // *_leadership, so getRoleFamily() returned undefined for ANY IC or
+  // non-tech title ("Software Engineer", "Accountant", "Registered Nurse",
+  // "Desarrollador de Software" - all verified undefined). Consequence was
+  // double: the role component of the score (30 pts, the heaviest) degraded
+  // to exact-phrase matching for the majority of the market, AND - worse -
+  // roleMatches() also pre-filters the candidate POOL (atsSearchHelpers.ts),
+  // so "Backend Engineer" never even entered the funnel for a user targeting
+  // "Software Engineer" (recall lost at the source, not just a weaker score).
+  // Leadership families stay FIRST: Object.entries order decides ties, and a
+  // "Director of Product" must keep resolving to product_leadership, not to
+  // an IC family. Aliases are pre-normalized (lowercase, no accents - the ñ
+  // in "diseñador" normalizes to n) and matched on significant-word presence,
+  // so avoid single generic words ("engineer", "analyst", "tester") that
+  // would over-match across families.
+  software_engineering: [
+    'software engineer', 'software developer', 'backend engineer', 'backend developer',
+    'frontend engineer', 'frontend developer', 'full stack engineer', 'full stack developer',
+    'fullstack engineer', 'fullstack developer', 'web developer', 'mobile developer',
+    'mobile engineer', 'ios engineer', 'ios developer', 'android engineer', 'android developer',
+    'api developer', 'application developer', 'embedded engineer', 'games developer', 'game developer',
+    'desarrollador de software', 'ingeniero de software', 'desarrollador backend',
+    'desarrollador frontend', 'desarrollador web', 'desarrollador movil', 'programador',
+  ],
+  devops_sre: [
+    'devops engineer', 'devops', 'site reliability engineer', 'sre',
+    'infrastructure engineer', 'cloud engineer', 'platform engineer',
+    'systems engineer', 'system administrator', 'sysadmin', 'network engineer',
+    'network administrator', 'administrador de sistemas', 'ingeniero de infraestructura',
+  ],
+  data_ic: [
+    'data engineer', 'data scientist', 'data analyst', 'machine learning engineer',
+    'ml engineer', 'analytics engineer', 'business intelligence analyst', 'bi analyst',
+    'business analyst', 'analista de datos', 'cientifico de datos', 'ingeniero de datos',
+  ],
+  security_ic: [
+    'security engineer', 'security analyst', 'cybersecurity analyst', 'cybersecurity engineer',
+    'penetration tester', 'information security analyst', 'analista de seguridad',
+  ],
+  qa_ic: [
+    'qa engineer', 'quality assurance engineer', 'test engineer', 'qa analyst',
+    'quality engineer', 'automation engineer', 'qa tester', 'analista de calidad',
+  ],
+  design_ic: [
+    'ux designer', 'ui designer', 'product designer', 'ux researcher',
+    'graphic designer', 'visual designer', 'interaction designer', 'web designer',
+    'disenador ux', 'disenador grafico', 'disenador de producto',
+  ],
+  product_management: [
+    'product manager', 'product owner', 'technical product manager',
+    'gerente de producto', 'product analyst',
+  ],
+  project_management: [
+    'project manager', 'program manager', 'scrum master', 'delivery manager',
+    'project coordinator', 'gerente de proyectos', 'jefe de proyecto', 'lider de proyecto',
+  ],
+  finance_ic: [
+    'accountant', 'financial analyst', 'accounts payable', 'accounts receivable',
+    'bookkeeper', 'auditor', 'tax analyst', 'payroll specialist', 'treasury analyst',
+    'credit analyst', 'contador', 'analista financiero', 'analista contable', 'tesorero',
+  ],
+  sales_ic: [
+    'account executive', 'sales representative', 'sales rep', 'sales executive',
+    'business development representative', 'sales development representative', 'sdr', 'bdr',
+    'account manager', 'inside sales', 'field sales', 'ejecutivo de ventas',
+    'representante de ventas', 'ejecutivo comercial', 'asesor comercial', 'vendedor',
+  ],
+  marketing_ic: [
+    'marketing analyst', 'marketing specialist', 'content marketing', 'digital marketing',
+    'seo specialist', 'social media manager', 'marketing coordinator', 'growth marketer',
+    'performance marketing', 'copywriter', 'community manager',
+    'analista de marketing', 'especialista en marketing',
+  ],
+  customer_ic: [
+    'customer success manager', 'customer success', 'customer support', 'technical support',
+    'support engineer', 'customer service representative', 'help desk', 'it support',
+    'atencion al cliente', 'soporte tecnico', 'servicio al cliente',
+  ],
+  people_ic: [
+    'recruiter', 'talent acquisition', 'hr generalist', 'hr analyst', 'people operations',
+    'human resources generalist', 'human resources analyst',
+    'reclutador', 'analista de recursos humanos', 'generalista de recursos humanos',
+  ],
+  operations_ic: [
+    'operations analyst', 'operations coordinator', 'operations specialist',
+    'supply chain analyst', 'logistics coordinator', 'logistics analyst',
+    'procurement specialist', 'analista de operaciones', 'coordinador de operaciones',
+    'analista de logistica',
+  ],
+  healthcare: [
+    'registered nurse', 'nurse practitioner', 'medical assistant', 'physician',
+    'pharmacist', 'physical therapist', 'clinical nurse', 'enfermera', 'enfermero',
+    'medico general', 'farmaceutico',
+  ],
+  legal: [
+    'lawyer', 'attorney', 'paralegal', 'legal counsel', 'legal assistant',
+    'corporate counsel', 'abogado', 'asesor legal', 'asistente legal',
+  ],
+  education: [
+    'teacher', 'professor', 'instructor', 'academic tutor',
+    'profesor', 'docente', 'maestro',
+  ],
 };
 
 // Order matters: getSeniorityBand returns the FIRST band whose alias matches, so
@@ -137,7 +240,10 @@ function matchesRolePhrase(haystack: string, needle: string) {
 // Development"). Family aliases now match on significant-word presence
 // (order-independent, ignores stopwords) instead of a rigid phrase - the
 // exact-phrase check in roleMatches() above is untouched and stays strict.
-const STOPWORDS = new Set(['of', 'the', 'a', 'an', 'and', 'for', 'to', 'in', 'at']);
+// Spanish stopwords included since the IC families carry Spanish aliases
+// ("desarrollador de software" must match "Desarrollador Senior de Software"
+// without requiring the exact connective in place).
+const STOPWORDS = new Set(['of', 'the', 'a', 'an', 'and', 'for', 'to', 'in', 'at', 'de', 'del', 'la', 'el', 'y', 'en']);
 const wordSetCache = new Map<string, string[]>();
 
 function significantWords(phrase: string): string[] {

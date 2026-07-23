@@ -269,7 +269,23 @@ decisión consciente que se documenta en `docs/DECISIONS.md`, no un refactor.
    → `scoring/__tests__/fitScorer.test.ts` (guard "Registered Nurse" para un COO).
 6. **Los tokens de ATS siempre se validan contra la API real** antes de
    guardarse. → mecanismo de `growRegistryFromCompanies`.
-7. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
+7. **La taxonomía de roles cubre TODO el mercado, no solo liderazgo.**
+   `ROLE_FAMILIES` (roleTaxonomy.ts) debe reconocer títulos IC y no-tech
+   (ingeniería, datos, diseño, finanzas, ventas, salud, legal, educación...,
+   con aliases en inglés Y español) además de las familias ejecutivas. No es
+   cosmético: `roleMatches()` no solo alimenta el componente de rol del score
+   (30 pts, el más pesado) - también PRE-FILTRA el pool de candidatos
+   (`atsSearchHelpers.ts`), así que un título sin familia pierde recall en
+   origen ("Backend Engineer" ni siquiera entraba al embudo para quien busca
+   "Software Engineer"). Bug real (auditoría doble 2026-07-23): todas las
+   familias eran `*_leadership`, y 4 de 6 cuentas de producción terminaban
+   con 0 matches. Las familias de liderazgo van PRIMERO en el objeto (el
+   orden decide empates: "Director of Product" debe resolver a
+   product_leadership, no a una familia IC). Al agregar una familia nueva,
+   evita aliases de una sola palabra genérica ("engineer", "analyst") - el
+   matching es por presencia de palabras y sobre-matchearía entre familias.
+   → `scoring/__tests__/roleTaxonomy.test.ts` (bloque "IC and non-tech").
+8. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
    rescate.** Un worker recién arrancado tiene CERO trabajos corriendo (un
    solo proceso, ver `ecosystem.config.js`), así que todo estado en DB que
    diga "en curso" al arrancar es huérfano de una muerte dura (SIGKILL/OOM
