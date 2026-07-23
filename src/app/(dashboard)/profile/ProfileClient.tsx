@@ -662,24 +662,6 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                 />
               </div>
 
-              <div className="field-group" style={{ marginBottom: '1rem' }}>
-                <label className="field-label">Palabras clave prioritarias (suben el puntaje de una vacante)</label>
-                <TagInput
-                  tags={form.priorityKeywords}
-                  onChange={(priorityKeywords) => setForm({ ...form, priorityKeywords })}
-                  placeholder="Ej. React, SaaS... Enter para añadir"
-                />
-              </div>
-
-              <div className="field-group" style={{ marginBottom: '1rem' }}>
-                <label className="field-label">Palabras de alerta (bajan el puntaje o marcan advertencia)</label>
-                <TagInput
-                  tags={form.alertKeywords}
-                  onChange={(alertKeywords) => setForm({ ...form, alertKeywords })}
-                  placeholder="Ej. comisión pura... Enter para añadir"
-                />
-              </div>
-
               <div className="field-group">
                 <label className="field-label">Expectativa Salarial Mínima</label>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
@@ -706,10 +688,13 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
 
             <div className="card">
               <div className="card-label">Habilidades</div>
+              <p style={{ fontSize: '.78rem', color: 'var(--text-3)', margin: '0 0 .6rem' }}>
+                Si la agregas, asumimos que la tienes - se usa como palabra clave en la búsqueda.
+              </p>
               <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
                 {form.skills.map((s: { skill: string; level?: string }, i: number) => (
                   <span key={i} className="tag">
-                    {s.skill}{s.level ? ` · ${s.level}` : ''}
+                    {s.skill}
                     <button type="button" onClick={() => {
                       const skills = form.skills.filter((_: any, idx: number) => idx !== i);
                       setForm({ ...form, skills });
@@ -725,11 +710,56 @@ export default function ProfileClient({ user, profile, resumes }: { user: SafeUs
                       e.preventDefault();
                       const val = (e.target as HTMLInputElement).value.trim();
                       if (val) {
-                        setForm({ ...form, skills: [...form.skills, { skill: val, level: 'Intermediate' }] });
+                        setForm({ ...form, skills: [...form.skills, { skill: val }] });
                         (e.target as HTMLInputElement).value = '';
                       }
                     }
                   }} />
+              </div>
+            </div>
+
+            <div className="card">
+              <div className="card-label">Certificaciones</div>
+              <p style={{ fontSize: '.78rem', color: 'var(--text-3)', margin: '0 0 .6rem' }}>
+                El buscador también las usa como palabras clave de coincidencia.
+              </p>
+              <div style={{ display: 'flex', gap: '0.35rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                {(form.certifications ?? []).map((c: { name: string; issuer?: string }, i: number) => (
+                  <span key={i} className="tag">
+                    {c.name}{c.issuer ? ` · ${c.issuer}` : ''}
+                    <button type="button" onClick={() => {
+                      const certifications = form.certifications.filter((_: any, idx: number) => idx !== i);
+                      setForm({ ...form, certifications });
+                    }}></button>
+                  </span>
+                ))}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <input className="input" style={{ maxWidth: 220, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                  placeholder="Nombre de la certificación..." id="cert-name-input" />
+                <input className="input" style={{ maxWidth: 180, fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}
+                  placeholder="Emisor (opcional)"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const nameInput = document.getElementById('cert-name-input') as HTMLInputElement;
+                      const name = nameInput?.value.trim();
+                      const issuer = (e.target as HTMLInputElement).value.trim();
+                      if (name) {
+                        setForm({ ...form, certifications: [...(form.certifications ?? []), { name, issuer }] });
+                        nameInput.value = '';
+                        (e.target as HTMLInputElement).value = '';
+                      }
+                    }
+                  }} />
+                <button type="button" className="btn btn-secondary btn-sm" onClick={() => {
+                  const nameInput = document.getElementById('cert-name-input') as HTMLInputElement;
+                  const name = nameInput?.value.trim();
+                  if (name) {
+                    setForm({ ...form, certifications: [...(form.certifications ?? []), { name, issuer: '' }] });
+                    nameInput.value = '';
+                  }
+                }}>+ Añadir</button>
               </div>
             </div>
           </div>

@@ -66,6 +66,7 @@ type FormState = {
   workAuthorization: WorkAuth[];
   skills: Array<{ skill: string; level?: string }>;
   languages: Language[];
+  certifications: Array<{ name: string; issuer?: string; year?: number }>;
 };
 
 // Tab layout mirrors how the data flows through the product:
@@ -111,7 +112,24 @@ function toForm(user: ProfileUser | null, profile: ProfessionalProfile | null): 
     workAuthorization: user?.workAuthorization ?? [],
     skills: normalizeSkills(profile?.skills),
     languages: user?.languages ?? [],
+    certifications: normalizeCertifications(profile?.certifications),
   };
+}
+
+function normalizeCertifications(value: unknown): Array<{ name: string; issuer?: string; year?: number }> {
+  if (!Array.isArray(value)) return [];
+  return value.map((item) => {
+    if (typeof item === 'string') return { name: item };
+    if (item && typeof item === 'object') {
+      const row = item as { name?: unknown; issuer?: unknown; year?: unknown };
+      return {
+        name: String(row.name ?? '').trim(),
+        ...(row.issuer ? { issuer: String(row.issuer) } : {}),
+        ...(row.year ? { year: Number(row.year) } : {}),
+      };
+    }
+    return { name: '' };
+  }).filter((item) => item.name.length > 0);
 }
 
 function normalizeSkills(value: unknown): Array<{ skill: string; level?: string }> {
@@ -200,7 +218,7 @@ export default function ProfileScreen() {
         targetCountries: form.targetCountries,
         experience: data?.profile?.experience ?? [],
         education: data?.profile?.education ?? [],
-        certifications: data?.profile?.certifications ?? [],
+        certifications: form.certifications,
         skills: form.skills,
       });
       setMessage('Guardado.');
@@ -381,17 +399,15 @@ export default function ProfileScreen() {
                   </Section>
                 ) : null}
 
-                {data?.profile?.certifications?.length ? (
-                  <Section title="Certificaciones">
-                    <View style={styles.toggleRow}>
-                      {data.profile.certifications.map((cert, i) => (
-                        <View key={i} style={[styles.chip, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
-                          <ThemedText style={styles.chipText}>{typeof cert === 'string' ? cert : String(cert)}</ThemedText>
-                        </View>
-                      ))}
-                    </View>
-                  </Section>
-                ) : null}
+                <Section title="Certificaciones">
+                  <ThemedText style={styles.hint}>
+                    El buscador también las usa como palabras clave de coincidencia.
+                  </ThemedText>
+                  <CertificationEditor
+                    certifications={form.certifications}
+                    onChange={(next) => setForm((f) => ({ ...f, certifications: next }))}
+                  />
+                </Section>
 
                 <Section title="Logros destacados">
                   <ThemedText style={styles.hint}>
@@ -461,33 +477,10 @@ export default function ProfileScreen() {
                 </Section>
 
                 <Section title="Habilidades">
+                  <ThemedText style={styles.hint}>
+                    Si la agregas, asumimos que la tienes - se usa como palabra clave en la búsqueda.
+                  </ThemedText>
                   <SkillEditor skills={form.skills} onChange={(skills) => setForm((f) => ({ ...f, skills }))} />
-                </Section>
-
-                <Section title="Palabras clave prioritarias">
-                  <ThemedText style={styles.hint}>
-                    Las vacantes que las mencionen suben de puntaje.
-                  </ThemedText>
-                  <TagEditor
-                    tags={form.priorityKeywords}
-                    onChange={(priorityKeywords) => setForm((f) => ({ ...f, priorityKeywords }))}
-                    placeholder="Ej. React, SaaS, B2B"
-                    emptyText="Sin palabras prioritarias todavía."
-                    removeLabel="palabra clave"
-                  />
-                </Section>
-
-                <Section title="Palabras de alerta">
-                  <ThemedText style={styles.hint}>
-                    Las vacantes que las mencionen bajan de puntaje o se marcan con advertencia.
-                  </ThemedText>
-                  <TagEditor
-                    tags={form.alertKeywords}
-                    onChange={(alertKeywords) => setForm((f) => ({ ...f, alertKeywords }))}
-                    placeholder="Ej. comisión pura, ventas en frío"
-                    emptyText="Sin palabras de alerta todavía."
-                    removeLabel="palabra de alerta"
-                  />
                 </Section>
 
                 {message ? <ThemedText style={styles.message}>{message}</ThemedText> : null}
@@ -953,25 +946,26 @@ function WorkAuthEditor({ auths, onChange }: { auths: WorkAuth[]; onChange: (aut
   );
 }
 
-const SKILL_LEVELS = ['Beginner', 'Intermediate', 'Advanced', 'Expert'];
-const SKILL_LEVEL_LABELS: Record<string, string> = {
-  Beginner: 'Básico', Intermediate: 'Intermedio', Advanced: 'Avanzado', Expert: 'Experto',
-};
 
 function SkillEditor({ skills, onChange }: {
   skills: Array<{ skill: string; level?: string }>; onChange: (skills: Array<{ skill: string; level?: string }>) => void;
 }) {
   const theme = useTheme();
   const [draft, setDraft] = useState('');
-  const [draftLevel, setDraftLevel] = useState('Intermediate');
+  function addSkill() {
+    const v = draft.trim();
+    // No level prompt: listing a skill at all already means "I have it" -
+    // per the user's explicit ask, the level distinction was friction that
+    // didn't add matching value (fitScorer treats it as an optional bonus
+    // signal, not a requirement, so an omitted level is a no-op there).
+    if (v) { onChange([...skills, { skill: v }]); setDraft(''); }
+  }
   return (
     <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
       <View style={styles.toggleRow}>
         {skills.map((s, i) => (
           <AnimatedPressable key={i} haptic="light" onPress={() => onChange(skills.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar habilidad ${s.skill}`} style={[styles.chip, styles.chipActive]}>
-            <ThemedText style={styles.chipTextActive}>
-              {s.skill}{s.level ? ` · ${SKILL_LEVEL_LABELS[s.level] ?? s.level}` : ''} ✕
-            </ThemedText>
+            <ThemedText style={styles.chipTextActive}>{s.skill} ✕</ThemedText>
           </AnimatedPressable>
         ))}
         {!skills.length ? <ThemedText style={styles.empty}>Sin habilidades todavía.</ThemedText> : null}
@@ -983,16 +977,8 @@ function SkillEditor({ skills, onChange }: {
           onChangeText={setDraft}
           placeholder="Añadir habilidad..."
           placeholderTextColor="#a3a9aa"
-          onSubmitEditing={() => {
-            const v = draft.trim();
-            if (v) { onChange([...skills, { skill: v, level: draftLevel }]); setDraft(''); }
-          }}
+          onSubmitEditing={addSkill}
         />
-      </View>
-      <View style={[styles.toggleRow, { marginTop: Spacing.two }]}>
-        {SKILL_LEVELS.map((lvl) => (
-          <ToggleChip key={lvl} label={SKILL_LEVEL_LABELS[lvl]} active={draftLevel === lvl} onPress={() => setDraftLevel(lvl)} />
-        ))}
       </View>
     </View>
   );
@@ -1031,6 +1017,61 @@ function LanguageEditor({ languages, onChange }: { languages: Language[]; onChan
           variant="secondary"
           onPress={() => onChange([...languages, { language: draftLang, proficiency: draftProf }])}
         />
+      </View>
+    </View>
+  );
+}
+
+function CertificationEditor({ certifications, onChange }: {
+  certifications: Array<{ name: string; issuer?: string; year?: number }>;
+  onChange: (certs: Array<{ name: string; issuer?: string; year?: number }>) => void;
+}) {
+  const theme = useTheme();
+  const [draftName, setDraftName] = useState('');
+  const [draftIssuer, setDraftIssuer] = useState('');
+
+  function addCert() {
+    const name = draftName.trim();
+    if (!name) return;
+    onChange([...certifications, { name, ...(draftIssuer.trim() ? { issuer: draftIssuer.trim() } : {}) }]);
+    setDraftName('');
+    setDraftIssuer('');
+  }
+
+  return (
+    <View style={[styles.subCard, { backgroundColor: theme.backgroundElement, borderColor: theme.backgroundSelected }]}>
+      <View style={styles.toggleRow}>
+        {certifications.map((c, i) => (
+          <AnimatedPressable key={i} haptic="light" onPress={() => onChange(certifications.filter((_, idx) => idx !== i))} hitSlop={8} accessibilityLabel={`Quitar certificación ${c.name}`} style={[styles.chip, styles.chipActive]}>
+            <ThemedText style={styles.chipTextActive}>
+              {c.name}{c.issuer ? ` · ${c.issuer}` : ''} ✕
+            </ThemedText>
+          </AnimatedPressable>
+        ))}
+        {!certifications.length ? <ThemedText style={styles.empty}>Sin certificaciones todavía.</ThemedText> : null}
+      </View>
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
+          value={draftName}
+          onChangeText={setDraftName}
+          placeholder="Nombre de la certificación..."
+          placeholderTextColor="#a3a9aa"
+          onSubmitEditing={addCert}
+        />
+      </View>
+      <View style={styles.addRow}>
+        <TextInput
+          style={[styles.input, styles.addInput, { backgroundColor: theme.background, borderColor: theme.backgroundSelected, color: theme.text }]}
+          value={draftIssuer}
+          onChangeText={setDraftIssuer}
+          placeholder="Emisor (opcional)..."
+          placeholderTextColor="#a3a9aa"
+          onSubmitEditing={addCert}
+        />
+      </View>
+      <View style={{ marginTop: Spacing.two }}>
+        <GradientButton label="+ Añadir certificación" variant="secondary" onPress={addCert} />
       </View>
     </View>
   );
