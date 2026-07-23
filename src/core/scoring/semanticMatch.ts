@@ -1,5 +1,3 @@
-import { getInternalAiConfig } from '../ai/config';
-
 /**
  * Phase 2b of relevance: an OPTIONAL embeddings-based semantic re-ranker.
  *
@@ -12,11 +10,18 @@ import { getInternalAiConfig } from '../ai/config';
  * - Disabled unless ENABLE_SEMANTIC_RERANK === 'true'.
  * - Returns a no-op ({ adjustment: 0 }) on any failure or missing API key, so
  * it can never break or block the search pipeline.
- * - Sends profile + job text to the configured embeddings provider (Google),
- * so it only runs when the operator has explicitly opted in.
+ * - Provider: OpenAI text-embedding-3-small (decision 2026-07-24, explicit
+ * user choice - ~10x cheaper than Gemini's embedding models at this volume;
+ * the generative model for extraction/tailoring stays on Gemini, this is a
+ * SEPARATE provider/key used only for embeddings). Needs its own
+ * OPENAI_API_KEY - independent of the Gemini key used elsewhere in the app.
  */
 
-const EMBEDDING_MODEL = process.env.GEMINI_EMBEDDING_MODEL || 'gemini-embedding-001';
+const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
+
+function getOpenAiKey(): string | null {
+  return process.env.OPENAI_API_KEY || null;
+}
 
 // How far from the materials threshold a score must be to be worth an API call.
 const BORDERLINE_BAND = 12;
@@ -35,18 +40,18 @@ const PROFILE_CACHE_TTL_MS = 10 * 60 * 1000;
 const profileEmbeddingCache = new Map<string, { text: string; vector: number[]; at: number }>();
 
 export function isSemanticRerankEnabled(): boolean {
-  return process.env.ENABLE_SEMANTIC_RERANK === 'true' && getInternalAiConfig() !== null;
+  return process.env.ENABLE_SEMANTIC_RERANK === 'true' && getOpenAiKey() !== null;
 }
 
 async function embedText(text: string): Promise<number[] | null> {
-  const ai = getInternalAiConfig();
-  if (!ai) return null;
+  const apiKey = getOpenAiKey();
+  if (!apiKey) return null;
   try {
     const { embed } = await import('ai');
-    const { google } = await import('@ai-sdk/google');
-    process.env.GOOGLE_GENERATIVE_AI_API_KEY = ai.apiKey;
+    const { createOpenAI } = await import('@ai-sdk/openai');
+    const openai = createOpenAI({ apiKey });
     const { embedding } = await embed({
-      model: google.textEmbeddingModel(EMBEDDING_MODEL),
+      model: openai.textEmbeddingModel(EMBEDDING_MODEL),
       value: text.slice(0, 8000),
       // A hung embedding request would freeze this pMap slot forever (a hang
       // is not an error, so the catch below never fires). Abort for real.
