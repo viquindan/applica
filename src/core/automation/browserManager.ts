@@ -7,6 +7,17 @@ chromium.use(stealth());
 let globalBrowser: Browser | null = null;
 
 export async function getBrowser(): Promise<Browser> {
+  // Found real 2026-07-23 while adding real-browser web-search discovery:
+  // Bing's page can crash the shared Chromium process mid-navigation, and
+  // this cache had no liveness check - every call after that kept handing
+  // back a dead `Browser` reference, so `browser.newContext()` failed with
+  // "Target page, context or browser has been closed" for the rest of the
+  // worker's life (any automation, not just discovery) until a full process
+  // restart. Detect the dead reference and relaunch instead of trusting it.
+  if (globalBrowser && !globalBrowser.isConnected()) {
+    console.warn('[BrowserManager] Cached browser is disconnected, relaunching...');
+    globalBrowser = null;
+  }
   if (globalBrowser) return globalBrowser;
 
   // Default headless (original behavior). Headful passes invisible reCAPTCHA more

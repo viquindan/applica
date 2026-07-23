@@ -1,18 +1,30 @@
 /**
- * Pure web-search scraping for ATS board discovery (no database imports).
+ * Web-search scraping for ATS board discovery, via a real headless browser
+ * (not database-free anymore in the strict sense, but still has no DB import -
+ * it only pulls in the shared Playwright browser).
  *
- * The discovery patterns regex over raw search-result HTML, so we just need to
- * gather as much result HTML as possible. We hit two engines (DuckDuckGo + Bing)
- * across several result pages, throttled to stay under their rate limits.
+ * Real root cause found 2026-07-23 (verified live from the VPS): DuckDuckGo
+ * (both html.duckduckgo.com and duckduckgo.com) is network-blackholed from
+ * this VPS's IP - plain `curl` doesn't even get a bot-challenge response, it
+ * times out at the TCP level (confirmed with `curl -m 10`, both endpoints
+ * hang the full 10s with no response at all). A real browser can't fix a
+ * connection that never completes, so DuckDuckGo is dropped entirely rather
+ * than kept as a permanently-failing no-op. Bing DOES respond (curl gets a
+ * fast 200), but a bare fetch() never saw real result links - confirmed via a
+ * raw HTML dump that Bing's results (`id="b_results"` > `li.b_algo`) ARE
+ * present after rendering, but the `u=a1<base64>` redirector regex never
+ * matched because every `&` inside the href is HTML-entity-encoded as
+ * `&amp;` (`&amp;u=a1...`, not `&u=a1...`) - see the `&amp;` decode in
+ * recoverUrls below, which was the actual, silent, zero-yield bug (present
+ * whether the HTML came from fetch() or a real browser). Switched to a real
+ * headless browser anyway, since a bare fetch() is trivially fingerprinted
+ * and blocked outright by search engines going forward, and the shared
+ * stealth-patched Chromium (browserManager.ts) the apply-engine already runs
+ * was sitting right there for this.
  */
+import { createIncognitoContext } from '../automation/browserManager';
+import type { BrowserContext } from 'playwright';
 
-const USER_AGENTS = [
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:121.0) Gecko/20100101 Firefox/121.0',
-];
-
-const randomUA = () => USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 type Engine = 'duckduckgo' | 'bing';
@@ -31,7 +43,14 @@ function buildEngineUrl(engine: Engine, query: string, page: number): string {
  * encoded. Recover them: DuckDuckGo uses `uddg=<percent-encoded>`, Bing uses
  * `u=a1<base64url>`. We also keep raw hrefs and the raw HTML as a fallback.
  */
-function recoverUrls(engine: Engine, html: string): string {
+function recoverUrls(engine: Engine, rawHtml: string): string {
+  // Real bug found live 2026-07-23: real Bing result links ARE present in the
+  // rendered DOM (confirmed via a raw dump), but every `&` inside an href
+  // attribute is HTML-entity-encoded as `&amp;` - the redirector regexes
+  // below look for a literal `&` right before `u=a1`, which never matches
+  // `&amp;u=a1`. This silently zeroed out extraction regardless of whether
+  // fetch() or a real browser fetched the page - decode entities first.
+  const html = rawHtml.replace(/&amp;/g, '&');
   const urls: string[] = [];
 
   if (engine === 'duckduckgo') {
@@ -56,26 +75,25 @@ function recoverUrls(engine: Engine, html: string): string {
   return urls.join('\n') + '\n' + html;
 }
 
-async function fetchSearchHtml(engine: Engine, query: string, page: number): Promise<string> {
+async function fetchSearchHtml(context: BrowserContext, engine: Engine, query: string, page: number): Promise<string> {
   const url = buildEngineUrl(engine, query, page);
+  const tab = await context.newPage();
   try {
-    const response = await fetch(url, {
-      headers: {
-        'User-Agent': randomUA(),
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-      },
-    });
-    // Anything other than 200 (e.g. DuckDuckGo's 202 challenge) is a bot-block /
-    // interstitial, not real results - skip it rather than parse junk.
-    if (response.status !== 200) {
-      console.warn(`[WebSearch] ${engine} p${page} non-200 (${response.status}) for: ${query}`);
-      return '';
-    }
-    return recoverUrls(engine, await response.text());
+    await tab.goto(url, { waitUntil: 'domcontentloaded', timeout: 20000 });
+    // Bing sometimes keeps navigating/redirecting client-side right after
+    // domcontentloaded (found real, 2026-07-23: page.content() threw "page is
+    // navigating and changing the content" on a straight timed wait) - settle
+    // on 'load' first so content() isn't racing an in-flight navigation, then
+    // give any late JS-injected results a moment to render.
+    await tab.waitForLoadState('load', { timeout: 15000 }).catch(() => {});
+    await tab.waitForTimeout(1200);
+    const html = await tab.content();
+    return recoverUrls(engine, html);
   } catch (error) {
     console.warn(`[WebSearch] ${engine} p${page} failed for "${query}":`, (error as Error)?.message ?? error);
     return '';
+  } finally {
+    await tab.close().catch(() => {});
   }
 }
 
@@ -90,19 +108,44 @@ export interface CollectOptions {
  * concatenated. Token extraction runs over this blob downstream.
  */
 export async function collectDiscoveryHtml(queries: string[], options: CollectOptions = {}): Promise<string> {
-  const engines = options.enginesPerQuery ?? (['duckduckgo', 'bing'] as Engine[]);
+  // DuckDuckGo dropped from the default: network-blackholed from this VPS's
+  // IP at the TCP level (see file header) - not a bot-challenge a browser can
+  // get past, every request just times out. Still selectable explicitly via
+  // enginesPerQuery for re-testing if that ever changes (different IP, etc.).
+  const engines = options.enginesPerQuery ?? (['bing'] as Engine[]);
   const pages = Math.max(1, options.pagesPerQuery ?? 2);
   const delayMs = options.delayMs ?? 1200;
 
-  const chunks: string[] = [];
-  for (const query of queries) {
-    for (const engine of engines) {
-      for (let page = 0; page < pages; page += 1) {
-        const html = await fetchSearchHtml(engine, query, page);
-        if (html) chunks.push(html);
-        await sleep(delayMs);
+  // One incognito context (fresh cookies/UA, no leftover session) shared
+  // across every query in this run, closed at the end - reuses the existing
+  // shared headless Chromium instance (browserManager.ts) rather than
+  // launching a new browser process per call.
+  let context = await createIncognitoContext();
+  try {
+    const chunks: string[] = [];
+    for (const query of queries) {
+      for (const engine of engines) {
+        for (let page = 0; page < pages; page += 1) {
+          let html: string;
+          try {
+            html = await fetchSearchHtml(context, engine, query, page);
+          } catch (error) {
+            // Found real, 2026-07-23: a Bing navigation once took the whole
+            // context down mid-run ("Target page, context or browser has
+            // been closed" on the next newPage()) - recreate it once and
+            // keep going instead of losing the rest of this run's queries.
+            console.warn(`[WebSearch] context died, recreating (${engine} p${page}):`, (error as Error)?.message ?? error);
+            await context.close().catch(() => {});
+            context = await createIncognitoContext();
+            html = '';
+          }
+          if (html) chunks.push(html);
+          await sleep(delayMs);
+        }
       }
     }
+    return chunks.join('\n');
+  } finally {
+    await context.close().catch(() => {});
   }
-  return chunks.join('\n');
 }
