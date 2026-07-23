@@ -62,7 +62,11 @@ export default auth((req) => {
   // URL ever starts with it), files under public/ are served at the ROOT,
   // so a new public/ subfolder needs its own explicit allow here or it's
   // gated by login like any other page.
-  const isPublicRoute = pathname === '/' || pathname === '/terms' || pathname === '/privacy' || pathname === '/favicon.ico' || pathname.startsWith('/_next') || pathname.startsWith('/public') || pathname.startsWith('/downloads') || isAdminLoginPage;
+  // '/icon.png' is Next's App Router icon convention (src/app/icon.png) -
+  // served at the root like favicon.ico. Without this allow, logged-out
+  // visitors got a 307 to /auth/login instead of the tab icon (found real
+  // 2026-07-23 verifying the new logo in production).
+  const isPublicRoute = pathname === '/' || pathname === '/terms' || pathname === '/privacy' || pathname === '/favicon.ico' || pathname === '/icon.png' || pathname.startsWith('/_next') || pathname.startsWith('/public') || pathname.startsWith('/downloads') || isAdminLoginPage;
 
   if (isApi) return NextResponse.next();
   if (pathname === '/home') return NextResponse.redirect(new URL('/applications', req.url));

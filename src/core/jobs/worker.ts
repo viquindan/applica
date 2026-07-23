@@ -113,8 +113,20 @@ export async function startWorkers() {
         db.select().from(platformSettings).where(eq(platformSettings.userId, userId)),
       ]);
       if (settings?.searchInProgress) {
-        console.log(`[Worker] Search already in progress for user ${userId}. Skipping duplicate.`);
-        return { message: 'Search already in progress' };
+        // Distinguish a REAL concurrent search from a stale flag left by a
+        // hard death (SIGKILL/OOM mid-search skips both the success and the
+        // catch cleanup). Found real in production 2026-07-23 (2nd audit): a
+        // user sat >24h with search_in_progress=t, zero scheduled search
+        // jobs, and every manual "Buscar ahora" rejected - permanent, silent
+        // lockout. A genuine in-flight search touches updatedAt when it sets
+        // the flag and finishes well under 30 min, so an older flag can only
+        // be an orphan: reclaim it and run instead of skipping forever.
+        const flagAgeMs = Date.now() - (settings.updatedAt?.getTime() ?? 0);
+        if (flagAgeMs < 30 * 60 * 1000) {
+          console.log(`[Worker] Search already in progress for user ${userId}. Skipping duplicate.`);
+          return { message: 'Search already in progress' };
+        }
+        console.warn(`[Worker] Stale searchInProgress flag for user ${userId} (${Math.round(flagAgeMs / 60000)} min old) - reclaiming.`);
       }
       await db.update(userSettings).set({
         searchInProgress: true,
@@ -1408,6 +1420,28 @@ export async function startWorkers() {
     if (orphans.length) console.log(`[Worker] Rescued ${orphans.length} orphaned assisted application(s) -> pending_review.`);
   } catch (e) {
     console.warn('[Worker] Orphan rescue failed:', (e as Error)?.message ?? e);
+  }
+
+  // Same rescue principle for searchInProgress: a freshly booted worker has
+  // ZERO searches running (single worker process, see ecosystem.config.js),
+  // so any user still flagged in-progress is an orphan from a hard death
+  // (SIGKILL/OOM skips both cleanup paths in the search handler). Found real
+  // in production 2026-07-23 (2nd audit): one of six users stuck >24h with
+  // the flag on and no scheduled search job - no automatic search would ever
+  // run again for them and every manual "Buscar ahora" got rejected, with no
+  // visible error anywhere. Reset the flag AND re-queue their search so they
+  // rejoin the normal cadence instead of staying silently dead.
+  try {
+    const stuck = await db.update(userSettings)
+      .set({ searchInProgress: false, lastSearchStatus: 'failed', lastSearchError: 'Búsqueda interrumpida por un reinicio del sistema - reprogramada.', updatedAt: new Date() })
+      .where(eq(userSettings.searchInProgress, true))
+      .returning({ userId: userSettings.userId });
+    for (const row of stuck) {
+      console.log(`[Worker] Rescued stuck searchInProgress flag for user ${row.userId} - re-queueing their search.`);
+      await queueSearch(row.userId);
+    }
+  } catch (e) {
+    console.warn('[Worker] Stuck-search rescue failed:', (e as Error)?.message ?? e);
   }
 
   // Supply-job cadence: run each once now (fire-and-forget, doesn't delay the

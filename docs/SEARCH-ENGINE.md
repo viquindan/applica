@@ -269,6 +269,20 @@ decisión consciente que se documenta en `docs/DECISIONS.md`, no un refactor.
    → `scoring/__tests__/fitScorer.test.ts` (guard "Registered Nurse" para un COO).
 6. **Los tokens de ATS siempre se validan contra la API real** antes de
    guardarse. → mecanismo de `growRegistryFromCompanies`.
+7. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
+   rescate.** Un worker recién arrancado tiene CERO trabajos corriendo (un
+   solo proceso, ver `ecosystem.config.js`), así que todo estado en DB que
+   diga "en curso" al arrancar es huérfano de una muerte dura (SIGKILL/OOM
+   se salta los dos caminos de limpieza) y DEBE resetearse en el arranque:
+   aplicaciones `approved` → `pending_review`, y `searchInProgress=true` →
+   false + re-encolar la búsqueda. Además, el guard anti-duplicados del
+   handler de búsqueda trata un flag con más de 30 min como huérfano y lo
+   reclama en vez de saltarse la corrida. Bug real (auditoría 2026-07-23):
+   un usuario quedó >24h en lockout total y silencioso - sin búsqueda
+   automática programada y con cada "Buscar ahora" rechazado - porque el
+   flag quedó pegado y nada lo limpiaba. Si agregas un estado "en curso"
+   nuevo a cualquier tabla, agrega su rescate de arranque en `worker.ts`
+   junto a los dos existentes.
 
 ---
 
