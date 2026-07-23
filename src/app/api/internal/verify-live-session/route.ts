@@ -15,7 +15,7 @@ const ASSISTED_SESSION_MAX_MS = 15 * 60 * 1000;
 // Re-checks the token's claims against LIVE DB state instead of trusting the
 // token alone - the pool slot it names could have been released and hop to a
 // DIFFERENT application's session in between minting the token and it being
-// used (a real race given the token's own 5-minute TTL and how transient a
+// used (a real race given the token's own 15-minute TTL and how transient a
 // session is), which would otherwise let an old token peek at someone else's
 // captcha.
 export async function GET(req: NextRequest) {

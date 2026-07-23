@@ -12,7 +12,14 @@ import { createHmac, timingSafeEqual } from 'crypto';
  * user id.
  */
 const SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || 'applica-dev-secret';
-const TTL_MS = 5 * 60 * 1000;
+// Matches ASSISTED_SESSION_MAX_MS (the session's own hard ceiling in
+// live-session/route.ts and verify-live-session/route.ts) rather than a
+// short 5min window - a backgrounded mobile WebView drops its WebSocket
+// (Android throttles background network activity, found real via user
+// feedback) and needs to reconnect with THIS SAME token; a short TTL made
+// that reconnect fail with a stale-looking 401 well before the underlying
+// assisted session itself had actually ended.
+const TTL_MS = 15 * 60 * 1000;
 
 type Payload = { applicationId: string; poolIndex: number; exp: number };
 

@@ -32,12 +32,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const index = app.assistedSessionPoolIndex!;
   const token = signLiveSessionToken(id, index);
-  // noVNC's static client lives at /novnc/vnc.html (served directly by nginx -
-  // it's the same JS/HTML for every session, nothing per-user in it); `path`
-  // tells it which WebSocket to open for the actual VNC stream. nginx gates
-  // that second path with `auth_request` against the token before proxying to
-  // this specific session's websockify port (see the live-session plan).
+  // Custom kiosk client (/novnc/applica.html, a plain static file served
+  // directly by nginx alongside the vendored noVNC install - not a patch to
+  // it, so an OS package upgrade of novnc won't clobber it) instead of the
+  // stock vnc.html: no control-bar clutter and auto-reconnects when a
+  // backgrounded mobile WebView drops the socket, per real user feedback
+  // (2026-07-23). `path` tells it which WebSocket to open for the actual VNC
+  // stream; nginx gates that path with `auth_request` against the token
+  // before proxying to this specific session's websockify port.
   const wsPath = `assisted-view/${index}/websockify?token=${token}`;
-  const url = `/novnc/vnc.html?autoconnect=true&resize=scale&path=${encodeURIComponent(wsPath)}`;
+  const url = `/novnc/applica.html?path=${encodeURIComponent(wsPath)}`;
   return NextResponse.json({ live: true, url });
 }

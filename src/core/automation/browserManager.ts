@@ -107,6 +107,16 @@ export async function createIncognitoContext(options?: ContextOptions): Promise<
  * user to finish (CAPTCHA + submit). Independent of the shared background browser
  * so it can stay open without affecting the worker's headless scraping.
  */
+// Must match the pool's Xvfb resolution (xvfb-pool@.service on the VPS,
+// `Xvfb :10%i -screen 0 420x900x24` - not tracked in this repo). `Xvfb`/the
+// assisted-apply pool run with NO window manager at all, so `--start-maximized`
+// has nothing to negotiate window geometry with and silently falls back to
+// some default size far smaller than the virtual screen - found real via the
+// user's noVNC screenshot showing the browser filling only a small fraction
+// of the phone-shaped display with a huge black margin below it. An explicit
+// `--window-size`/`--window-position` doesn't need a WM at all.
+const HEADFUL_SCREEN_SIZE = { width: 420, height: 900 };
+
 export async function launchHeadfulBrowser(options?: ContextOptions): Promise<{ browser: Browser; context: BrowserContext }> {
   const proxy = options?.proxy ?? getProxyFromEnv();
   console.log(`[BrowserManager] Launching headful browser for assisted apply${options?.display ? ` on display ${options.display}` : ''}...`);
@@ -119,7 +129,8 @@ export async function launchHeadfulBrowser(options?: ContextOptions): Promise<{ 
     env: options?.display ? { ...process.env, DISPLAY: options.display } : undefined,
     args: [
       '--disable-blink-features=AutomationControlled',
-      '--start-maximized',
+      `--window-size=${HEADFUL_SCREEN_SIZE.width},${HEADFUL_SCREEN_SIZE.height}`,
+      '--window-position=0,0',
       // Headful uses the user's REAL GPU (don't force software GL - that's what
       // crashes on hCaptcha/WebGL pages like Lever/dLocal in GPU-less environments).
       '--disable-dev-shm-usage',

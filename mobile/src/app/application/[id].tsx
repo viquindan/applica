@@ -1,14 +1,17 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import { Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Linking, ScrollView, StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
+import { Glyph } from '@/components/glyph';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Gold, Radius, Spacing, TextGold } from '@/constants/theme';
+import { Gold, Petrol, Radius, Spacing, TextGold } from '@/constants/theme';
 import { isLinkedIn, useApplicationActions, useApplicationsData } from '@/hooks/use-applications';
 import { useTheme } from '@/hooks/use-theme';
 import { stripHtml } from '@/utils/html';
+
+type SendState = 'idle' | 'sending' | 'sent';
 
 export default function ApplicationDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -16,6 +19,7 @@ export default function ApplicationDetailScreen() {
   const { apps } = useApplicationsData();
   const { applyApp, applyAnyway, actionError } = useApplicationActions();
   const [preparing, setPreparing] = useState(false);
+  const [sendState, setSendState] = useState<SendState>('idle');
   const theme = useTheme();
   const app = apps.find((a) => a.id === id);
 
@@ -33,8 +37,12 @@ export default function ApplicationDetailScreen() {
   // for that whole round trip, unlike the swipe which moves on immediately
   // and lets the result surface later via push notification + Pendientes.
   // applyApp fires the mutation without awaiting it (react-query .mutate,
-  // not .mutateAsync) - navigating back right after has the same effect as
-  // the swipe's optimistic hide, just via navigation instead of a local list.
+  // not .mutateAsync) - the spinner->check below is a LOCAL ~1.6s
+  // acknowledgment, not a wait on the real result (which still surfaces via
+  // Pendientes/push per the user's explicit design decision).
+  const timers = useRef<ReturnType<typeof setTimeout>[]>([]);
+  useEffect(() => () => { timers.current.forEach(clearTimeout); }, []);
+
   function onApplyPress() {
     if (!app) return;
     if (isLinkedIn(app)) {
@@ -43,7 +51,9 @@ export default function ApplicationDetailScreen() {
     }
     const reason = applyApp(app);
     if (reason) { Alert.alert('Todavia no se puede aplicar', reason); return; }
-    router.back();
+    setSendState('sending');
+    timers.current.push(setTimeout(() => setSendState('sent'), 900));
+    timers.current.push(setTimeout(() => router.back(), 1900));
   }
 
   if (!app) {
@@ -90,9 +100,18 @@ export default function ApplicationDetailScreen() {
           ) : null}
 
           {app.status === 'pending_review' && (
-            <ThemedText onPress={onApplyPress} style={styles.applyButton}>
-              Aplicar
-            </ThemedText>
+            <View
+              onTouchEnd={sendState === 'idle' ? onApplyPress : undefined}
+              style={[styles.applyButtonView, sendState === 'sent' && styles.applyButtonSent]}>
+              {sendState === 'sending' ? (
+                <ActivityIndicator color={TextGold} size="small" />
+              ) : sendState === 'sent' ? (
+                <Glyph name="check" size={18} color={Petrol} />
+              ) : null}
+              <ThemedText style={[styles.applyButtonText, sendState === 'sent' && styles.applyButtonSentText]}>
+                {sendState === 'sending' ? 'Enviando' : sendState === 'sent' ? 'Enviado' : 'Aplicar'}
+              </ThemedText>
+            </View>
           )}
 
           {vacancyOnly ? (
@@ -149,6 +168,22 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   applyButtonDisabled: { opacity: 0.6 },
+  applyButtonView: {
+    marginTop: Spacing.five,
+    backgroundColor: Gold,
+    paddingVertical: Spacing.three,
+    borderRadius: Radius.full,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  // A quiet green tint (not Gold) reads as "done", distinct from the
+  // action-pending color the button had a second earlier.
+  applyButtonSent: { backgroundColor: '#dff3e6' },
+  applyButtonText: { color: TextGold, fontWeight: '700', fontSize: 15 },
+  applyButtonSentText: { color: Petrol },
   card: { marginTop: Spacing.five, borderRadius: Radius.md, padding: Spacing.four, gap: Spacing.two },
   cardTitle: { fontSize: 15, fontWeight: '700' },
   cardBody: { fontSize: 13, lineHeight: 19 },
