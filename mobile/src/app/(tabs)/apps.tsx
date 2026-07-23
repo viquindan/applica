@@ -57,7 +57,9 @@ export default function AppsScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* No 'bottom' edge: NativeTabs already reserves its own safe-area
+          inset below - see index.tsx for the full explanation. */}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* No page title - the tab bar already reads "Apps" (see Feed for the
             same change and why). The stats line below still earns its space. */}
         {stats ? (

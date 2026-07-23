@@ -65,7 +65,9 @@ export default function PendingScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* No 'bottom' edge: NativeTabs already reserves its own safe-area
+          inset below - see index.tsx for the full explanation. */}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         {/* No page title - the tab bar already reads "Pendientes" (see Feed
             for the same change and why). */}
         {sendingCount > 0 ? <SendingBanner count={sendingCount} /> : null}

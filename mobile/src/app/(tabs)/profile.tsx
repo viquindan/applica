@@ -283,7 +283,9 @@ export default function ProfileScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* No 'bottom' edge: NativeTabs already reserves its own safe-area
+          inset below - see index.tsx for the full explanation. */}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <View style={styles.header}>
           <View style={styles.identity}>
             <AnimatedPressable

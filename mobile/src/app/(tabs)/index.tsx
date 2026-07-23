@@ -152,7 +152,11 @@ export default function FeedScreen() {
 
   return (
     <ThemedView style={styles.container}>
-      <SafeAreaView style={styles.safeArea}>
+      {/* No 'bottom' edge: NativeTabs (app-tabs.tsx) is a real native tab bar
+          that already reserves its own safe-area inset below - adding it
+          AGAIN here double-counted that space, leaving a visible gap between
+          the card and the tab bar the user flagged repeatedly. */}
+      <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
         <FeedHud
           queueCount={visibleQueue.length}
           foundTodayCount={stats?.today ?? 0}
