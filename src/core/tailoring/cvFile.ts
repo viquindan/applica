@@ -29,9 +29,20 @@ export async function renderCvToPdf(text: string, fileBase: string): Promise<str
   }
 }
 
-/** Resolve a possibly-relative stored path to an absolute one for file uploads. */
+/** Resolve a possibly-relative stored path to an absolute one for file uploads.
+ * Resolves against UPLOAD_DIR (the persistent shared uploads dir), NOT
+ * process.cwd() - found real (2026-07-23): every release/deploy gets its own
+ * fresh checkout directory, so process.cwd() differs from one deploy to the
+ * next even though the SAME `applica-current` symlink is what PM2 points at
+ * (Node resolves cwd to the real, symlink-free path). A relative path stored
+ * once (e.g. a base CV uploaded as "uploads/<uuid>.pdf") worked only until
+ * the next deploy, then 404'd against a since-pruned old release directory -
+ * intermittent "no hay CV cargable" failures that tracked deploys, not code. */
 export function resolveUploadPath(p: string): string {
-  return path.isAbsolute(p) ? p : path.resolve(process.cwd(), p);
+  if (path.isAbsolute(p)) return p;
+  const uploadDir = path.resolve(process.env.UPLOAD_DIR || './uploads');
+  const rel = p.startsWith('uploads/') || p.startsWith('uploads\\') ? p.slice('uploads/'.length) : p;
+  return path.join(uploadDir, rel);
 }
 
 function escapeHtml(s: string): string {
