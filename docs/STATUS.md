@@ -1,5 +1,14 @@
 # Applica - Estado
 
+## Pool de discovery auto-expandible: deja de estancarse solo (2026-07-23)
+Pedido explícito del usuario tras el diagnóstico de `discover_ats_boards`/`discover_companies_directory` de hoy: en vez de que el pool de categorías de Wikipedia se agote cada tantas sesiones y haya que notarlo y ampliarlo a mano (pasó 2 veces hoy mismo), automatizar el crecimiento usando la misma tecnología gratis que ya funciona.
+- **Nueva tabla `ats_discovery_categories`** (categoría + `exhausted` + último % de nombres ya conocidos) reemplaza el array hardcodeado como fuente de las categorías rotadas a diario. Se siembra una sola vez con las ~127 categorías existentes.
+- **Nuevo job semanal `expand_discovery_categories`**: recorre un nivel de la propia jerarquía de categorías de Wikipedia (`Category:Companies_by_industry/by_country/by_city/by_year_of_establishment` - las 4 verificadas en vivo que existen y tienen subcategorías reales) y agrega cualquier categoría nueva y plausible (filtra categorías "meta"/cruce como "by industry and city" que no listan empresas reales, y categorías irrelevantes como "defunct"/"disestablished"/stubs).
+- **Auto-retiro de categorías agotadas**: tras cada rotación, se mide el % de nombres ya conocidos de las categorías usadas (sin llamadas a las APIs de los ATS, solo lectura de la propia DB) y se marcan `exhausted` al superar 90% - se retiran solas de la rotación diaria en vez de seguir ocupando un slot sin aportar nada.
+- **Verificado en producción, no solo en local**: en el primer arranque tras el deploy, el job corrió solo y agregó **692 categorías nuevas** (de 127 a 819 totales), confirmado con una query directa a la tabla real en el VPS. Sin errores nuevos en los logs del worker.
+- Verificado: `tsc --noEmit`, `npm run build`, `npm test` (78/78) limpios antes del push.
+
+## `discover_ats_boards` investigado a fondo en vivo: 3 bugs reales arreglados, mecanismo de fondo sigue sin ser viable (2026-07-23)
 ## `discover_ats_boards` investigado a fondo en vivo: 3 bugs reales arreglados, mecanismo de fondo sigue sin ser viable (2026-07-23)
 El usuario pidió explícitamente "solucionarlo urgentemente" tras el diagnóstico anterior. Se probó en vivo contra el VPS real (curl directo + Playwright real, no supuesto) en vez de solo leer código:
 1. **DuckDuckGo bloqueado a nivel TCP desde la IP del VPS** - ni siquiera devuelve un bot-challenge, `curl -m 10` agota el timeout completo en los dos endpoints (`html.duckduckgo.com` y `duckduckgo.com`). No arreglable con un navegador real. Quitado del set de motores por defecto (antes fallaba siempre, solo perdía tiempo).
