@@ -132,7 +132,14 @@ export function expertiseMatchRatio(expertise: ExpertiseProfile, jobText: string
 
   let matched = 0;
   for (const [term, weight] of expertise.weightedTerms) {
-    if (haystack.includes(` ${term} `) || haystack.includes(term)) {
+    // Word-boundary match ONLY (both sides are canonicalized and the haystack
+    // is space-padded, so this also covers terms at the edges). The old
+    // `|| haystack.includes(term)` fallback silently voided the boundary
+    // check: short generic skills matched INSIDE unrelated words ("web" in
+    // "webinar", "app" in "application") - measured live at up to 0.75 match
+    // ratio against pure noise text (audit 2026-07-23, M1), leaking ~+5 pts
+    // of the +12 expertise component into irrelevant vacancies.
+    if (haystack.includes(` ${term} `)) {
       matched += weight;
     }
   }

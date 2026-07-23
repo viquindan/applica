@@ -299,7 +299,20 @@ decisión consciente que se documenta en `docs/DECISIONS.md`, no un refactor.
    caller nuevo que itere vacantes debe pasar `history` en el contexto de
    `processVacancyForUser`, y cualquier re-score debe pasar las señales.
    → `scoring/__tests__/learnedSignals.test.ts`.
-9. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
+9. **Todo matching de texto respeta límites de palabra - nunca substring
+   crudo.** Ya había pasado dos veces antes de la regla ("gas" dentro de
+   "organizational" en excludedIndustries, 2026-07-13) y volvió a pasar
+   (auditoría 2026-07-23, M1): `expertiseMatchRatio` tenía un fallback
+   `|| haystack.includes(term)` que anulaba el chequeo con límite - skills
+   cortos matcheaban DENTRO de palabras sin relación ("web"⊂"webinar",
+   "app"⊂"application"), medido en vivo hasta 0.75 de ratio contra puro
+   ruido, filtrando ~+5 pts del componente de expertise (+12) a vacantes
+   irrelevantes. Si agregas cualquier comparación de términos nueva, usa
+   límite de palabra (`includesNormalizedPhrase`, el patrón espaciado de
+   expertise, o regex con `\b`) - un `.includes()` crudo sobre texto libre
+   es un bug esperando su auditoría.
+   → `scoring/__tests__/expertise.test.ts`.
+10. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
    rescate.** Un worker recién arrancado tiene CERO trabajos corriendo (un
    solo proceso, ver `ecosystem.config.js`), así que todo estado en DB que
    diga "en curso" al arrancar es huérfano de una muerte dura (SIGKILL/OOM
