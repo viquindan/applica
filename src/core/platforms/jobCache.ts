@@ -6,6 +6,8 @@ import { LeverAdapter } from './lever';
 import { AshbyAdapter } from './ashby';
 import { RecruiteeAdapter } from './recruitee';
 import { SmartRecruitersAdapter } from './smartrecruiters';
+import { WorkableAdapter } from './workable';
+import { BambooHrAdapter } from './bamboohr';
 import { filterRankLimit } from './atsSearchHelpers';
 import { clearVacancyEmbeddingCache } from '../scoring/vacancyEmbeddingCache';
 
@@ -19,12 +21,18 @@ import { clearVacancyEmbeddingCache } from '../scoring/vacancyEmbeddingCache';
  * fetch to get descriptions, and it has few boards, so it stays on the live
  * per-user path.
  */
-const CACHED_PLATFORMS = ['greenhouse', 'lever', 'ashby', 'recruitee'] as const;
+// Fase 1 (2026-07-24): workable/bamboohr son adapters de SOLO BÚSQUEDA (ver el
+// comentario de cabecera en workable.ts/bamboohr.ts) - amplían el pool de
+// oferta sin tocar el motor de aplicación, que sigue yendo por GenericAdapter
+// (assisted_apply) para cualquier plataforma no registrada en worker.ts.
+const CACHED_PLATFORMS = ['greenhouse', 'lever', 'ashby', 'recruitee', 'workable', 'bamboohr'] as const;
 const cachedAdapters = {
   greenhouse: new GreenhouseAdapter(),
   lever: new LeverAdapter(),
   ashby: new AshbyAdapter(),
   recruitee: new RecruiteeAdapter(),
+  workable: new WorkableAdapter(),
+  bamboohr: new BambooHrAdapter(),
 };
 const smartRecruitersAdapter = new SmartRecruitersAdapter();
 

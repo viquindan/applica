@@ -97,6 +97,10 @@ export async function validateAtsBoard(platform: string, token: string) {
     url = `https://api.smartrecruiters.com/v1/companies/${normalizedToken}/postings?limit=10`;
   } else if (platform === 'recruitee') {
     url = `https://${normalizedToken}.recruitee.com/api/offers/`;
+  } else if (platform === 'workable') {
+    url = `https://apply.workable.com/api/v1/widget/accounts/${normalizedToken}`;
+  } else if (platform === 'bamboohr') {
+    url = `https://${normalizedToken}.bamboohr.com/careers/list`;
   } else {
     throw new Error('Unsupported platform');
   }
@@ -126,6 +130,10 @@ export async function validateAtsBoard(platform: string, token: string) {
     jobCount = (payload as any).totalFound ?? (payload as any).content.length;
   } else if (platform === 'recruitee' && Array.isArray((payload as any).offers)) {
     jobCount = (payload as any).offers.length;
+  } else if (platform === 'workable' && Array.isArray((payload as any).jobs)) {
+    jobCount = (payload as any).jobs.length;
+  } else if (platform === 'bamboohr' && Array.isArray((payload as any).result)) {
+    jobCount = (payload as any).result.length;
   }
 
   await db.update(atsBoards).set({
@@ -251,7 +259,7 @@ export async function discoveratsBoardsFromText(input: {
 
 // ── Self-growing registry: turn company NAMES into permanent ATS sources ──────
 
-const PROBE_PLATFORMS: AtsPlatform[] = ['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'recruitee'];
+const PROBE_PLATFORMS: AtsPlatform[] = ['greenhouse', 'lever', 'ashby', 'smartrecruiters', 'recruitee', 'workable', 'bamboohr'];
 
 export function companyNameToToken(name: string): string {
   return (name ?? '')
@@ -268,6 +276,10 @@ function probeUrl(platform: AtsPlatform, token: string): string {
     case 'ashby': return `https://api.ashbyhq.com/posting-api/job-board/${token}`;
     case 'smartrecruiters': return `https://api.smartrecruiters.com/v1/companies/${token}/postings?limit=1`;
     case 'recruitee': return `https://${token}.recruitee.com/api/offers/`;
+    // Verified live 2026-07-24 against real accounts (pavago, flyio, posthog)
+    // before adding these - see workable.ts/bamboohr.ts header comments.
+    case 'workable': return `https://apply.workable.com/api/v1/widget/accounts/${token}`;
+    case 'bamboohr': return `https://${token}.bamboohr.com/careers/list`;
   }
 }
 
@@ -277,6 +289,8 @@ function probeJobCount(platform: AtsPlatform, payload: any): number {
   if (platform === 'ashby') return Array.isArray(payload?.jobs) ? payload.jobs.length : 0;
   if (platform === 'smartrecruiters') return payload?.totalFound ?? 0;
   if (platform === 'recruitee') return Array.isArray(payload?.offers) ? payload.offers.length : 0;
+  if (platform === 'workable') return Array.isArray(payload?.jobs) ? payload.jobs.length : 0;
+  if (platform === 'bamboohr') return Array.isArray(payload?.result) ? payload.result.length : 0;
   return 0;
 }
 

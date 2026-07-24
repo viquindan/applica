@@ -168,6 +168,23 @@ solo las mejores, ordenadas, sin ruido. Todo esto vive en el handler
 - **Plataformas por defecto (opt-out):** se buscan TODAS las plataformas
   soportadas salvo que el usuario desactive una explícitamente. Agregar una
   plataforma nueva no requiere que el usuario la pre-configure.
+- **Plataformas de SOLO BÚSQUEDA (Workable, BambooHR - Fase 1, 2026-07-24):**
+  amplían el pool de oferta sin motor de aplicación propio - cualquier
+  vacante suya va por `GenericAdapter` (assisted_apply) igual que un sitio
+  desconocido. Por diseño NO están en el `adapters` map de `worker.ts` (ese
+  map gobierna `process_application`/`assisted_apply`; meterlas ahí rompería
+  el fallback a GenericAdapter, ver APPLY-ENGINE.md §8.1) - pero SÍ deben
+  estar en `SEARCH_ONLY_PLATFORMS` (mismo archivo) para que
+  `activePlatforms` las incluya, o quedan invisibles en toda búsqueda pese a
+  estar en el cache compartido (bug real encontrado al cablearlas: el filtro
+  de opt-out por plataforma usaba `Object.keys(adapters)` como universo
+  completo). Cualquier plataforma de solo-búsqueda nueva sigue este mismo
+  patrón: adapter con `search`/`extractVacancy` real (verificado en vivo
+  antes de escribir código, nunca adivinado) + `apply()` que lanza "not
+  implemented" + entrada en `jobCache.ts` (`CACHED_PLATFORMS`) +
+  `SEARCH_ONLY_PLATFORMS` + `PROBE_PLATFORMS`/`probeUrl`/`probeJobCount`
+  (`atsRegistry.ts`) para que el discovery de Wikipedia también las
+  alimente.
 - **Roles de búsqueda:** `buildSearchRoles(profile).all` = roles objetivo +
   roles derivados de la experiencia.
 
@@ -348,7 +365,7 @@ suggestRoles}.ts`, `app/api/resumes/*`, `app/api/profile/route.ts`,
 
 **Mitad B — matching:** `core/jobs/worker.ts` (orquesta),
 `core/platforms/{jobCache, atsSearchHelpers, smartrecruiters, greenhouse,
-lever, ashby, recruitee}.ts`, `core/scoring/{fitScorer, eligibility, geography,
+lever, ashby, recruitee, workable, bamboohr}.ts`, `core/scoring/{fitScorer, eligibility, geography,
 roleTaxonomy, expertise, semanticMatch, semanticRole, learnedSignals, salary,
 synonyms}.ts`, `core/pipeline/{processVacancy, reEvaluate}.ts`,
 `core/billing/{planLimits, usageTracker}.ts`.

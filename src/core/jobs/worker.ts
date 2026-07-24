@@ -38,6 +38,8 @@ import { seedLeverBoards } from '../platforms/leverSources';
 import { seedAshbyBoards } from '../platforms/ashbySources';
 import { seedSmartRecruitersBoards } from '../platforms/smartRecruitersSources';
 import { seedRecruiteeBoards } from '../platforms/recruiteeSources';
+import { seedWorkableBoards } from '../platforms/workableSources';
+import { seedBambooHrBoards } from '../platforms/bambooHrSources';
 import { getActiveAtsBoardTokensBatch, getActiveBoardCount, refreshAtsBoardRegistry, getAtsRegistryMetrics, seedAtsBoards, growRegistryFromCompanies } from '../platforms/atsRegistry';
 import { discoverCompaniesFromDirectories, discoverNewWikipediaCategories } from '../platforms/companyDirectoryDiscovery';
 import { refreshJobCache, isJobCacheFresh, gatherSearchCandidates, jobCacheSize } from '../platforms/jobCache';
@@ -59,6 +61,16 @@ const adapters = {
   smartrecruiters: new SmartRecruitersAdapter(),
   recruitee: new RecruiteeAdapter(),
 };
+
+// Search-only platforms (workable.ts/bamboohr.ts, Fase 1 2026-07-24):
+// deliberately NOT in `adapters` above (that map governs process_application/
+// assisted_apply routing - adding them there would break the GenericAdapter
+// fallback these platforms rely on, see APPLY-ENGINE.md §8.1). But the
+// "which platforms does this user search" list below (`activePlatforms`) was
+// ALSO built from Object.keys(adapters), so leaving them out there entirely
+// would silently exclude every workable/bamboohr vacancy from every search -
+// found while wiring this in. SEARCH_ONLY_PLATFORMS widens just that list.
+const SEARCH_ONLY_PLATFORMS = ['workable', 'bamboohr'] as const;
 
 const VACANCY_TIMEOUT_MS = Number(process.env.VACANCY_PROCESS_TIMEOUT_MS ?? 90_000);
 
@@ -139,7 +151,7 @@ export async function startWorkers() {
       // newly added platforms (e.g. smartrecruiters, recruitee) are searched
       // without requiring the user to pre-configure them.
       const settingByName = new Map(userPlatforms.map((p) => [p.platformName, p]));
-      const activePlatforms = (Object.keys(adapters) as Array<keyof typeof adapters>)
+      const activePlatforms = ([...Object.keys(adapters), ...SEARCH_ONLY_PLATFORMS] as string[])
         .filter((name) => {
           const ps = settingByName.get(name);
           if (!ps) return true;
@@ -1343,7 +1355,11 @@ export async function startWorkers() {
     const resultsSmart = await refreshAtsBoardRegistry('smartrecruiters', 150);
     console.log('[Worker] Refreshing ATS board registry (Recruitee)...');
     const resultsRecruitee = await refreshAtsBoardRegistry('recruitee', 150);
-    const results = [...resultsGreenhouse, ...resultsLever, ...resultsAshby, ...resultsSmart, ...resultsRecruitee];
+    console.log('[Worker] Refreshing ATS board registry (Workable)...');
+    const resultsWorkable = await refreshAtsBoardRegistry('workable', 150);
+    console.log('[Worker] Refreshing ATS board registry (BambooHR)...');
+    const resultsBamboo = await refreshAtsBoardRegistry('bamboohr', 150);
+    const results = [...resultsGreenhouse, ...resultsLever, ...resultsAshby, ...resultsSmart, ...resultsRecruitee, ...resultsWorkable, ...resultsBamboo];
     const valid = results.filter((r) => r.ok).length;
     const invalid = results.filter((r) => !r.ok).length;
     console.log(`[Worker] Registry refresh done: ${valid} valid, ${invalid} invalid out of ${results.length} checked.`);
@@ -1381,6 +1397,8 @@ export async function startWorkers() {
     await seedAtsBoards(seedAshbyBoards, 'ashby');
     await seedAtsBoards(seedSmartRecruitersBoards, 'smartrecruiters');
     await seedAtsBoards(seedRecruiteeBoards, 'recruitee');
+    await seedAtsBoards(seedWorkableBoards, 'workable');
+    await seedAtsBoards(seedBambooHrBoards, 'bamboohr');
 
     // Run dynamic web search for new boards globally
     const discoveryResult = await searchAtsWeb();

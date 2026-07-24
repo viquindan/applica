@@ -2,7 +2,7 @@
  * Pure ATS board-token patterns and helpers. Kept free of any database import
  * so discovery / token extraction can be exercised and tested standalone.
  */
-export type AtsPlatform = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'recruitee';
+export type AtsPlatform = 'greenhouse' | 'lever' | 'ashby' | 'smartrecruiters' | 'recruitee' | 'workable' | 'bamboohr';
 export type ExtractedBoard = { platform: AtsPlatform; token: string };
 
 const BOARD_PATTERNS: Array<{ platform: AtsPlatform; pattern: RegExp }> = [
@@ -17,6 +17,8 @@ const BOARD_PATTERNS: Array<{ platform: AtsPlatform; pattern: RegExp }> = [
   { platform: 'smartrecruiters', pattern: /jobs\.smartrecruiters\.com\/([a-z0-9_-]+)/gi },
   { platform: 'smartrecruiters', pattern: /api\.smartrecruiters\.com\/v1\/companies\/([a-z0-9_-]+)/gi },
   { platform: 'recruitee', pattern: /([a-z0-9_-]+)\.recruitee\.com/gi },
+  { platform: 'workable', pattern: /apply\.workable\.com\/([a-z0-9_-]+)\/j(?:obs)?\//gi },
+  { platform: 'bamboohr', pattern: /([a-z0-9_-]+)\.bamboohr\.com\/careers/gi },
 ];
 
 // Subdomains/path segments that are never real company board tokens.
