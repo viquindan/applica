@@ -312,7 +312,18 @@ decisión consciente que se documenta en `docs/DECISIONS.md`, no un refactor.
    expertise, o regex con `\b`) - un `.includes()` crudo sobre texto libre
    es un bug esperando su auditoría.
    → `scoring/__tests__/expertise.test.ts`.
-10. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
+11. **El embedding de una vacante se calcula UNA vez por ciclo de cache, nunca
+   por usuario.** `vacancyEmbeddingCache.ts` (Map en memoria, clave = URL de
+   la vacante) cachea el vector devuelto por `maybeSemanticAdjust`
+   (`semanticMatch.ts`) para que N usuarios cuyas búsquedas evalúan la MISMA
+   vacante como borderline en la misma ventana paguen 1 sola llamada a la API
+   de embeddings, no N. Se limpia entera cada vez que `refreshJobCache`
+   reemplaza el pool compartido (`jobCache.ts`) - su ciclo de vida está atado
+   1:1 al pool, nunca queda una vacante vieja cacheada después de que salió
+   del pool. Si agregas un consumidor nuevo de embeddings de vacantes, pásale
+   la URL para que reuse esta caché en vez de llamar a la API directo.
+   → `scoring/__tests__/vacancyEmbeddingCache.test.ts`.
+12. **Ningún estado "en curso" sobrevive a un reinicio del worker sin
    rescate.** Un worker recién arrancado tiene CERO trabajos corriendo (un
    solo proceso, ver `ecosystem.config.js`), así que todo estado en DB que
    diga "en curso" al arrancar es huérfano de una muerte dura (SIGKILL/OOM

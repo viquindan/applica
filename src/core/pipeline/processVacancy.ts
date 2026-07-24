@@ -108,6 +108,10 @@ export async function processVacancyForUser(userId: string, vacancy: NormalizedV
     jobText: `${vacancy.title}\n${vacancy.description ?? ''}\n${vacancy.requirements ?? ''}`,
     baseScore: score.score,
     threshold: genThreshold,
+    // Lets maybeSemanticAdjust reuse one embedding of this vacancy across
+    // every user's search instead of recomputing it per user (audit
+    // 2026-07-24) - see vacancyEmbeddingCache.ts.
+    vacancyUrl: vacancy.url,
   });
   let finalScore = Math.max(0, Math.min(100, score.score + semantic.adjustment));
   // Don't let semantic re-ranking lift a locally-capped vacancy back over 50.

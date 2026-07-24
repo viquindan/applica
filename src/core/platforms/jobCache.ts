@@ -7,6 +7,7 @@ import { AshbyAdapter } from './ashby';
 import { RecruiteeAdapter } from './recruitee';
 import { SmartRecruitersAdapter } from './smartrecruiters';
 import { filterRankLimit } from './atsSearchHelpers';
+import { clearVacancyEmbeddingCache } from '../scoring/vacancyEmbeddingCache';
 
 /**
  * Shared in-memory job cache. The worker fetches every active board ONCE per
@@ -64,6 +65,12 @@ export async function refreshJobCache(): Promise<{ total: number; byPlatform: Re
 
   cache = all;
   cachedAt = Date.now();
+  // The shared pool just got replaced - any cached vacancy embedding
+  // (vacancyEmbeddingCache.ts) now refers to a posting that may no longer be
+  // in the pool, or whose text may have changed. Clearing here (instead of a
+  // separate TTL) keeps the embedding cache's lifetime tied 1:1 to the pool
+  // it was computed against - stale entries never linger.
+  clearVacancyEmbeddingCache();
   return { total: all.length, byPlatform };
 }
 

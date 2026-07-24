@@ -17,6 +17,8 @@
  * OPENAI_API_KEY - independent of the Gemini key used elsewhere in the app.
  */
 
+import { getCachedVacancyEmbedding, setCachedVacancyEmbedding } from './vacancyEmbeddingCache';
+
 const EMBEDDING_MODEL = process.env.OPENAI_EMBEDDING_MODEL || 'text-embedding-3-small';
 
 function getOpenAiKey(): string | null {
@@ -74,6 +76,21 @@ async function getProfileEmbedding(userId: string, profileText: string): Promise
   return vector;
 }
 
+/**
+ * Job-side embedding, shared across every user whose search evaluates this
+ * vacancy in the same cache cycle (see vacancyEmbeddingCache.ts). Falls back
+ * to embedText when no URL is available (shouldn't happen in the real
+ * pipeline, kept only so this function stays safe to call standalone).
+ */
+async function getVacancyEmbedding(vacancyUrl: string | undefined, jobText: string): Promise<number[] | null> {
+  if (!vacancyUrl) return embedText(jobText);
+  const cached = getCachedVacancyEmbedding(vacancyUrl);
+  if (cached) return cached;
+  const vector = await embedText(jobText);
+  if (vector) setCachedVacancyEmbedding(vacancyUrl, vector);
+  return vector;
+}
+
 function cosineSimilarity(a: number[], b: number[]): number {
   if (a.length !== b.length || a.length === 0) return 0;
   let dot = 0;
@@ -106,6 +123,7 @@ export async function maybeSemanticAdjust(input: {
   jobText: string;
   baseScore: number;
   threshold: number;
+  vacancyUrl?: string;
 }): Promise<{ adjustment: number; similarity: number | null }> {
   const noop = { adjustment: 0, similarity: null as number | null };
   if (!isSemanticRerankEnabled()) return noop;
@@ -116,7 +134,7 @@ export async function maybeSemanticAdjust(input: {
 
   const [profileVec, jobVec] = await Promise.all([
     getProfileEmbedding(input.userId, input.profileText),
-    embedText(input.jobText),
+    getVacancyEmbedding(input.vacancyUrl, input.jobText),
   ]);
   if (!profileVec || !jobVec) return noop;
 
